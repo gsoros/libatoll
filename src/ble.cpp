@@ -1,5 +1,7 @@
 #include "ble.h"
 
+BLE::~BLE() {}  // avoid "undefined reference to ..."
+
 void BLE::setup(const char *deviceName, Preferences *p) {
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
     preferencesSetup(p, "BLE");
@@ -186,8 +188,8 @@ void BLE::onWrite(BLECharacteristic *c) {
     Serial.printf("[BLE] %s: onWrite(), value: %s\n",
                   characteristicStr(c),
                   value);
-    if (c->getHandle() == apiRxChar->getHandle())
-        handleApiCommand(value);
+    // if (c->getHandle() == apiRxChar->getHandle())
+    //  TODO   handleApiCommand(value);
 };
 
 void BLE::onNotify(BLECharacteristic *pCharacteristic){

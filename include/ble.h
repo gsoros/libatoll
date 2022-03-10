@@ -53,7 +53,7 @@ class BLE : public Task,
     uint32_t passkey = 696669;  // passkey for API service, max 6 digits
 
     BLE() {}
-    ~BLE() {}
+    virtual ~BLE();
 
     void setup(const char *deviceName, Preferences *p);
     void loop();
@@ -62,7 +62,7 @@ class BLE : public Task,
     void startBlService();
     void startApiService();
     void notifyBl(const ulong t, const uint8_t level);
-    void handleApiCommand(const char *command);
+    // void handleApiCommand(const char *command);
     void setApiValue(const char *value);
     const char *characteristicStr(BLECharacteristic *c);
     void stop();
