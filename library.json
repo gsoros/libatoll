@@ -1,0 +1,25 @@
+{
+  "name": "libAtoll",
+  "version": "1.0.0",
+  "description": "Collection of tools for my cycling-related ESP32 projects",
+  "keywords": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gsoros/libatoll.git"
+  },
+  "authors": [
+    {
+      "name": "G Soros",
+      "email": "gsoros@users.noreply.github.com",
+      "url": ""
+    }
+  ],
+  "license": "GPL",
+  "homepage": "",
+  "dependencies": {
+    "h2zero/NimBLE-Arduino": "^1.3.7",
+    "rlogiacco/CircularBuffer": "^1.3.3"
+  },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}
