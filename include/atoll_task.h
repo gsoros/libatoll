@@ -1,11 +1,13 @@
-#ifndef __task_h
-#define __task_h
+#ifndef __atoll_task_h
+#define __atoll_task_h
 
 #include "xtensa/core-macros.h"
 #include <Arduino.h>
 
 #define TASK_NAME_LEN 32
 #define TASK_DEFAULT_CORE 1
+
+namespace Atoll {
 
 class Task {
    public:
@@ -36,7 +38,7 @@ class Task {
         strncpy(taskName, name, TASK_NAME_LEN);
         taskFreq = freq;
         _taskSetDelayFromFreq();
-        log_i("[Task] Starting %s at %dHz (delay: %dms), stack %d\n",
+        log_i("[Task] Starting %s at %dHz (delay: %dms), stack %d",
               name, freq, _xTaskDelay, stack);
         BaseType_t err = xTaskCreatePinnedToCore(
             _taskLoop,
@@ -48,8 +50,8 @@ class Task {
             taskCore);
         if (pdPASS != err)
             log_e("Failed to start task %s, error %d", taskName, err);
-        else
-            log_i("[Task] Started %s\n", name);
+        // else
+        //     log_i("[Task] Started %s", name);
     }
 
     bool taskRunning() {
@@ -58,7 +60,7 @@ class Task {
 
     void taskStop() {
         if (NULL != taskHandle) {
-            log_i("[Task] Stopping %s\n", taskName);
+            log_i("[Task] Stopping %s", taskName);
             vTaskDelete(taskHandle);
         }
         taskHandle = NULL;
@@ -97,5 +99,7 @@ class Task {
         _xTaskDelay = pdMS_TO_TICKS(1000 / taskFreq);
     }
 };
+
+}  // namespace Atoll
 
 #endif

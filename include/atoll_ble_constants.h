@@ -1,5 +1,5 @@
-#ifndef __ble_constants_h
-#define __ble_constants_h
+#ifndef __atoll_ble_constants_h
+#define __atoll_ble_constants_h
 
 /*
     Parts based on https://github.com/ihaque/pelomon/blob/main/pelomon/ble_constants.h

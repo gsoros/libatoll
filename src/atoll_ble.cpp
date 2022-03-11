@@ -1,10 +1,12 @@
-#include "ble.h"
+#include "atoll_ble.h"
 
-BLE::~BLE() {}  // avoid "undefined reference to ..."
+using namespace Atoll;
 
-void BLE::setup(const char *deviceName, Preferences *p) {
+Ble::~Ble() {}  // avoid "undefined reference to ..."
+
+void Ble::setup(const char *deviceName, ::Preferences *p) {
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
-    preferencesSetup(p, "BLE");
+    preferencesSetup(p, "Ble");
     loadSettings();
     printSettings();
     enabled = true;
@@ -30,20 +32,20 @@ void BLE::setup(const char *deviceName, Preferences *p) {
     lastBatteryNotification = 0;
 }
 
-void BLE::startServices() {
+void Ble::startServices() {
     startDiService();
     startBlService();
     startApiService();
 }
 
-void BLE::loop() {
+void Ble::loop() {
     if (!enabled) return;
     if (!advertising->isAdvertising()) startAdvertising();
 }
 
 // Start Device Information service
-void BLE::startDiService() {
-    Serial.println("[BLE] Starting DIS");
+void Ble::startDiService() {
+    Serial.println("[AtollBle] Starting DIS");
     disUUID = BLEUUID(DEVICE_INFORMATION_SERVICE_UUID);
     dis = server->createService(disUUID);
     diChar = dis->createCharacteristic(
@@ -59,8 +61,8 @@ void BLE::startDiService() {
 }
 
 // Start Battey Level service
-void BLE::startBlService() {
-    Serial.println("[BLE] Starting BLS");
+void Ble::startBlService() {
+    Serial.println("[AtollBle] Starting BLS");
     blsUUID = BLEUUID(BATTERY_SERVICE_UUID);
     bls = server->createService(blsUUID);
     blChar = bls->createCharacteristic(
@@ -78,8 +80,8 @@ void BLE::startBlService() {
     advertising->addServiceUUID(blsUUID);
 }
 
-void BLE::startApiService() {
-    Serial.println("[BLE] Starting APIS");
+void Ble::startApiService() {
+    Serial.println("[AtollBle] Starting APIS");
     char s[SETTINGS_STR_LENGTH] = "";
     asUUID = BLEUUID(API_SERVICE_UUID);
     as = server->createService(asUUID);
@@ -115,9 +117,9 @@ void BLE::startApiService() {
 }
 
 // Notify Battery Level service
-void BLE::notifyBl(const ulong t, const uint8_t level) {
+void Ble::notifyBl(const ulong t, const uint8_t level) {
     if (!enabled) {
-        Serial.println("[BLE] Not enabled, not notifying BL");
+        Serial.println("[AtollBle] Not enabled, not notifying BL");
         return;
     }
 
@@ -128,7 +130,7 @@ void BLE::notifyBl(const ulong t, const uint8_t level) {
     blChar->notify();
 }
 
-const char *BLE::characteristicStr(BLECharacteristic *c) {
+const char *Ble::characteristicStr(BLECharacteristic *c) {
     if (c == nullptr) return "unknown characteristic";
     if (blChar != nullptr && blChar->getHandle() == c->getHandle()) return "BL";
     if (apiTxChar != nullptr && apiTxChar->getHandle() == c->getHandle()) return "APITX";
@@ -136,18 +138,18 @@ const char *BLE::characteristicStr(BLECharacteristic *c) {
     return c->getUUID().toString().c_str();
 }
 
-// disconnect clients, stop advertising and shutdown BLE
-void BLE::stop() {
+// disconnect clients, stop advertising and shutdown AtollBle
+void Ble::stop() {
     while (!_clients.isEmpty())
         server->disconnect(_clients.shift());
     server->stopAdvertising();
     enabled = false;
-    delay(100);  // give the BLE stack a chance to clear packets
+    delay(100);  // give the AtollBle stack a chance to clear packets
     // BLEDevice::deinit(true);  // TODO never returns
 }
 
-void BLE::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
-    Serial.printf("[BLE] Client connected, ID: %d Address: %s\n",
+void Ble::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
+    Serial.printf("[AtollBle] Client connected, ID: %d Address: %s\n",
                   desc->conn_handle,
                   BLEAddress(desc->peer_ota_addr).toString().c_str());
     // NimBLEDevice::startSecurity(desc->conn_handle);
@@ -160,44 +162,44 @@ void BLE::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
         _clients.push(desc->conn_handle);
 }
 
-void BLE::onDisconnect(BLEServer *pServer) {
-    Serial.println("[BLE] Server onDisconnect");
+void Ble::onDisconnect(BLEServer *pServer) {
+    Serial.println("[AtollBle] Server onDisconnect");
 }
 
-void BLE::startAdvertising() {
+void Ble::startAdvertising() {
     if (!enabled) {
-        Serial.println("[BLE] Not enabled, not starting advertising");
+        Serial.println("[AtollBle] Not enabled, not starting advertising");
         return;
     }
     delay(300);
     if (!advertising->isAdvertising()) {
         server->startAdvertising();
-        Serial.println("[BLE] Start advertising");
+        Serial.println("[AtollBle] Start advertising");
     }
 }
 
-void BLE::onRead(BLECharacteristic *c) {
-    Serial.printf("[BLE] %s: onRead(), value: %s\n",
+void Ble::onRead(BLECharacteristic *c) {
+    Serial.printf("[AtollBle] %s: onRead(), value: %s\n",
                   characteristicStr(c),
                   c->getValue().c_str());
 };
 
-void BLE::onWrite(BLECharacteristic *c) {
+void Ble::onWrite(BLECharacteristic *c) {
     char value[BLE_CHAR_VALUE_MAXLENGTH] = "";
     strncpy(value, c->getValue().c_str(), sizeof(value));
-    Serial.printf("[BLE] %s: onWrite(), value: %s\n",
+    Serial.printf("[AtollBle] %s: onWrite(), value: %s\n",
                   characteristicStr(c),
                   value);
     // if (c->getHandle() == apiRxChar->getHandle())
     //  TODO   handleApiCommand(value);
 };
 
-void BLE::onNotify(BLECharacteristic *pCharacteristic){
-    // Serial.printf("[BLE] Sending notification: %d\n", pCharacteristic->getValue<int>());
+void Ble::onNotify(BLECharacteristic *pCharacteristic){
+    // Serial.printf("[AtollBle] Sending notification: %d\n", pCharacteristic->getValue<int>());
 };
 
-void BLE::onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {
-    Serial.printf("[BLE] Client ID: %d Address: %s ",
+void Ble::onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {
+    Serial.printf("[AtollBle] Client ID: %d Address: %s ",
                   desc->conn_handle,
                   BLEAddress(desc->peer_ota_addr).toString().c_str());
     if (subValue == 0)
@@ -211,43 +213,43 @@ void BLE::onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t su
     Serial.println(characteristicStr(c));
 };
 
-void BLE::setSecureApi(bool state) {
+void Ble::setSecureApi(bool state) {
     if (state == secureApi) return;
     secureApi = state;
     saveSettings();
-    Serial.printf("[BLE] SecureAPI %sabled\n", secureApi ? "en" : "dis");
+    Serial.printf("[AtollBle] SecureAPI %sabled\n", secureApi ? "en" : "dis");
     /* TODO deinit() does not return
     stop();
     setup(deviceName, preferences);
     */
 }
 
-void BLE::setPasskey(uint32_t newPasskey) {
+void Ble::setPasskey(uint32_t newPasskey) {
     if (newPasskey == passkey) return;
     passkey = newPasskey;
     saveSettings();
-    Serial.printf("[BLE] New passkey: %d\n", passkey);
+    Serial.printf("[AtollBle] New passkey: %d\n", passkey);
     /* TODO deinit() does not return
     stop();
     setup(deviceName, preferences);
     */
 }
 
-void BLE::loadSettings() {
+void Ble::loadSettings() {
     if (!preferencesStartLoad()) return;
     secureApi = preferences->getBool("secureApi", secureApi);
     passkey = (uint32_t)preferences->getInt("passkey", passkey);
     preferencesEnd();
 }
 
-void BLE::saveSettings() {
+void Ble::saveSettings() {
     if (!preferencesStartSave()) return;
     preferences->putBool("secureApi", secureApi);
     preferences->putInt("passkey", (int32_t)passkey);
     preferencesEnd();
 }
 
-void BLE::printSettings() {
-    Serial.printf("[BLE] SecureAPI: %s\n", secureApi ? "Yes" : "No");
-    Serial.printf("[BLE] Passkey: %d\n", passkey);
+void Ble::printSettings() {
+    Serial.printf("[AtollBle] SecureAPI: %s\n", secureApi ? "Yes" : "No");
+    Serial.printf("[AtollBle] Passkey: %d\n", passkey);
 }

@@ -1,15 +1,17 @@
-#ifndef __hasPreferences_h
-#define __hasPreferences_h
+#ifndef __atoll_preferences_h
+#define __atoll_preferences_h
 
 #include <Arduino.h>
 #include <Preferences.h>
 
-class HasPreferences {
+namespace Atoll {
+
+class Preferences {
    public:
-    Preferences *preferences;
+    ::Preferences *preferences;
     const char *preferencesNS;
 
-    void preferencesSetup(Preferences *p, const char *ns) {
+    void preferencesSetup(::Preferences *p, const char *ns) {
         if (strlen(ns) < 1) log_e("%s %s Error: empty namespace\n", __FILE__, __LINE__);
         preferences = p;
         preferencesNS = ns;
@@ -39,5 +41,7 @@ class HasPreferences {
         preferences->end();
     }
 };
+
+}  // namespace Atoll
 
 #endif

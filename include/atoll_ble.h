@@ -1,13 +1,13 @@
-#ifndef __ble_h
-#define __ble_h
+#ifndef __atoll_ble_h
+#define __atoll_ble_h
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 #include <CircularBuffer.h>
 
-#include "ble_constants.h"
-#include "task.h"
-#include "haspreferences.h"
+#include "atoll_ble_constants.h"
+#include "atoll_task.h"
+#include "atoll_preferences.h"
 
 #ifndef BLE_CHAR_VALUE_MAXLENGTH
 #define BLE_CHAR_VALUE_MAXLENGTH 128
@@ -18,15 +18,17 @@
 #endif
 
 #ifndef HOSTNAME
-#define HOSTNAME "libAtollBle"
+#define HOSTNAME "libAtollBle_unnamed"
 #endif
 
 #ifndef BLE_APPEARANCE
 #define BLE_APPEARANCE APPEARANCE_CYCLING_POWER_SENSOR
 #endif
 
-class BLE : public Task,
-            public HasPreferences,
+namespace Atoll {
+
+class Ble : public Task,
+            public Preferences,
             // public BLEClientCallbacks,
             public BLEServerCallbacks,
             public BLECharacteristicCallbacks {
@@ -52,10 +54,10 @@ class BLE : public Task,
     bool secureApi = false;     // whether to use LESC for API service
     uint32_t passkey = 696669;  // passkey for API service, max 6 digits
 
-    BLE() {}
-    virtual ~BLE();
+    Ble() {}
+    virtual ~Ble();
 
-    void setup(const char *deviceName, Preferences *p);
+    virtual void setup(const char *deviceName, ::Preferences *p);
     void loop();
     void startServices();
     void startDiService();
@@ -86,4 +88,5 @@ class BLE : public Task,
     CircularBuffer<uint16_t, 32> _clients;  // keeps track of connected client handles, in order to gracefully disconnect them before deep sleep or reboot; TODO add has() to CircularBuffer
 };
 
+}  // namespace Atoll
 #endif
