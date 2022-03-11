@@ -32,46 +32,21 @@ class Touch : public Task {
    public:
     static struct TouchPad pads[ATOLL_TOUCH_NUM_PADS];
 
-    Touch(int pin0 = -1, int pin1 = -1, int pin2 = -1, int pin3 = -1) {
+    Touch(int pin0 = -1,
+          int pin1 = -1,
+          int pin2 = -1,
+          int pin3 = -1) {
         pads[0].pin = pin0;
         pads[1].pin = pin1;
         pads[2].pin = pin2;
         pads[3].pin = pin3;
     }
 
-    void setup() {
+    virtual void setup() {
         attachInterrupts();
     }
 
-   protected:
-    void loop() {
-        static ulong lastT = 0;
-        ulong t = millis();
-        for (int i = 0; i < ATOLL_TOUCH_NUM_PADS; i++) {
-            if (!pads[i].isTouched) continue;
-            if (pads[i].lastTouched < lastT) {
-                pads[i].isTouched = false;
-                pads[i].wasTouched = false;
-            }
-            if (pads[i].isTouched) {
-                if (!pads[i].wasTouched) {
-                    fireEvent(i, ATOLL_TOUCH_START);
-                    pads[i].wasTouched = true;
-                    continue;
-                }
-                fireEvent(i, ATOLL_TOUCH_TOUCHING);
-                continue;
-            }
-            fireEvent(i, ATOLL_TOUCH_END);
-        }
-        lastT = t;
-    }
-
-    void fireEvent(uint8_t index, uint8_t event) {
-        Serial.printf("[Touch %d] %s\n", index, eventName(event));
-    }
-
-    const char *eventName(uint8_t event) {
+    static const char *eventName(uint8_t event) {
         switch (event) {
             case ATOLL_TOUCH_START:
                 return "start";
@@ -83,7 +58,35 @@ class Touch : public Task {
         return "unknown";
     }
 
-    void attachInterrupts() {
+   protected:
+    virtual void loop() {
+        static ulong lastT = 0;
+        ulong t = millis();
+        for (int i = 0; i < ATOLL_TOUCH_NUM_PADS; i++) {
+            if (!pads[i].isTouched) continue;
+            if (pads[i].lastTouched < lastT) {
+                pads[i].isTouched = false;
+                pads[i].wasTouched = false;
+            }
+            if (pads[i].isTouched) {
+                if (!pads[i].wasTouched) {
+                    onEvent(i, ATOLL_TOUCH_START);
+                    pads[i].wasTouched = true;
+                    continue;
+                }
+                onEvent(i, ATOLL_TOUCH_TOUCHING);
+                continue;
+            }
+            onEvent(i, ATOLL_TOUCH_END);
+        }
+        lastT = t;
+    }
+
+    virtual void onEvent(uint8_t index, uint8_t event) {
+        Serial.printf("[Touch %d] %s\n", index, eventName(event));
+    }
+
+    virtual void attachInterrupts() {
 #if 0 < ATOLL_TOUCH_NUM_PADS
         attachInterrupt(0, touchISR0);
 #endif
@@ -98,12 +101,12 @@ class Touch : public Task {
 #endif
     }
 
-    void attachInterrupt(uint8_t index, void (*ISR)()) {
+    virtual void attachInterrupt(uint8_t index, void (*ISR)()) {
         if (pads[index].pin < 0) return;
         touchAttachInterrupt(pads[index].pin, ISR, pads[index].threshold);
     }
 
-    uint16_t read(uint8_t index) {
+    virtual uint16_t read(uint8_t index) {
         return touchRead(pads[index].pin);
     }
 };
