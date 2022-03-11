@@ -6,7 +6,8 @@
 #include "atoll_task.h"
 
 namespace Atoll {
-struct TouchPad : public Task {
+
+struct TouchPad {
     int pin = -1;
     uint16_t threshold = 42;
     bool isTouched = false;
@@ -17,6 +18,10 @@ struct TouchPad : public Task {
 #ifndef ATOLL_TOUCH_NUM_PADS
 #define ATOLL_TOUCH_NUM_PADS 4
 #endif
+
+#define ATOLL_TOUCH_START 0
+#define ATOLL_TOUCH_TOUCHING 1
+#define ATOLL_TOUCH_END 2
 
 extern void IRAM_ATTR touchISR0();
 extern void IRAM_ATTR touchISR1();
@@ -50,16 +55,32 @@ class Touch : public Task {
             }
             if (pads[i].isTouched) {
                 if (!pads[i].wasTouched) {
-                    Serial.printf("[Touch %d] start\n", i);
+                    fireEvent(i, ATOLL_TOUCH_START);
                     pads[i].wasTouched = true;
                     continue;
                 }
-                Serial.printf("[Touch %d] touching\n", i);
+                fireEvent(i, ATOLL_TOUCH_TOUCHING);
                 continue;
             }
-            Serial.printf("[Touch %d] end\n", i);
+            fireEvent(i, ATOLL_TOUCH_END);
         }
         lastT = t;
+    }
+
+    void fireEvent(uint8_t index, uint8_t event) {
+        Serial.printf("[Touch %d] %s\n", index, eventName(event));
+    }
+
+    const char *eventName(uint8_t event) {
+        switch (event) {
+            case ATOLL_TOUCH_START:
+                return "start";
+            case ATOLL_TOUCH_TOUCHING:
+                return "touching";
+            case ATOLL_TOUCH_END:
+                return "end";
+        }
+        return "unknown";
     }
 
     void attachInterrupts() {
