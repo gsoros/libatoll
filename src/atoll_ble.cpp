@@ -185,13 +185,7 @@ void Ble::onRead(BLECharacteristic *c) {
 };
 
 void Ble::onWrite(BLECharacteristic *c) {
-    char value[BLE_CHAR_VALUE_MAXLENGTH] = "";
-    strncpy(value, c->getValue().c_str(), sizeof(value));
-    Serial.printf("[AtollBle] %s: onWrite(), value: %s\n",
-                  characteristicStr(c),
-                  value);
-    // if (c->getHandle() == apiRxChar->getHandle())
-    //  TODO   handleApiCommand(value);
+    log_i("char: %s, value: %s\n", characteristicStr(c), c->getValue().c_str());
 };
 
 void Ble::onNotify(BLECharacteristic *pCharacteristic){
