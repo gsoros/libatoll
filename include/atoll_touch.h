@@ -11,11 +11,14 @@ namespace Atoll {
 struct TouchPad {
     int pin = -1;
     uint8_t index = 0;
-    uint16_t threshold = 85;
+    uint16_t threshold = 85;  // touch sensitivity
     volatile bool isTouched = false;
     bool wasTouched = false;
     volatile ulong lastTouched = 0;
     ulong touchStart = 0;
+    uint16_t doubleTouchDelay = 300;  // ms
+    uint16_t longTouchDelay = 800;    // ms
+    ulong lastLongTouch = 0;
 };
 
 #ifndef ATOLL_TOUCH_NUM_PADS
@@ -25,7 +28,9 @@ struct TouchPad {
 enum TouchEvent {
     start,
     touching,
-    end
+    end,
+    doubleTouch,
+    longTouch
 };
 
 extern void IRAM_ATTR touchISR0();
@@ -37,8 +42,6 @@ class Touch : public Task, public Preferences {
    public:
     static struct TouchPad pads[ATOLL_TOUCH_NUM_PADS];
     static const unsigned char numPads;
-    static ::Preferences *preferences;
-    static const char *preferencesNS;
 
     Touch(int pin0 = -1,
           int pin1 = -1,
@@ -69,7 +72,7 @@ class Touch : public Task, public Preferences {
     }
 
     bool anyPadIsTouched() {
-        for (int i = 0; i < numPads; i++)
+        for (uint8_t i = 0; i < numPads; i++)
             if (pads[i].isTouched)
                 return true;
         return false;
@@ -83,6 +86,13 @@ class Touch : public Task, public Preferences {
                 return "touching";
             case end:
                 return "end";
+            case doubleTouch:
+                return "doubleTouch";
+            case longTouch:
+                return "longTouch";
+            default:
+                log_e("%d not handled", event);
+                break;
         }
         return "unknown";
     }
@@ -144,11 +154,14 @@ class Touch : public Task, public Preferences {
     }
 
    protected:
+    static ::Preferences *preferences;
+    static const char *preferencesNS;
+
     virtual void loop() {
         // log_i("%d", read(0));
         static ulong lastT = 0;
         ulong t = millis();
-        for (int i = 0; i < numPads; i++) {
+        for (uint8_t i = 0; i < numPads; i++) {
             if (!pads[i].isTouched) continue;
             // log_i("touched %d", i);
             if (pads[i].lastTouched < lastT) {
@@ -159,19 +172,23 @@ class Touch : public Task, public Preferences {
             if (pads[i].isTouched) {
                 if (!pads[i].wasTouched) {
                     pads[i].touchStart = t;
-                    onEvent(i, TouchEvent::start);
+                    fireEvent(i, TouchEvent::start);
                     pads[i].wasTouched = true;
                     continue;
                 }
-                onEvent(i, TouchEvent::touching);
+                fireEvent(i, TouchEvent::touching);  // do we need to repeatedly fire?
+                if (pads[i].touchStart < t - pads[i].longTouchDelay && pads[i].lastLongTouch < pads[i].touchStart) {
+                    fireEvent(i, TouchEvent::longTouch);
+                    pads[i].lastLongTouch = t;
+                }
                 continue;
             }
-            onEvent(i, TouchEvent::end);
+            fireEvent(i, TouchEvent::end);
         }
         lastT = t;
     }
 
-    virtual void onEvent(uint8_t index, TouchEvent event) {
+    virtual void fireEvent(uint8_t index, TouchEvent event) {
         // log_i("[Touch %d] %s", index, eventName(event));
     }
 
