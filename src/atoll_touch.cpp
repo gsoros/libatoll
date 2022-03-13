@@ -1,9 +1,12 @@
 #include "atoll_touch.h"
+#include "atoll_preferences.h"
 
 using namespace Atoll;
 
 struct TouchPad Touch::pads[ATOLL_TOUCH_NUM_PADS];
 const unsigned char Touch::numPads = ATOLL_TOUCH_NUM_PADS;
+::Preferences *Touch::preferences;
+const char *Touch::preferencesNS;
 
 void IRAM_ATTR Atoll::touchISR0() {
     Atoll::Touch::pads[0].isTouched = true;

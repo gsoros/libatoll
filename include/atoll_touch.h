@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 #include "atoll_task.h"
+#include "atoll_preferences.h"
 
 namespace Atoll {
 
@@ -32,10 +33,12 @@ extern void IRAM_ATTR touchISR1();
 extern void IRAM_ATTR touchISR2();
 extern void IRAM_ATTR touchISR3();
 
-class Touch : public Task {
+class Touch : public Task, public Preferences {
    public:
     static struct TouchPad pads[ATOLL_TOUCH_NUM_PADS];
     static const unsigned char numPads;
+    static ::Preferences *preferences;
+    static const char *preferencesNS;
 
     Touch(int pin0 = -1,
           int pin1 = -1,
@@ -57,7 +60,11 @@ class Touch : public Task {
 #endif
     }
 
-    virtual void setup() {
+    virtual void setup(::Preferences *preferences, const char *preferencesNS) {
+        this->preferences = preferences;
+        this->preferencesNS = preferencesNS;
+        preferencesSetup(preferences, preferencesNS);
+        loadSettings();
         attachInterrupts();
     }
 
@@ -78,6 +85,62 @@ class Touch : public Task {
                 return "end";
         }
         return "unknown";
+    }
+
+    bool loadSettings() {
+        if (!preferencesStartLoad()) return false;
+        for (int i = 0; i < numPads; i++) {
+            char key[8];
+            snprintf(key, sizeof key, "thres%d", i);
+            uint8_t threshold = preferences->getUChar(key, pads[i].threshold);
+            log_i("pad %d threshold %d", i, threshold);
+            pads[i].threshold = threshold;
+        }
+        preferencesEnd();
+        return true;
+    }
+
+    bool saveSettings() {
+        if (!preferencesStartSave()) return false;
+        uint8_t result = 0;
+        for (int i = 0; i < numPads; i++) {
+            char key[8];
+            snprintf(key, sizeof key, "thres%d", i);
+            if (preferences->putUChar(key, pads[i].threshold)) {
+                log_i("pad %d saved threshold %d", i, pads[i].threshold);
+                result++;
+            }
+        }
+        preferencesEnd();
+        return result == numPads;
+    }
+
+    void setPadThreshold(uint8_t index, uint8_t threshold) {
+        if (numPads <= index) {
+            log_e("index out of range: %d", index);
+            return;
+        }
+        if (threshold < 1 || 100 < threshold) {
+            log_e("threshold out of range: %d", threshold);
+            return;
+        }
+        pads[index].threshold = threshold;
+        switch (index) {
+            case 0:
+                attachInterrupt(index, touchISR0);
+                break;
+            case 1:
+                attachInterrupt(index, touchISR1);
+                break;
+            case 2:
+                attachInterrupt(index, touchISR2);
+                break;
+            case 3:
+                attachInterrupt(index, touchISR3);
+                break;
+            default:
+                break;
+        }
     }
 
    protected:

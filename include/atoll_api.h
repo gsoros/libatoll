@@ -59,7 +59,8 @@ class ApiCommand {
 
     ApiResult *call(const char *arg, char *reply, char *value) {
         ApiResult *result = processor(arg, reply, value);
-        log_i("%d:%s=%s => %s (%s)", code, name, arg, reply, value);
+        log_i("command(%d:%s)=arg(%s) ===> result(%d:%s) reply(%s) value(%s)",
+              code, name, arg, result->code, result->name, reply, value);
         return result;
     };
 };

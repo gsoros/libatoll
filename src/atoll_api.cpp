@@ -16,7 +16,8 @@ void Api::setup() {
     addResult(ApiResult(3, "commandMissing"));
     addResult(ApiResult(4, "unknownCommand"));
     addResult(ApiResult(5, "commandTooLong"));
-    addResult(ApiResult(6, "argTooLong"));
+    addResult(ApiResult(6, "argInvalid"));
+    addResult(ApiResult(7, "argTooLong"));
 
     addCommand(ApiCommand(
         1,
