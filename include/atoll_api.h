@@ -41,15 +41,17 @@ class ApiResult {
     }
 };
 
+typedef ApiResult *(*ApiProcessor)(const char *str, char *reply, char *value);
+
 class ApiCommand {
    public:
     uint8_t code;
     char name[ATOLL_API_COMMAND_NAME_LENGTH];
-    ApiResult *(*processor)(const char *str, char *reply, char *value);
+    ApiProcessor processor;
 
     ApiCommand(uint8_t code = 0,
                const char *name = "",
-               ApiResult *(*processor)(const char *str, char *reply, char *value) = nullptr) {
+               ApiProcessor processor = nullptr) {
         this->code = code;
         strncpy(this->name, name, sizeof(this->name));
         this->processor = processor;
@@ -69,8 +71,8 @@ class Api {
     static bool addResult(ApiResult result);
     static ApiResult *process(const char *commandWithArg, char *reply, char *value);
 
-    static ApiResult *result(uint8_t code);
-    static ApiResult *result(const char *name);
+    static ApiResult *result(uint8_t code, bool logOnError = true);
+    static ApiResult *result(const char *name, bool logOnError = true);
     static ApiResult *success();
     static ApiResult *error();
 
@@ -83,8 +85,8 @@ class Api {
     static ApiResult results[ATOLL_API_MAX_RESULTS];
     static uint8_t numResults;
 
-    static ApiCommand *command(uint8_t code);
-    static ApiCommand *command(const char *name);
+    static ApiCommand *command(uint8_t code, bool logOnError = true);
+    static ApiCommand *command(const char *name, bool logOnError = true);
 
     static ApiResult *hostname(const char *arg, char *reply, char *value);
     static ApiResult *build(const char *arg, char *reply, char *value);

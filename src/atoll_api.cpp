@@ -33,7 +33,7 @@ bool Api::addCommand(ApiCommand newCommand) {
         log_e("no slot left for '%s'", newCommand.name);
         return false;
     }
-    if (nullptr != command(newCommand.name) || nullptr != command(newCommand.code)) {
+    if (nullptr != command(newCommand.name, false) || nullptr != command(newCommand.code, false)) {
         log_e("'%s' (%d) already exists", newCommand.name, newCommand.code);
         return false;
     }
@@ -47,7 +47,7 @@ bool Api::addResult(ApiResult newResult) {
         log_e("no slot left for '%s'", newResult.name);
         return false;
     }
-    if (nullptr != result(newResult.name) || nullptr != result(newResult.code)) {
+    if (nullptr != result(newResult.name, false) || nullptr != result(newResult.code, false)) {
         log_e("'%s' (%d) already exists", newResult.name, newResult.code);
         return false;
     }
@@ -56,35 +56,35 @@ bool Api::addResult(ApiResult newResult) {
     return true;
 }
 
-ApiCommand *Api::command(uint8_t code) {
+ApiCommand *Api::command(uint8_t code, bool logOnError) {
     if (code < 1) return nullptr;
     for (int i = 0; i < numCommands; i++)
         if (commands[i].code == code) return &commands[i];
-    log_e("no command with code %d", code);
+    if (logOnError) log_e("no command with code %d", code);
     return nullptr;
 }
 
-ApiCommand *Api::command(const char *name) {
+ApiCommand *Api::command(const char *name, bool logOnError) {
     if (strlen(name) < 1) return nullptr;
     for (int i = 0; i < numCommands; i++)
         if (0 == strcmp(commands[i].name, name)) return &commands[i];
-    log_e("no command with name '%s'", name);
+    if (logOnError) log_e("no command with name '%s'", name);
     return nullptr;
 }
 
-ApiResult *Api::result(uint8_t code) {
+ApiResult *Api::result(uint8_t code, bool logOnError) {
     if (code < 1) return nullptr;
     for (int i = 0; i < numResults; i++)
         if (results[i].code == code) return &results[i];
-    log_e("no result with code %d", code);
+    if (logOnError) log_e("no result with code %d", code);
     return nullptr;
 }
 
-ApiResult *Api::result(const char *name) {
+ApiResult *Api::result(const char *name, bool logOnError) {
     if (strlen(name) < 1) return nullptr;
     for (int i = 0; i < numResults; i++)
         if (0 == strcmp(results[i].name, name)) return &results[i];
-    log_e("no result with name '%s'", name);
+    if (logOnError) log_e("no result with name '%s'", name);
     return nullptr;
 }
 
@@ -151,7 +151,10 @@ ApiResult *Api::process(const char *commandWithArg, char *reply, char *value) {
     // prepend the result code
     char replyTmp[replyLength];
     strncpy(replyTmp, reply, replyLength);
-    snprintf(reply, replyLength, "%d;%s", r->code, replyTmp);
+    if (r->code == success()->code)  // in case of succes we only return "1;..."
+        snprintf(reply, replyLength, "%d;%s", r->code, replyTmp);
+    else  // in case of an error, we also supply the error name: "code:name;..."
+        snprintf(reply, replyLength, "%d:%s;%s", r->code, r->name, replyTmp);
     return r;
 }
 

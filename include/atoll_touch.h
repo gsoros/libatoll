@@ -9,19 +9,23 @@ namespace Atoll {
 
 struct TouchPad {
     int pin = -1;
-    uint16_t threshold = 42;
-    bool isTouched = false;
+    uint8_t index = 0;
+    uint16_t threshold = 85;
+    volatile bool isTouched = false;
     bool wasTouched = false;
-    ulong lastTouched = 0;
+    volatile ulong lastTouched = 0;
+    ulong touchStart = 0;
 };
 
 #ifndef ATOLL_TOUCH_NUM_PADS
 #define ATOLL_TOUCH_NUM_PADS 4
 #endif
 
-#define ATOLL_TOUCH_START 0
-#define ATOLL_TOUCH_TOUCHING 1
-#define ATOLL_TOUCH_END 2
+enum TouchEvent {
+    start,
+    touching,
+    end
+};
 
 extern void IRAM_ATTR touchISR0();
 extern void IRAM_ATTR touchISR1();
@@ -31,28 +35,46 @@ extern void IRAM_ATTR touchISR3();
 class Touch : public Task {
    public:
     static struct TouchPad pads[ATOLL_TOUCH_NUM_PADS];
+    static const unsigned char numPads;
 
     Touch(int pin0 = -1,
           int pin1 = -1,
           int pin2 = -1,
           int pin3 = -1) {
+        pads[0].index = 0;
         pads[0].pin = pin0;
+#if 1 < ATOLL_TOUCH_NUM_PADS
+        pads[1].index = 1;
         pads[1].pin = pin1;
+#endif
+#if 2 < ATOLL_TOUCH_NUM_PADS
+        pads[2].index = 2;
         pads[2].pin = pin2;
+#endif
+#if 3 < ATOLL_TOUCH_NUM_PADS
+        pads[3].index = 3;
         pads[3].pin = pin3;
+#endif
     }
 
     virtual void setup() {
         attachInterrupts();
     }
 
-    static const char *eventName(uint8_t event) {
+    bool anyPadIsTouched() {
+        for (int i = 0; i < numPads; i++)
+            if (pads[i].isTouched)
+                return true;
+        return false;
+    }
+
+    static const char *eventName(TouchEvent event) {
         switch (event) {
-            case ATOLL_TOUCH_START:
+            case start:
                 return "start";
-            case ATOLL_TOUCH_TOUCHING:
+            case touching:
                 return "touching";
-            case ATOLL_TOUCH_END:
+            case end:
                 return "end";
         }
         return "unknown";
@@ -60,30 +82,34 @@ class Touch : public Task {
 
    protected:
     virtual void loop() {
+        // log_i("%d", read(0));
         static ulong lastT = 0;
         ulong t = millis();
-        for (int i = 0; i < ATOLL_TOUCH_NUM_PADS; i++) {
+        for (int i = 0; i < numPads; i++) {
             if (!pads[i].isTouched) continue;
+            // log_i("touched %d", i);
             if (pads[i].lastTouched < lastT) {
                 pads[i].isTouched = false;
                 pads[i].wasTouched = false;
+                pads[i].touchStart = 0;
             }
             if (pads[i].isTouched) {
                 if (!pads[i].wasTouched) {
-                    onEvent(i, ATOLL_TOUCH_START);
+                    pads[i].touchStart = t;
+                    onEvent(i, TouchEvent::start);
                     pads[i].wasTouched = true;
                     continue;
                 }
-                onEvent(i, ATOLL_TOUCH_TOUCHING);
+                onEvent(i, TouchEvent::touching);
                 continue;
             }
-            onEvent(i, ATOLL_TOUCH_END);
+            onEvent(i, TouchEvent::end);
         }
         lastT = t;
     }
 
-    virtual void onEvent(uint8_t index, uint8_t event) {
-        Serial.printf("[Touch %d] %s\n", index, eventName(event));
+    virtual void onEvent(uint8_t index, TouchEvent event) {
+        // log_i("[Touch %d] %s", index, eventName(event));
     }
 
     virtual void attachInterrupts() {
@@ -103,6 +129,7 @@ class Touch : public Task {
 
     virtual void attachInterrupt(uint8_t index, void (*ISR)()) {
         if (pads[index].pin < 0) return;
+        // log_i("%d %d", index, pads[index].pin);
         touchAttachInterrupt(pads[index].pin, ISR, pads[index].threshold);
     }
 
