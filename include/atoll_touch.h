@@ -72,7 +72,7 @@ class Touch : public Task, public Preferences {
         attachInterrupts();
     }
 
-    bool padIsTouched(Pad *pad) {
+    bool padIsTouched(TouchPad *pad) {
         return millis() - pad->last < touchTime;
     }
 
