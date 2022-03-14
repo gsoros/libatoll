@@ -9,18 +9,14 @@ const unsigned char Touch::numPads = ATOLL_TOUCH_NUM_PADS;
 const char *Touch::preferencesNS;
 
 void IRAM_ATTR Atoll::touchISR0() {
-    Atoll::Touch::pads[0].isTouched = true;
-    Atoll::Touch::pads[0].lastTouched = millis();
+    Atoll::Touch::pads[0].last = millis();
 }
 void IRAM_ATTR Atoll::touchISR1() {
-    Atoll::Touch::pads[1].isTouched = true;
-    Atoll::Touch::pads[1].lastTouched = millis();
+    Atoll::Touch::pads[1].last = millis();
 }
 void IRAM_ATTR Atoll::touchISR2() {
-    Atoll::Touch::pads[2].isTouched = true;
-    Atoll::Touch::pads[2].lastTouched = millis();
+    Atoll::Touch::pads[2].last = millis();
 }
 void IRAM_ATTR Atoll::touchISR3() {
-    Atoll::Touch::pads[3].isTouched = true;
-    Atoll::Touch::pads[3].lastTouched = millis();
+    Atoll::Touch::pads[3].last = millis();
 }

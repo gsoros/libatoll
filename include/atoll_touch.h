@@ -12,13 +12,10 @@ struct TouchPad {
     int pin = -1;
     uint8_t index = 0;
     uint16_t threshold = 85;  // touch sensitivity
-    volatile bool isTouched = false;
-    bool wasTouched = false;
-    volatile ulong lastTouched = 0;
-    ulong touchStart = 0;
-    uint16_t doubleTouchDelay = 300;  // ms
-    uint16_t longTouchDelay = 800;    // ms
-    ulong lastLongTouch = 0;
+    volatile ulong last = 0;
+    ulong start = 0;
+    ulong end = 0;
+    ulong longTouch = 0;
 };
 
 #ifndef ATOLL_TOUCH_NUM_PADS
@@ -42,6 +39,10 @@ class Touch : public Task, public Preferences {
    public:
     static struct TouchPad pads[ATOLL_TOUCH_NUM_PADS];
     static const unsigned char numPads;
+
+    static const uint16_t touchTime = 100;        // ms
+    static const uint16_t doubleTouchTime = 300;  // ms
+    static const uint16_t longTouchTime = 800;    // ms
 
     Touch(int pin0 = -1,
           int pin1 = -1,
@@ -73,7 +74,7 @@ class Touch : public Task, public Preferences {
 
     bool anyPadIsTouched() {
         for (uint8_t i = 0; i < numPads; i++)
-            if (pads[i].isTouched)
+            if (pads[i].last != 0)
                 return true;
         return false;
     }
@@ -84,12 +85,12 @@ class Touch : public Task, public Preferences {
                 return "start";
             case touching:
                 return "touching";
-            case end:
-                return "end";
             case doubleTouch:
                 return "doubleTouch";
             case longTouch:
                 return "longTouch";
+            case end:
+                return "end";
             default:
                 log_e("%d not handled", event);
                 break;
@@ -159,37 +160,40 @@ class Touch : public Task, public Preferences {
 
     virtual void loop() {
         // log_i("%d", read(0));
-        static ulong lastT = 0;
+        // return;
         ulong t = millis();
         for (uint8_t i = 0; i < numPads; i++) {
-            if (!pads[i].isTouched) continue;
-            // log_i("touched %d", i);
-            if (pads[i].lastTouched < lastT) {
-                pads[i].isTouched = false;
-                pads[i].wasTouched = false;
-                pads[i].touchStart = 0;
-            }
-            if (pads[i].isTouched) {
-                if (!pads[i].wasTouched) {
-                    pads[i].touchStart = t;
-                    fireEvent(i, TouchEvent::start);
-                    pads[i].wasTouched = true;
-                    continue;
-                }
-                fireEvent(i, TouchEvent::touching);  // do we need to repeatedly fire?
-                if (pads[i].touchStart < t - pads[i].longTouchDelay && pads[i].lastLongTouch < pads[i].touchStart) {
-                    fireEvent(i, TouchEvent::longTouch);
-                    pads[i].lastLongTouch = t;
+            TouchPad *p = &pads[i];
+            if (p->last < t - touchTime) {  // not touched recently
+                if (p->start != 0 &&
+                    p->start < t - touchTime) {
+                    p->start = 0;
+                    p->end = t;
+                    fireEvent(i, TouchEvent::end);
                 }
                 continue;
             }
-            fireEvent(i, TouchEvent::end);
+            if (p->start == 0) {
+                if (t - p->end < doubleTouchTime) {
+                    p->end = 0;
+                    fireEvent(i, TouchEvent::doubleTouch);
+                    continue;
+                }
+                p->start = t;
+                fireEvent(i, TouchEvent::start);
+                continue;
+            }
+            fireEvent(i, TouchEvent::touching);
+            if (p->start < t - longTouchTime &&
+                p->longTouch < p->start) {
+                p->longTouch = t;
+                fireEvent(i, TouchEvent::longTouch);
+            }
         }
-        lastT = t;
     }
 
     virtual void fireEvent(uint8_t index, TouchEvent event) {
-        // log_i("[Touch %d] %s", index, eventName(event));
+        // log_i("%d %s", index, eventName(event));
     }
 
     virtual void attachInterrupts() {
