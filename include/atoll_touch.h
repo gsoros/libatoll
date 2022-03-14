@@ -72,9 +72,14 @@ class Touch : public Task, public Preferences {
         attachInterrupts();
     }
 
+    bool padIsTouched(Pad *pad) {
+        return millis() - pad->last < touchTime;
+    }
+
     bool anyPadIsTouched() {
+        ulong t = millis();
         for (uint8_t i = 0; i < numPads; i++)
-            if (pads[i].last != 0)
+            if (t - pads[i].last < touchTime)
                 return true;
         return false;
     }
