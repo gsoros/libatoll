@@ -3,8 +3,9 @@
 
 using namespace Atoll;
 
-struct TouchPad Touch::pads[ATOLL_TOUCH_NUM_PADS];
+struct Touch::Pad Touch::pads[ATOLL_TOUCH_NUM_PADS];
 const unsigned char Touch::numPads = ATOLL_TOUCH_NUM_PADS;
+
 ::Preferences *Touch::preferences;
 const char *Touch::preferencesNS;
 

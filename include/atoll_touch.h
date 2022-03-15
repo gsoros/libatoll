@@ -6,29 +6,11 @@
 #include "atoll_task.h"
 #include "atoll_preferences.h"
 
-namespace Atoll {
-
-struct TouchPad {
-    int pin = -1;
-    uint8_t index = 0;
-    uint16_t threshold = 85;  // touch sensitivity
-    volatile ulong last = 0;
-    ulong start = 0;
-    ulong end = 0;
-    ulong longTouch = 0;
-};
-
 #ifndef ATOLL_TOUCH_NUM_PADS
 #define ATOLL_TOUCH_NUM_PADS 4
 #endif
 
-enum TouchEvent {
-    start,
-    touching,
-    end,
-    doubleTouch,
-    longTouch
-};
+namespace Atoll {
 
 extern void IRAM_ATTR touchISR0();
 extern void IRAM_ATTR touchISR1();
@@ -37,8 +19,26 @@ extern void IRAM_ATTR touchISR3();
 
 class Touch : public Task, public Preferences {
    public:
-    static struct TouchPad pads[ATOLL_TOUCH_NUM_PADS];
+    struct Pad {
+        int pin = -1;
+        uint8_t index = 0;
+        uint16_t threshold = 85;  // touch sensitivity
+        volatile ulong last = 0;
+        ulong start = 0;
+        ulong end = 0;
+        ulong longTouch = 0;
+    };
+
+    static struct Pad pads[ATOLL_TOUCH_NUM_PADS];
     static const unsigned char numPads;
+
+    enum Event {
+        start,
+        touching,
+        end,
+        doubleTouch,
+        longTouch
+    };
 
     static const uint16_t touchTime = 100;        // ms
     static const uint16_t doubleTouchTime = 300;  // ms
@@ -72,7 +72,7 @@ class Touch : public Task, public Preferences {
         attachInterrupts();
     }
 
-    bool padIsTouched(TouchPad *pad) {
+    bool padIsTouched(Pad *pad) {
         return millis() - pad->last < touchTime;
     }
 
@@ -84,7 +84,7 @@ class Touch : public Task, public Preferences {
         return false;
     }
 
-    static const char *eventName(TouchEvent event) {
+    static const char *eventName(Event event) {
         switch (event) {
             case start:
                 return "start";
@@ -168,36 +168,38 @@ class Touch : public Task, public Preferences {
         // return;
         ulong t = millis();
         for (uint8_t i = 0; i < numPads; i++) {
-            TouchPad *p = &pads[i];
+            Pad *p = &pads[i];
             if (p->last < t - touchTime) {  // not touched recently
                 if (p->start != 0 &&
                     p->start < t - touchTime) {
                     p->start = 0;
                     p->end = t;
-                    fireEvent(i, TouchEvent::end);
+                    if (0 == p->longTouch)  // don't fire end after longTouch
+                        fireEvent(i, Event::end);
+                    p->longTouch = 0;
                 }
                 continue;
             }
             if (p->start == 0) {
                 if (t - p->end < doubleTouchTime) {
                     p->end = 0;
-                    fireEvent(i, TouchEvent::doubleTouch);
+                    fireEvent(i, Event::doubleTouch);
                     continue;
                 }
                 p->start = t;
-                fireEvent(i, TouchEvent::start);
+                fireEvent(i, Event::start);
                 continue;
             }
-            fireEvent(i, TouchEvent::touching);
+            fireEvent(i, Event::touching);
             if (p->start < t - longTouchTime &&
                 p->longTouch < p->start) {
                 p->longTouch = t;
-                fireEvent(i, TouchEvent::longTouch);
+                fireEvent(i, Event::longTouch);
             }
         }
     }
 
-    virtual void fireEvent(uint8_t index, TouchEvent event) {
+    virtual void fireEvent(uint8_t index, Event event) {
         // log_i("%d %s", index, eventName(event));
     }
 
