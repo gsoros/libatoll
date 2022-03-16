@@ -18,15 +18,16 @@ void Api::setup() {
     addResult(ApiResult(5, "commandTooLong"));
     addResult(ApiResult(6, "argInvalid"));
     addResult(ApiResult(7, "argTooLong"));
+    addResult(ApiResult(8, "internalError"));
 
     addCommand(ApiCommand(
         1,
         "hostname",
-        Atoll::Api::hostname));
+        Atoll::Api::hostnameProcessor));
     addCommand(ApiCommand(
         2,
         "build",
-        Atoll::Api::build));
+        Atoll::Api::buildProcessor));
 }
 
 bool Api::addCommand(ApiCommand newCommand) {
@@ -34,9 +35,19 @@ bool Api::addCommand(ApiCommand newCommand) {
         log_e("no slot left for '%s'", newCommand.name);
         return false;
     }
-    if (nullptr != command(newCommand.name, false) || nullptr != command(newCommand.code, false)) {
-        log_e("'%s' (%d) already exists", newCommand.name, newCommand.code);
-        return false;
+    ApiCommand *byCode = command(newCommand.code, false);
+    ApiCommand *byName = command(newCommand.name, false);
+    if (nullptr != byCode || nullptr != byName) {
+        if (byCode != byName) {
+            log_e("%d:%s already exists", newCommand.name, newCommand.code);
+            return false;
+        }
+        for (uint8_t i = 0; i < numCommands; i++)
+            if (commands[i].code == byCode->code && commands[i].name == byCode->name) {
+                log_i("Warning: replacing command %d:%s", byCode->code, byCode->name);
+                commands[i] = newCommand;
+                return true;
+            }
     }
     commands[numCommands] = newCommand;
     numCommands++;
@@ -44,7 +55,7 @@ bool Api::addCommand(ApiCommand newCommand) {
 }
 
 bool Api::addResult(ApiResult newResult) {
-    if (ATOLL_API_MAX_RESULTS <= numCommands) {
+    if (ATOLL_API_MAX_RESULTS <= numResults) {
         log_e("no slot left for '%s'", newResult.name);
         return false;
     }
@@ -60,7 +71,8 @@ bool Api::addResult(ApiResult newResult) {
 ApiCommand *Api::command(uint8_t code, bool logOnError) {
     if (code < 1) return nullptr;
     for (int i = 0; i < numCommands; i++)
-        if (commands[i].code == code) return &commands[i];
+        if (commands[i].code == code)
+            return &commands[i];
     if (logOnError) log_e("no command with code %d", code);
     return nullptr;
 }
@@ -68,7 +80,8 @@ ApiCommand *Api::command(uint8_t code, bool logOnError) {
 ApiCommand *Api::command(const char *name, bool logOnError) {
     if (strlen(name) < 1) return nullptr;
     for (int i = 0; i < numCommands; i++)
-        if (0 == strcmp(commands[i].name, name)) return &commands[i];
+        if (0 == strcmp(commands[i].name, name))
+            return &commands[i];
     if (logOnError) log_e("no command with name '%s'", name);
     return nullptr;
 }
@@ -76,7 +89,8 @@ ApiCommand *Api::command(const char *name, bool logOnError) {
 ApiResult *Api::result(uint8_t code, bool logOnError) {
     if (code < 1) return nullptr;
     for (int i = 0; i < numResults; i++)
-        if (results[i].code == code) return &results[i];
+        if (results[i].code == code)
+            return &results[i];
     if (logOnError) log_e("no result with code %d", code);
     return nullptr;
 }
@@ -84,7 +98,8 @@ ApiResult *Api::result(uint8_t code, bool logOnError) {
 ApiResult *Api::result(const char *name, bool logOnError) {
     if (strlen(name) < 1) return nullptr;
     for (int i = 0; i < numResults; i++)
-        if (0 == strcmp(results[i].name, name)) return &results[i];
+        if (0 == strcmp(results[i].name, name))
+            return &results[i];
     if (logOnError) log_e("no result with name '%s'", name);
     return nullptr;
 }
@@ -98,26 +113,23 @@ ApiResult *Api::error() {
 }
 
 // Command format: commandCode|commandStr[=[arg]];
-// Reply format: replyCode;[commandCode|commandStr[=value]]
-ApiResult *Api::process(const char *commandWithArg, char *reply, char *value) {
+// Reply format: resultCode[:resultName];[commandCode[=value]]
+ApiReply Api::process(const char *commandWithArg) {
     log_i("Processing command %s\n", commandWithArg);
-    Atoll::ApiResult *r;
+    Atoll::ApiReply reply;
     char commandStr[ATOLL_API_COMMAND_NAME_LENGTH] = "";
-    char arg[replyLength] = "";
     int commandWithArgLength = strlen(commandWithArg);
     char *eqSign = strstr(commandWithArg, "=");
     int commandEnd = eqSign ? eqSign - commandWithArg : commandWithArgLength;
     if (commandEnd < 1) {
         log_e("missing command: %s", commandWithArg);
-        r = result("commandMissing");
-        snprintf(reply, replyLength, "%d;%s", r->code, commandWithArg);
-        return r;
+        reply.result = result("commandMissing");
+        return reply;
     }
-    if (ATOLL_API_COMMAND_NAME_LENGTH < commandEnd) {
+    if (sizeof(commandStr) < commandEnd) {
         log_e("command too long: %s", commandWithArg);
-        r = result("commandTooLong");
-        snprintf(reply, replyLength, "%d;%s", r->code, commandWithArg);
-        return r;
+        reply.result = result("commandTooLong");
+        return reply;
     }
     strncpy(commandStr, commandWithArg, commandEnd);
 
@@ -126,61 +138,35 @@ ApiResult *Api::process(const char *commandWithArg, char *reply, char *value) {
         log_i("argLength=%d", argLength);
         if (ATOLL_API_ARG_LENGTH < argLength) {
             log_e("arg too long: %s", commandWithArg);
-            r = result("argTooLong");
-            snprintf(reply, replyLength, "%d;%s", r->code, commandWithArg);
-            return r;
+            reply.result = result("argTooLong");
+            return reply;
         }
-        strncpy(arg, eqSign + 1, argLength);
+        strncpy(reply.arg, eqSign + 1, sizeof(reply.arg));
     }
-
-    log_i("commandStr=%s arg=%s", commandStr, arg);
+    log_i("commandStr=%s arg=%s", commandStr, reply.arg);
 
     ApiCommand *c = command(commandStr);
     if (nullptr == c) {
-        r = result("unknownCommand");
-        snprintf(reply, replyLength, "%d;%s", r->code, commandWithArg);
-        return r;
+        reply.result = result("unknownCommand");
+        return reply;
     }
+    reply.commandCode = c->code;
 
-    // by default echo back the commandCode= so clients can
-    // verify that this is a response to the correct command
-    snprintf(reply, replyLength, "%d=", c->code);
+    // call the command's processor, it will set reply.result, reply text and reply.value
+    c->call(&reply);
 
-    // call the command's processor
-    r = c->call(arg, reply, value);
-
-    // prepend the result code
-    char replyTmp[replyLength];
-    strncpy(replyTmp, reply, replyLength);
-    if (r->code == success()->code)  // in case of succes we only return "1;..."
-        snprintf(reply, replyLength, "%d;%s", r->code, replyTmp);
-    else  // in case of an error, we also supply the error name: "code:name;..."
-        snprintf(reply, replyLength, "%d:%s;%s", r->code, r->name, replyTmp);
-    return r;
+    return reply;
 }
 
-ApiResult *Api::hostname(const char *arg, char *reply, char *value) {
+ApiResult *Api::hostnameProcessor(ApiReply *reply) {
     // set hostname
     // ...
     // get hostname
-    const char *hostname = "libAtollApiHost";
-    // reply already contains "commandcode=", we append our hostname
-    char replyTmp[replyLength];
-    strncpy(replyTmp, reply, replyLength);
-    snprintf(reply, replyLength, "%s%s", replyTmp, hostname);
-    // set value
-    strncpy(value, hostname, valueLength);
+    strncpy(reply->value, "libAtollApiHost", valueLength);
     return success();
 }
 
-ApiResult *Api::build(const char *arg, char *reply, char *value) {
-    char build[32];
-    snprintf(build, 32, "%s %s", __DATE__, __TIME__);
-    // reply already contains "commandcode=", we append our hostname
-    char replyTmp[replyLength];
-    strncpy(replyTmp, reply, replyLength);
-    snprintf(reply, replyLength, "%s%s", replyTmp, build);
-    // set value
-    strncpy(value, build, valueLength);
+ApiResult *Api::buildProcessor(ApiReply *reply) {
+    snprintf(reply->value, valueLength, "%s %s", __DATE__, __TIME__);
     return success();
 }

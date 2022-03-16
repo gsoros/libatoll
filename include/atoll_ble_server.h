@@ -1,5 +1,5 @@
-#ifndef __atoll_ble_h
-#define __atoll_ble_h
+#ifndef __atoll_ble_server_h
+#define __atoll_ble_server_h
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
@@ -27,11 +27,11 @@
 
 namespace Atoll {
 
-class Ble : public Task,
-            public Preferences,
-            // public BLEClientCallbacks,
-            public BLEServerCallbacks,
-            public BLECharacteristicCallbacks {
+class BleServer : public Task,
+                  public Preferences,
+                  // public BLEClientCallbacks,
+                  public BLEServerCallbacks,
+                  public BLECharacteristicCallbacks {
    public:
     uint32_t taskStack = 4096;                        // task stack size in bytes
     char deviceName[SETTINGS_STR_LENGTH] = HOSTNAME;  // advertised device name
@@ -54,8 +54,8 @@ class Ble : public Task,
     bool secureApi = false;     // whether to use LESC for API service
     uint32_t passkey = 696669;  // passkey for API service, max 6 digits
 
-    Ble() {}
-    virtual ~Ble();
+    BleServer() {}
+    virtual ~BleServer();
 
     virtual void setup(const char *deviceName, ::Preferences *p);
     void loop();

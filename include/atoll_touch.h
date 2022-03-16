@@ -159,6 +159,10 @@ class Touch : public Task, public Preferences {
         }
     }
 
+    virtual uint16_t read(uint8_t index) {
+        return touchRead(pads[index].pin);
+    }
+
    protected:
     static ::Preferences *preferences;
     static const char *preferencesNS;
@@ -222,10 +226,6 @@ class Touch : public Task, public Preferences {
         if (pads[index].pin < 0) return;
         // log_i("%d %d", index, pads[index].pin);
         touchAttachInterrupt(pads[index].pin, ISR, pads[index].threshold);
-    }
-
-    virtual uint16_t read(uint8_t index) {
-        return touchRead(pads[index].pin);
     }
 };
 

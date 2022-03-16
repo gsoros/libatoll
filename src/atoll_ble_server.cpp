@@ -1,12 +1,12 @@
-#include "atoll_ble.h"
+#include "atoll_ble_server.h"
 
 using namespace Atoll;
 
-Ble::~Ble() {}  // avoid "undefined reference to ..."
+BleServer::~BleServer() {}  // avoid "undefined reference to ..."
 
-void Ble::setup(const char *deviceName, ::Preferences *p) {
+void BleServer::setup(const char *deviceName, ::Preferences *p) {
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
-    preferencesSetup(p, "Ble");
+    preferencesSetup(p, "BleServer");
     loadSettings();
     printSettings();
     enabled = true;
@@ -32,19 +32,19 @@ void Ble::setup(const char *deviceName, ::Preferences *p) {
     lastBatteryNotification = 0;
 }
 
-void Ble::startServices() {
+void BleServer::startServices() {
     startDiService();
     startBlService();
     startApiService();
 }
 
-void Ble::loop() {
+void BleServer::loop() {
     if (!enabled) return;
     if (!advertising->isAdvertising()) startAdvertising();
 }
 
 // Start Device Information service
-void Ble::startDiService() {
+void BleServer::startDiService() {
     Serial.println("[AtollBle] Starting DIS");
     disUUID = BLEUUID(DEVICE_INFORMATION_SERVICE_UUID);
     dis = server->createService(disUUID);
@@ -61,7 +61,7 @@ void Ble::startDiService() {
 }
 
 // Start Battey Level service
-void Ble::startBlService() {
+void BleServer::startBlService() {
     Serial.println("[AtollBle] Starting BLS");
     blsUUID = BLEUUID(BATTERY_SERVICE_UUID);
     bls = server->createService(blsUUID);
@@ -80,7 +80,7 @@ void Ble::startBlService() {
     advertising->addServiceUUID(blsUUID);
 }
 
-void Ble::startApiService() {
+void BleServer::startApiService() {
     Serial.println("[AtollBle] Starting APIS");
     char s[SETTINGS_STR_LENGTH] = "";
     asUUID = BLEUUID(API_SERVICE_UUID);
@@ -117,7 +117,7 @@ void Ble::startApiService() {
 }
 
 // Notify Battery Level service
-void Ble::notifyBl(const ulong t, const uint8_t level) {
+void BleServer::notifyBl(const ulong t, const uint8_t level) {
     if (!enabled) {
         Serial.println("[AtollBle] Not enabled, not notifying BL");
         return;
@@ -130,7 +130,7 @@ void Ble::notifyBl(const ulong t, const uint8_t level) {
     blChar->notify();
 }
 
-const char *Ble::characteristicStr(BLECharacteristic *c) {
+const char *BleServer::characteristicStr(BLECharacteristic *c) {
     if (c == nullptr) return "unknown characteristic";
     if (blChar != nullptr && blChar->getHandle() == c->getHandle()) return "BL";
     if (apiTxChar != nullptr && apiTxChar->getHandle() == c->getHandle()) return "APITX";
@@ -139,7 +139,7 @@ const char *Ble::characteristicStr(BLECharacteristic *c) {
 }
 
 // disconnect clients, stop advertising and shutdown AtollBle
-void Ble::stop() {
+void BleServer::stop() {
     while (!_clients.isEmpty())
         server->disconnect(_clients.shift());
     server->stopAdvertising();
@@ -148,7 +148,7 @@ void Ble::stop() {
     // BLEDevice::deinit(true);  // TODO never returns
 }
 
-void Ble::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
+void BleServer::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
     Serial.printf("[AtollBle] Client connected, ID: %d Address: %s\n",
                   desc->conn_handle,
                   BLEAddress(desc->peer_ota_addr).toString().c_str());
@@ -162,11 +162,11 @@ void Ble::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
         _clients.push(desc->conn_handle);
 }
 
-void Ble::onDisconnect(BLEServer *pServer) {
+void BleServer::onDisconnect(BLEServer *pServer) {
     Serial.println("[AtollBle] Server onDisconnect");
 }
 
-void Ble::startAdvertising() {
+void BleServer::startAdvertising() {
     if (!enabled) {
         Serial.println("[AtollBle] Not enabled, not starting advertising");
         return;
@@ -178,21 +178,21 @@ void Ble::startAdvertising() {
     }
 }
 
-void Ble::onRead(BLECharacteristic *c) {
+void BleServer::onRead(BLECharacteristic *c) {
     Serial.printf("[AtollBle] %s: onRead(), value: %s\n",
                   characteristicStr(c),
                   c->getValue().c_str());
 };
 
-void Ble::onWrite(BLECharacteristic *c) {
+void BleServer::onWrite(BLECharacteristic *c) {
     log_i("char: %s, value: %s\n", characteristicStr(c), c->getValue().c_str());
 };
 
-void Ble::onNotify(BLECharacteristic *pCharacteristic){
+void BleServer::onNotify(BLECharacteristic *pCharacteristic){
     // Serial.printf("[AtollBle] Sending notification: %d\n", pCharacteristic->getValue<int>());
 };
 
-void Ble::onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {
+void BleServer::onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {
     Serial.printf("[AtollBle] Client ID: %d Address: %s ",
                   desc->conn_handle,
                   BLEAddress(desc->peer_ota_addr).toString().c_str());
@@ -207,7 +207,7 @@ void Ble::onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t su
     Serial.println(characteristicStr(c));
 };
 
-void Ble::setSecureApi(bool state) {
+void BleServer::setSecureApi(bool state) {
     if (state == secureApi) return;
     secureApi = state;
     saveSettings();
@@ -218,7 +218,7 @@ void Ble::setSecureApi(bool state) {
     */
 }
 
-void Ble::setPasskey(uint32_t newPasskey) {
+void BleServer::setPasskey(uint32_t newPasskey) {
     if (newPasskey == passkey) return;
     passkey = newPasskey;
     saveSettings();
@@ -229,21 +229,21 @@ void Ble::setPasskey(uint32_t newPasskey) {
     */
 }
 
-void Ble::loadSettings() {
+void BleServer::loadSettings() {
     if (!preferencesStartLoad()) return;
     secureApi = preferences->getBool("secureApi", secureApi);
     passkey = (uint32_t)preferences->getInt("passkey", passkey);
     preferencesEnd();
 }
 
-void Ble::saveSettings() {
+void BleServer::saveSettings() {
     if (!preferencesStartSave()) return;
     preferences->putBool("secureApi", secureApi);
     preferences->putInt("passkey", (int32_t)passkey);
     preferencesEnd();
 }
 
-void Ble::printSettings() {
+void BleServer::printSettings() {
     Serial.printf("[AtollBle] SecureAPI: %s\n", secureApi ? "Yes" : "No");
     Serial.printf("[AtollBle] Passkey: %d\n", passkey);
 }
