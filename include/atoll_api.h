@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 #ifndef ATOLL_API_COMMAND_STR_LENGTH
-#define ATOLL_API_COMMAND_STR_LENGTH 256
+#define ATOLL_API_COMMAND_STR_LENGTH 512
 #endif
 #ifndef ATOLL_API_COMMAND_NAME_LENGTH
 #define ATOLL_API_COMMAND_NAME_LENGTH 16
@@ -16,10 +16,10 @@
 #define ATOLL_API_RESULT_NAME_LENGTH 16
 #endif
 #ifndef ATOLL_API_REPLY_LENGTH
-#define ATOLL_API_REPLY_LENGTH 256
+#define ATOLL_API_REPLY_LENGTH 512
 #endif
 #ifndef ATOLL_API_VALUE_LENGTH
-#define ATOLL_API_VALUE_LENGTH 32
+#define ATOLL_API_VALUE_LENGTH 512
 #endif
 #ifndef ATOLL_API_MAX_COMMANDS
 #define ATOLL_API_MAX_COMMANDS 32
@@ -36,8 +36,8 @@ class ApiResult {
     char name[ATOLL_API_RESULT_NAME_LENGTH];
 
     ApiResult(
-        uint8_t code = 0,
-        const char *name = "") {
+        const char *name = "",
+        uint8_t code = 0) {
         this->code = code;
         strncpy(this->name, name, sizeof(this->name));
     }
@@ -60,15 +60,19 @@ class ApiCommand {
     ApiProcessor processor;
 
     ApiCommand(
-        uint8_t code = 0,
         const char *name = "",
-        ApiProcessor processor = nullptr) {
+        ApiProcessor processor = nullptr,
+        uint8_t code = 0) {
         this->code = code;
         strncpy(this->name, name, sizeof(this->name));
         this->processor = processor;
     }
 
     ApiResult *call(ApiReply *reply) {
+        if (nullptr == processor) {
+            log_e("Command %d:%s has no processor", code, name);
+            return nullptr;
+        }
         reply->result = processor(reply);
         log_i("command(%d:%s)=arg(%s) ===> result(%d:%s) value(%s)",
               code, name, reply->arg, reply->result->code, reply->result->name, reply->value);
@@ -91,6 +95,9 @@ class Api {
     static ApiCommand *command(uint8_t code, bool logOnError = true);
     static ApiCommand *command(const char *name, bool logOnError = true);
 
+    static uint8_t nextAvailableCommandCode();
+    static uint8_t nextAvailableResultCode();
+
     static const uint16_t replyLength = ATOLL_API_REPLY_LENGTH;
     static const uint16_t valueLength = ATOLL_API_VALUE_LENGTH;
 
@@ -100,6 +107,7 @@ class Api {
     static ApiResult results[ATOLL_API_MAX_RESULTS];
     static uint8_t numResults;
 
+    static ApiResult *initProcessor(ApiReply *reply);
     static ApiResult *hostnameProcessor(ApiReply *reply);
     static ApiResult *buildProcessor(ApiReply *reply);
 };

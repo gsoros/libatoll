@@ -11,61 +11,128 @@ void Api::setup() {
     numCommands = 0;
     numResults = 0;
 
-    addResult(ApiResult(1, "success"));
-    addResult(ApiResult(2, "error"));
-    addResult(ApiResult(3, "commandMissing"));
-    addResult(ApiResult(4, "unknownCommand"));
-    addResult(ApiResult(5, "commandTooLong"));
-    addResult(ApiResult(6, "argInvalid"));
-    addResult(ApiResult(7, "argTooLong"));
-    addResult(ApiResult(8, "internalError"));
+    addResult(ApiResult("success", 1));
+    addResult(ApiResult("error"));
+    addResult(ApiResult("commandMissing"));
+    addResult(ApiResult("unknownCommand"));
+    addResult(ApiResult("commandTooLong"));
+    addResult(ApiResult("argInvalid"));
+    addResult(ApiResult("argTooLong"));
+    addResult(ApiResult("internalError"));
 
-    addCommand(ApiCommand(
-        1,
-        "hostname",
-        Atoll::Api::hostnameProcessor));
-    addCommand(ApiCommand(
-        2,
-        "build",
-        Atoll::Api::buildProcessor));
+    addCommand(ApiCommand("init", Atoll::Api::initProcessor));
+    addCommand(ApiCommand("hostname", Atoll::Api::hostnameProcessor));
+    addCommand(ApiCommand("build", Atoll::Api::buildProcessor));
 }
 
+// call with newCommand.code = 0 to assign the next available code
 bool Api::addCommand(ApiCommand newCommand) {
     if (ATOLL_API_MAX_COMMANDS <= numCommands) {
         log_e("no slot left for '%s'", newCommand.name);
         return false;
     }
-    ApiCommand *byCode = command(newCommand.code, false);
-    ApiCommand *byName = command(newCommand.name, false);
-    if (nullptr != byCode || nullptr != byName) {
-        if (byCode != byName) {
-            log_e("%d:%s already exists", newCommand.name, newCommand.code);
-            return false;
-        }
+    if (strlen(newCommand.name) < 1) {
+        log_e("cannot add command without name");
+        return false;
+    }
+    ApiCommand *existing = command(newCommand.code, false);
+    if (nullptr != existing) {
+        log_e("Code %d already exists: %s", existing->code, existing->name);
+        return false;
+    }
+    if (0 == newCommand.code)
+        newCommand.code = nextAvailableCommandCode();
+    existing = command(newCommand.name, false);
+    if (nullptr != existing) {
         for (uint8_t i = 0; i < numCommands; i++)
-            if (commands[i].code == byCode->code && commands[i].name == byCode->name) {
-                log_i("Warning: replacing command %d:%s", byCode->code, byCode->name);
+            if (0 == strcmp(commands[i].name, existing->name)) {
+                log_i("Warning: replacing command %d:%s", existing->code, existing->name);
+                newCommand.code = existing->code;
                 commands[i] = newCommand;
                 return true;
             }
+        log_e("Error adding %d:%s", newCommand.code, newCommand.name);
+        return false;
     }
+    log_i("Adding command %d:%s", newCommand.code, newCommand.name);
     commands[numCommands] = newCommand;
     numCommands++;
     return true;
 }
 
+// returns 0 if there are no available codes
+uint8_t Api::nextAvailableCommandCode() {
+    if (ATOLL_API_MAX_COMMANDS <= numCommands) {
+        log_e("no more command codes left");
+        return 0;
+    }
+    uint8_t candidate;
+    for (uint8_t i = 0; i < numCommands; i++) {
+        if (commands[i].code == UINT8_MAX) continue;
+        candidate = commands[i].code + 1;
+        if (nullptr == command(candidate))
+            return candidate;
+    }
+    candidate = 1;
+    if (nullptr == command(candidate))
+        return candidate;
+    log_e("could not find an available code");
+    return 0;
+}
+
+// call with newResult.code = 0 to assign the next available code
 bool Api::addResult(ApiResult newResult) {
     if (ATOLL_API_MAX_RESULTS <= numResults) {
         log_e("no slot left for '%s'", newResult.name);
         return false;
     }
-    if (nullptr != result(newResult.name, false) || nullptr != result(newResult.code, false)) {
-        log_e("'%s' (%d) already exists", newResult.name, newResult.code);
+    if (strlen(newResult.name) < 1) {
+        log_e("cannot add result without a name");
         return false;
     }
+    ApiResult *existing = result(newResult.code, false);
+    if (nullptr != existing) {
+        log_e("Code %d already exists: %s", existing->code, existing->name);
+        return false;
+    }
+    if (0 == newResult.code)
+        newResult.code = nextAvailableResultCode();
+    existing = result(newResult.name, false);
+    if (nullptr != existing) {
+        for (uint8_t i = 0; i < numResults; i++)
+            if (0 == strcmp(results[i].name, existing->name)) {
+                log_i("Warning: replacing result %d:%s", existing->code, existing->name);
+                newResult.code = existing->code;
+                results[i] = newResult;
+                return true;
+            }
+        log_e("Error adding %d:%s", newResult.code, newResult.name);
+        return false;
+    }
+    log_i("Adding result %d:%s", newResult.code, newResult.name);
     results[numResults] = newResult;
     numResults++;
     return true;
+}
+
+// returns 0 if there are no available codes
+uint8_t Api::nextAvailableResultCode() {
+    if (ATOLL_API_MAX_RESULTS <= numResults) {
+        log_e("no more command codes left");
+        return 0;
+    }
+    uint8_t candidate;
+    for (uint8_t i = 0; i < numResults; i++) {
+        if (results[i].code == UINT8_MAX) continue;
+        candidate = results[i].code + 1;
+        if (nullptr == result(candidate))
+            return candidate;
+    }
+    candidate = 1;
+    if (nullptr == result(candidate))
+        return candidate;
+    log_e("could not find an available code");
+    return 0;
 }
 
 ApiCommand *Api::command(uint8_t code, bool logOnError) {
@@ -115,7 +182,7 @@ ApiResult *Api::error() {
 // Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
 ApiReply Api::process(const char *commandWithArg) {
-    log_i("Processing command %s\n", commandWithArg);
+    log_i("Processing command %s", commandWithArg);
     Atoll::ApiReply reply;
     char commandStr[ATOLL_API_COMMAND_NAME_LENGTH] = "";
     int commandWithArgLength = strlen(commandWithArg);
@@ -156,6 +223,34 @@ ApiReply Api::process(const char *commandWithArg) {
     c->call(&reply);
 
     return reply;
+}
+
+ApiResult *Api::initProcessor(ApiReply *reply) {
+    // value format: commandCode:commandName=value;...
+    char value[valueLength] = "";
+    char token[6 + ATOLL_API_COMMAND_NAME_LENGTH + ATOLL_API_VALUE_LENGTH];
+    ApiResult *successResult = success();
+    for (int i = 0; i < numCommands; i++) {
+        if (0 == strcmp(commands[i].name, "init")) continue;
+        ApiReply reply = process(commands[i].name);  // calling command without arg
+        if (reply.result == successResult)
+            snprintf(token, sizeof(token), "%d:%s=%s;",
+                     commands[i].code,
+                     commands[i].name,
+                     reply.value);
+        else
+            snprintf(token, sizeof(token), "%d:%s;",
+                     commands[i].code,
+                     commands[i].name);
+        int16_t remaining = valueLength - strlen(value) - 1;
+        if (remaining < strlen(token)) {
+            log_e("no space left for adding %s to %s", token, value);
+            return result("internalError");
+        }
+        strncat(value, token, remaining);
+    }
+    strncpy(reply->value, value, valueLength);
+    return successResult;
 }
 
 ApiResult *Api::hostnameProcessor(ApiReply *reply) {
