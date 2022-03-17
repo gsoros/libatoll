@@ -1,16 +1,18 @@
+#include "atoll_ble.h"
 #include "atoll_ble_server.h"
 
 using namespace Atoll;
 
 BleServer::~BleServer() {}  // avoid "undefined reference to ..."
 
-void BleServer::setup(const char *deviceName, ::Preferences *p) {
+void BleServer::setup(const char *deviceName, ::Preferences *p, const char *asUuidStr) {
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
     preferencesSetup(p, "BleServer");
+    asUUID = BLEUUID(asUuidStr);
     loadSettings();
     printSettings();
     enabled = true;
-    BLEDevice::init(deviceName);
+    Ble::init(deviceName);
 
     if (secureApi) {
         NimBLEDevice::setSecurityAuth(true, true, true);
@@ -83,7 +85,6 @@ void BleServer::startBlService() {
 void BleServer::startApiService() {
     Serial.println("[AtollBle] Starting APIS");
     char s[SETTINGS_STR_LENGTH] = "";
-    asUUID = BLEUUID(API_SERVICE_UUID);
     as = server->createService(asUUID);
 
     // api char for writing commands
@@ -128,6 +129,15 @@ void BleServer::notifyBl(const ulong t, const uint8_t level) {
     lastBatteryNotification = t;
     blChar->setValue(&lastBatteryLevel, 1);
     blChar->notify();
+}
+
+void BleServer::setApiValue(const char *value) {
+    if (!enabled) {
+        log_i("not enabled, not setting API value");
+        return;
+    }
+    apiTxChar->setValue((uint8_t *)value, strlen(value));
+    apiTxChar->notify();
 }
 
 const char *BleServer::characteristicStr(BLECharacteristic *c) {
@@ -185,7 +195,7 @@ void BleServer::onRead(BLECharacteristic *c) {
 };
 
 void BleServer::onWrite(BLECharacteristic *c) {
-    log_i("char: %s, value: %s\n", characteristicStr(c), c->getValue().c_str());
+    log_i("char: %s, value: %s", characteristicStr(c), c->getValue().c_str());
 };
 
 void BleServer::onNotify(BLECharacteristic *pCharacteristic){

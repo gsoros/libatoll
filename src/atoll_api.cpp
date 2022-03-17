@@ -70,11 +70,11 @@ uint8_t Api::nextAvailableCommandCode() {
     for (uint8_t i = 0; i < numCommands; i++) {
         if (commands[i].code == UINT8_MAX) continue;
         candidate = commands[i].code + 1;
-        if (nullptr == command(candidate))
+        if (nullptr == command(candidate, false))
             return candidate;
     }
     candidate = 1;
-    if (nullptr == command(candidate))
+    if (nullptr == command(candidate, false))
         return candidate;
     log_e("could not find an available code");
     return 0;
@@ -125,11 +125,11 @@ uint8_t Api::nextAvailableResultCode() {
     for (uint8_t i = 0; i < numResults; i++) {
         if (results[i].code == UINT8_MAX) continue;
         candidate = results[i].code + 1;
-        if (nullptr == result(candidate))
+        if (nullptr == result(candidate, false))
             return candidate;
     }
     candidate = 1;
-    if (nullptr == result(candidate))
+    if (nullptr == result(candidate, false))
         return candidate;
     log_e("could not find an available code");
     return 0;

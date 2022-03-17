@@ -57,7 +57,7 @@ class BleServer : public Task,
     BleServer() {}
     virtual ~BleServer();
 
-    virtual void setup(const char *deviceName, ::Preferences *p);
+    virtual void setup(const char *deviceName, ::Preferences *p, const char *asUuidStr);
     void loop();
     void startServices();
     void startDiService();
