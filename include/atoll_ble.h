@@ -13,6 +13,10 @@ class Ble {
             log_e("init already done");
             return;
         }
+
+        BLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+        BLEDevice::setScanDuplicateCacheSize(200);
+
         BLEDevice::init(deviceName);
         // BLEDevice::setMTU(517);
         initDone = true;

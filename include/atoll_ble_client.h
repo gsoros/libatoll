@@ -42,9 +42,24 @@ class BleClient : public Task,
     BLEScan* scan;                                           // pointer to scan object
     BlePeerDevice* peers[ATOLL_BLE_CLIENT_PEERS];            // peer devices we want connected
     static const uint8_t peersMax = ATOLL_BLE_CLIENT_PEERS;  // convenience for iterations
+    static SemaphoreHandle_t mutex;
 
-    BleClient() {}
+    BleClient() {
+        mutex = xSemaphoreCreateMutex();
+        for (uint8_t i = 0; i < peersMax; i++) peers[i] = nullptr;  // initialize pointers
+    }
     virtual ~BleClient();
+
+    static bool aquireMutex(uint32_t timeout = 100) {
+        if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
+            return true;
+        log_e("Could not aquire mutex");
+        return false;
+    }
+
+    static void releaseMutex() {
+        xSemaphoreGive(mutex);
+    }
 
     virtual void setup(const char* deviceName, ::Preferences* p);
     virtual void loop();

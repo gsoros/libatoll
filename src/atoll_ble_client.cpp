@@ -3,6 +3,8 @@
 
 using namespace Atoll;
 
+SemaphoreHandle_t BleClient::mutex;
+
 BleClient::~BleClient() {
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
@@ -17,13 +19,8 @@ void BleClient::setup(const char* deviceName, ::Preferences* p) {
     printSettings();
     enabled = true;
 
-    BLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
-    BLEDevice::setScanDuplicateCacheSize(200);
-
     Ble::init(deviceName);
 
-    // client = BLEDevice::createClient();
-    // client->setCallbacks(this);
     scan = BLEDevice::getScan();
     scan->setAdvertisedDeviceCallbacks(this);
 
@@ -32,6 +29,7 @@ void BleClient::setup(const char* deviceName, ::Preferences* p) {
 
 void BleClient::loop() {
     if (!enabled) return;
+    if (scan->isScanning()) return;
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
         if (0 == strcmp(peers[i]->address, "")) continue;
@@ -55,6 +53,7 @@ void BleClient::stop() {
 }
 
 void BleClient::startScan(uint32_t duration) {
+    if (!aquireMutex()) return;
     if (scan->isScanning()) return;
 
     scan->setDuplicateFilter(false);
@@ -147,5 +146,6 @@ void BleClient::onResult(BLEAdvertisedDevice* advertisedDevice) {
 }
 
 void BleClient::onScanComplete(BLEScanResults results) {
+    releaseMutex();
     log_i("scan end");
 }

@@ -1,9 +1,11 @@
+#include "atoll_ble_client.h"
 #include "atoll_ble_peer_device.h"
 
 using namespace Atoll;
 
 void BlePeerDevice::connect() {
     // https://github.com/h2zero/NimBLE-Arduino/blob/master/examples/NimBLE_Client/NimBLE_Client.ino
+    if (!BleClient::aquireMutex()) return;
     if (connecting) {
         log_i("already connecting to %s", name);
         return;
@@ -47,124 +49,77 @@ void BlePeerDevice::connect() {
     log_i("connected to %s %s", name, getClient()->getPeerAddress().toString().c_str());
     goto end;
 
-    /*
-    //  Now we can read/write/subscribe the charateristics of the services we are interested in
-    NimBLERemoteService* pSvc = nullptr;
-    NimBLERemoteCharacteristic* pChr = nullptr;
-    NimBLERemoteDescriptor* pDsc = nullptr;
-
-    if (pSvc) {
-        pChr = pSvc->getCharacteristic("BEEF");
-
-        if (pChr) {
-            if (pChr->canRead()) {
-                Serial.print(pChr->getUUID().toString().c_str());
-                Serial.print(" Value: ");
-                Serial.println(pChr->readValue().c_str());
-            }
-
-            if (pChr->canWrite()) {
-                if (pChr->writeValue("Tasty")) {
-                    Serial.print("Wrote new value to: ");
-                    Serial.println(pChr->getUUID().toString().c_str());
-                } else {
-                    device->client->disconnect();
-                    return false;
-                }
-
-                if (pChr->canRead()) {
-                    Serial.print("The value of: ");
-                    Serial.print(pChr->getUUID().toString().c_str());
-                    Serial.print(" is now: ");
-                    Serial.println(pChr->readValue().c_str());
-                }
-            }
-            if (pChr->canNotify()) {
-                // if(!pChr->registerForNotify(notifyCB)) {
-                if (!pChr->subscribe(true, notifyCB)) {
-         device->client->disconnect();
-    return ;
-}
-}
-else if (pChr->canIndicate()) {
-    // if(!pChr->registerForNotify(notifyCB, false)) {
-    if (!pChr->subscribe(false, notifyCB)) {
-        device->client->disconnect();
-        return false;
-    }
-}
-}
-}
-else {
-    Serial.println("DEAD service not found.");
-}
-
-pSvc = device->client->getService("BAAD");
-if (pSvc) {
-    pChr = pSvc->getCharacteristic("F00D");
-
-    if (pChr) {
-        if (pChr->canRead()) {
-            Serial.print(pChr->getUUID().toString().c_str());
-            Serial.print(" Value: ");
-            Serial.println(pChr->readValue().c_str());
-        }
-
-        pDsc = pChr->getDescriptor(NimBLEUUID("C01D"));
-        if (pDsc) {
-            Serial.print("Descriptor: ");
-            Serial.print(pDsc->getUUID().toString().c_str());
-            Serial.print(" Value: ");
-            Serial.println(pDsc->readValue().c_str());
-        }
-
-        if (pChr->canWrite()) {
-            if (pChr->writeValue("No tip!")) {
-                Serial.print("Wrote new value to: ");
-                Serial.println(pChr->getUUID().toString().c_str());
-            } else {
-                device->client->disconnect();
-                return false;
-            }
-
-            if (pChr->canRead()) {
-                Serial.print("The value of: ");
-                Serial.print(pChr->getUUID().toString().c_str());
-                Serial.print(" is now: ");
-                Serial.println(pChr->readValue().c_str());
-            }
-        }
-        if (pChr->canNotify()) {
-            // if(!pChr->registerForNotify(notifyCB)) {
-            if (!pChr->subscribe(true, notifyCB)) {
-                device->client->disconnect();
-                return false;
-            }
-        } else if (pChr->canIndicate()) {
-            // if(!pChr->registerForNotify(notifyCB, false)) {
-            if (!pChr->subscribe(false, notifyCB)) {
-                device->client->disconnect();
-                return false;
-            }
-        }
-    }
-
-} else {
-    Serial.println("BAAD service not found.");
-}
-*/
-
 end:
     log_i("end");
     connecting = false;
-    return;
+    BleClient::releaseMutex();
+}
+
+void BlePeerDevice::subscribeChars() {
+    for (int8_t i = 0; i < charsMax; i++)
+        if (nullptr != chars[i]) {
+            log_i("subscribing %s", chars[i]->name);
+            chars[i]->subscribe(client);
+        }
+}
+
+// get index of existing characteristic by name
+// or first unused index for an empty name
+// returns -1 on error
+int8_t BlePeerDevice::charIndex(const char* name) {
+    size_t len = strlen(name);
+    log_i("checking char name '%s' len: %d", name, len);
+    for (int8_t i = 0; i < charsMax; i++) {
+        if (nullptr == chars[i] && !len) {
+            log_i("found unused index %d for empty name", i);
+            return i;
+        }
+        if (len && nullptr != chars[i] && 0 == strcmp(chars[i]->name, name)) {
+            log_i("found index %d of char '%s'", i, name);
+            return i;
+        }
+    }
+    // log_i("could not find index of char '%s'", name);
+    return -1;
+}
+
+bool BlePeerDevice::charExists(const char* name) {
+    return 0 <= charIndex(name);
+}
+
+bool BlePeerDevice::addChar(BlePeerCharacteristic* c) {
+    int8_t index = charIndex(c->name);
+    if (index < 0) index = charIndex("");
+    if (index < 0) {
+        log_e("cannot add char '%s'", c->name);
+        return false;
+    }
+    log_i("adding char name: '%s', uuid: '%s'", c->name, c->charUuid.toString().c_str());
+    chars[index] = c;
+    return true;
+}
+
+BlePeerCharacteristic* BlePeerDevice::getChar(const char* name) {
+    for (int8_t i = 0; i < charsMax; i++)
+        if (nullptr != chars[i] && 0 == strcmp(chars[i]->name, name))
+            return chars[i];
+    return nullptr;
+}
+
+bool BlePeerDevice::removeCharAt(int8_t index) {
+    if (charsMax <= index) return false;
+    chars[index] = nullptr;
+    return true;
 }
 
 /**
  * @brief Called after client connects.
  * @param [in] device->client A pointer to the calling client object.
  */
-void BlePeerDevice::onConnect(BLEClient* client) { log_i("TODO"); }
+void BlePeerDevice::onConnect(BLEClient* client) {
+    log_i("subscribing");
+    subscribeChars();
+}
 
 /**
  * @brief Called when disconnected from the server.
@@ -214,4 +169,10 @@ void BlePeerDevice::onAuthenticationComplete(ble_gap_conn_desc* desc) {
 bool BlePeerDevice::onConfirmPIN(uint32_t pin) {
     log_i("TODO");
     return true;
+}
+
+void BlePeerDevice::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) {
+    char buf[length];
+    strncpy(buf, (char*)data, length);
+    log_i("char: %s, data: '%s', len: %d", c->getUUID().toString().c_str(), buf, length);
 }

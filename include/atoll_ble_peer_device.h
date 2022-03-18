@@ -4,22 +4,25 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 #include "atoll_ble_constants.h"
+#include "atoll_ble_peer_characteristic.h"
 
 #ifndef SETTINGS_STR_LENGTH
 #define SETTINGS_STR_LENGTH 32
 #endif
 
+#ifndef ATOLL_BLE_PEER_DEVICE_MAX_CHARACTERISTICS
+#define ATOLL_BLE_PEER_DEVICE_MAX_CHARACTERISTICS 8
+#endif
+
 namespace Atoll {
 
-class BlePeerDevice :  // public BLECharacteristicCallbacks,
-                       public BLEClientCallbacks {
+class BlePeerDevice : public BLEClientCallbacks {
    public:
     char address[18];
     char type[4];
     char name[SETTINGS_STR_LENGTH];
     bool connecting = false;
 
-    BlePeerDevice() {}
     virtual ~BlePeerDevice() {
         log_i("checking to delete client");
         deleteClient();
@@ -33,6 +36,7 @@ class BlePeerDevice :  // public BLECharacteristicCallbacks,
             strncpy(this->address, address, sizeof(this->address));
         strncpy(this->type, type, sizeof(this->type));
         strncpy(this->name, name, sizeof(this->name));
+        for (int8_t i = 0; i < charsMax; i++) removeCharAt(i);  // initialize to nullptrs
     }
 
     virtual void setClient(BLEClient* client) {
@@ -72,10 +76,6 @@ class BlePeerDevice :  // public BLECharacteristicCallbacks,
         return hasClient() && client->isConnected();
     }
 
-    virtual bool connectClient(bool deleteAttibutes = true) {
-        return client->connect((BLEAddress)address, deleteAttibutes);
-    }
-
     virtual void connect();
 
     virtual void disconnect() {
@@ -85,29 +85,24 @@ class BlePeerDevice :  // public BLECharacteristicCallbacks,
         deleteClient();
     }
 
-    /*
-    // format: "address,type,name"
-    BlePeerDevice(const char* str) {
-        sscanf(str, "%s,%s,%s", this->address, this->type, this->name);  // TODO do this properly
-        char packed[60];
-        pack(&packed, 60);
-        if (0 != strcmp(packed, str))
-             log_e("Warning: could not parse %s (got %s)", str, packed);
-        log_i("'%s' ===> '%s', '%s', '%s'", str, this->address, this->type, this->name);
-    }
-    */
-    /*
-        void pack(char *packed, size_t len) {
-            if (len < sizeof(this->address) + sizeof(this->type) + sizeof(this->name) + 3);
-              log_e("buffer too small");
-            snprintf(packed, len, "%s,%s,%s", this->address, this->type, this->name);
-        }
-    */
+    virtual void subscribeChars();
+    virtual int8_t charIndex(const char* name);
+    virtual bool charExists(const char* name);
+    virtual bool addChar(BlePeerCharacteristic* c);
+    virtual BlePeerCharacteristic* getChar(const char* name);
+    virtual bool removeCharAt(int8_t index);
 
    protected:
-    BLEClient* client = nullptr;
+    BLEClient* client = nullptr;                                              // our NimBLE client
+    BlePeerCharacteristic* chars[ATOLL_BLE_PEER_DEVICE_MAX_CHARACTERISTICS];  // characteristics
+    int8_t charsMax = ATOLL_BLE_PEER_DEVICE_MAX_CHARACTERISTICS;              // convenience for iterating
 
-    /* client callbacks */
+    virtual bool
+    connectClient(bool deleteAttibutes = true) {
+        return client->connect((BLEAddress)address, deleteAttibutes);
+    }
+
+    // client callbacks
     virtual void onConnect(BLEClient* pClient);
     virtual void onDisconnect(BLEClient* pClient);
     virtual bool onConnParamsUpdateRequest(BLEClient* pClient, const ble_gap_upd_params* params);
@@ -116,9 +111,27 @@ class BlePeerDevice :  // public BLECharacteristicCallbacks,
     // virtual bool onSecurityRequest();
     virtual void onAuthenticationComplete(ble_gap_conn_desc* desc);
     virtual bool onConfirmPIN(uint32_t pin);
+
+    // notification callback
+    virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify);
 };
 
-class PowerMeter : public BlePeerDevice {};
+class PowerMeter : public BlePeerDevice {
+   public:
+    PowerMeter(const char* address,
+               const char* type,
+               const char* name) : BlePeerDevice(address,
+                                                 type,
+                                                 name) {
+        log_i("PowerMeter construct, adding char");
+        PowerPeerCharacteristic* p = new PowerPeerCharacteristic();
+        addChar(p);
+        log_i("PowerMeter constructed");
+    }
+    virtual ~PowerMeter() {}
+};
+
+class HeartrateMonitor : public BlePeerDevice {};
 
 }  // namespace Atoll
 
