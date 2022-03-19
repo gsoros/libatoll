@@ -3,8 +3,9 @@
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
-#include "atoll_ble_constants.h"
-#include "atoll_ble_peer_characteristic.h"
+// #include "atoll_ble_constants.h"
+// #include "atoll_ble_peer_characteristic.h"
+#include "atoll_ble_peer_characteristic_power.h"
 
 #ifndef SETTINGS_STR_LENGTH
 #define SETTINGS_STR_LENGTH 32
@@ -23,10 +24,7 @@ class BlePeerDevice : public BLEClientCallbacks {
     char name[SETTINGS_STR_LENGTH];
     bool connecting = false;
 
-    virtual ~BlePeerDevice() {
-        log_i("checking to delete client");
-        deleteClient();
-    }
+    virtual ~BlePeerDevice();
 
     BlePeerDevice(const char* address, const char* type, const char* name) {
         if (strlen(address) < 1) {
@@ -82,15 +80,16 @@ class BlePeerDevice : public BLEClientCallbacks {
         if (!hasClient()) return;
         if (isConnected())
             client->disconnect();
-        deleteClient();
+        // deleteClient();
     }
 
     virtual void subscribeChars();
-    virtual int8_t charIndex(const char* name);
-    virtual bool charExists(const char* name);
+    virtual int8_t charIndex(const char* label);
+    virtual bool charExists(const char* label);
     virtual bool addChar(BlePeerCharacteristic* c);
-    virtual BlePeerCharacteristic* getChar(const char* name);
+    virtual BlePeerCharacteristic* getChar(const char* label);
     virtual bool removeCharAt(int8_t index);
+    virtual uint8_t deleteChars(const char* label);
 
    protected:
     BLEClient* client = nullptr;                                              // our NimBLE client
@@ -118,17 +117,14 @@ class BlePeerDevice : public BLEClientCallbacks {
 
 class PowerMeter : public BlePeerDevice {
    public:
-    PowerMeter(const char* address,
-               const char* type,
-               const char* name) : BlePeerDevice(address,
-                                                 type,
-                                                 name) {
-        log_i("PowerMeter construct, adding char");
-        PowerPeerCharacteristic* p = new PowerPeerCharacteristic();
-        addChar(p);
-        log_i("PowerMeter constructed");
+    PowerMeter(
+        const char* address,
+        const char* type,
+        const char* name) : BlePeerDevice(address,
+                                          type,
+                                          name) {
+        addChar(new BlePeerCharacteristicPower());
     }
-    virtual ~PowerMeter() {}
 };
 
 class HeartrateMonitor : public BlePeerDevice {};

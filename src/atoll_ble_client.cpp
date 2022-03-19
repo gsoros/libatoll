@@ -3,8 +3,6 @@
 
 using namespace Atoll;
 
-SemaphoreHandle_t BleClient::mutex;
-
 BleClient::~BleClient() {
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
@@ -53,13 +51,13 @@ void BleClient::stop() {
 }
 
 void BleClient::startScan(uint32_t duration) {
-    if (!aquireMutex()) return;
     if (scan->isScanning()) return;
 
-    scan->setDuplicateFilter(false);
+    // scan->setDuplicateFilter(false);
     scan->clearDuplicateCache();
     scan->clearResults();
     scan->setFilterPolicy(BLE_HCI_SCAN_FILT_NO_WL);
+    // scan->setFilterPolicy(BLE_HCI_SCAN_FILT_NO_WL_INITA);
     scan->setLimitedOnly(false);
     scan->setActiveScan(true);  // Set active scanning, this will get more data from the advertiser.
     scan->setInterval(97);      // How often the scan occurs / switches channels; in milliseconds
@@ -146,6 +144,5 @@ void BleClient::onResult(BLEAdvertisedDevice* advertisedDevice) {
 }
 
 void BleClient::onScanComplete(BLEScanResults results) {
-    releaseMutex();
     log_i("scan end");
 }

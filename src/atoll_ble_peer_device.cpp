@@ -3,9 +3,13 @@
 
 using namespace Atoll;
 
+BlePeerDevice::~BlePeerDevice() {
+    log_i("checking to delete client");
+    deleteClient();
+}
+
 void BlePeerDevice::connect() {
     // https://github.com/h2zero/NimBLE-Arduino/blob/master/examples/NimBLE_Client/NimBLE_Client.ino
-    if (!BleClient::aquireMutex()) return;
     if (connecting) {
         log_i("already connecting to %s", name);
         return;
@@ -16,7 +20,7 @@ void BlePeerDevice::connect() {
         log_i("already connected to %s", name);
         goto end;
     }
-    if (!hasClient() && BLEDevice::getClientListSize()) {
+    if (BLEDevice::getClientListSize()) {
         setClient(BLEDevice::getClientByPeerAddress((BLEAddress)address));
         if (hasClient()) {
             if (connectClient(false)) {
@@ -52,64 +56,79 @@ void BlePeerDevice::connect() {
 end:
     log_i("end");
     connecting = false;
-    BleClient::releaseMutex();
 }
 
 void BlePeerDevice::subscribeChars() {
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
-            log_i("subscribing %s", chars[i]->name);
+            log_i("subscribing %s", chars[i]->label);
             chars[i]->subscribe(client);
         }
 }
 
-// get index of existing characteristic by name
-// or first unused index for an empty name
+// get index of existing characteristic by label
+// or first unused index for an empty label
 // returns -1 on error
-int8_t BlePeerDevice::charIndex(const char* name) {
-    size_t len = strlen(name);
-    log_i("checking char name '%s' len: %d", name, len);
+int8_t BlePeerDevice::charIndex(const char* label) {
+    size_t len = strlen(label);
+    log_i("checking char label '%s' len: %d", label, len);
     for (int8_t i = 0; i < charsMax; i++) {
         if (nullptr == chars[i] && !len) {
-            log_i("found unused index %d for empty name", i);
+            log_i("found unused index %d for empty label", i);
             return i;
         }
-        if (len && nullptr != chars[i] && 0 == strcmp(chars[i]->name, name)) {
-            log_i("found index %d of char '%s'", i, name);
+        if (len && nullptr != chars[i] && 0 == strcmp(chars[i]->label, label)) {
+            log_i("found index %d of char '%s'", i, label);
             return i;
         }
     }
-    // log_i("could not find index of char '%s'", name);
+    // log_i("could not find index of char '%s'", label);
     return -1;
 }
 
-bool BlePeerDevice::charExists(const char* name) {
-    return 0 <= charIndex(name);
+// chack if a char with label exists
+bool BlePeerDevice::charExists(const char* label) {
+    return 0 <= charIndex(label);
 }
 
+// add new characteristic
 bool BlePeerDevice::addChar(BlePeerCharacteristic* c) {
-    int8_t index = charIndex(c->name);
+    int8_t index = charIndex(c->label);
     if (index < 0) index = charIndex("");
     if (index < 0) {
-        log_e("cannot add char '%s'", c->name);
+        log_e("cannot add char '%s'", c->label);
         return false;
     }
-    log_i("adding char name: '%s', uuid: '%s'", c->name, c->charUuid.toString().c_str());
+    log_i("adding char label: '%s', uuid: '%s'", c->label, c->charUuid.toString().c_str());
     chars[index] = c;
     return true;
 }
 
-BlePeerCharacteristic* BlePeerDevice::getChar(const char* name) {
+// get first characteristic pointer with label
+BlePeerCharacteristic* BlePeerDevice::getChar(const char* label) {
     for (int8_t i = 0; i < charsMax; i++)
-        if (nullptr != chars[i] && 0 == strcmp(chars[i]->name, name))
+        if (nullptr != chars[i] && 0 == strcmp(chars[i]->label, label))
             return chars[i];
     return nullptr;
 }
 
+// remove char at index
 bool BlePeerDevice::removeCharAt(int8_t index) {
     if (charsMax <= index) return false;
     chars[index] = nullptr;
     return true;
+}
+
+// delete chars that have this label
+uint8_t BlePeerDevice::deleteChars(const char* label) {
+    uint8_t deleted = 0;
+    for (int8_t i = 0; i < charsMax; i++)
+        if (nullptr != chars[i] && 0 == strcmp(chars[i]->label, label)) {
+            delete chars[i];
+            removeCharAt(i);
+            deleted++;
+        }
+    return deleted;
 }
 
 /**
