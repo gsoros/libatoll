@@ -1,5 +1,5 @@
-#ifndef __atoll_ble_peer_characteristic_h
-#define __atoll_ble_peer_characteristic_h
+#ifndef __atoll_peer_characteristic_h
+#define __atoll_peer_characteristic_h
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
@@ -12,7 +12,7 @@
 
 namespace Atoll {
 
-class BlePeerCharacteristic {
+class PeerCharacteristic {
    public:
     char label[SETTINGS_STR_LENGTH] = "unnamed characteristic";
     BLEUUID serviceUuid = BLEUUID((uint16_t)0);
@@ -20,7 +20,7 @@ class BlePeerCharacteristic {
     BLERemoteService* service = nullptr;
     BLERemoteCharacteristic* characteristic = nullptr;
 
-    virtual ~BlePeerCharacteristic();  // virt dtor so we can safely delete
+    virtual ~PeerCharacteristic();  // virt dtor so we can safely delete
 
     virtual bool subscribe(BLEClient* client);
     virtual bool unsubscribe();

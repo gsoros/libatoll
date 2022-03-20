@@ -7,7 +7,7 @@
 #include "atoll_ble_constants.h"
 #include "atoll_task.h"
 #include "atoll_preferences.h"
-#include "atoll_ble_peer_device.h"
+#include "atoll_peer.h"
 
 #ifndef BLE_CHAR_VALUE_MAXLENGTH
 #define BLE_CHAR_VALUE_MAXLENGTH 128
@@ -40,7 +40,7 @@ class BleClient : public Task,
     char deviceName[SETTINGS_STR_LENGTH] = HOSTNAME;         // device name
     bool enabled = true;                                     // whether ble client is enabled
     BLEScan* scan;                                           // pointer to scan object
-    BlePeerDevice* peers[ATOLL_BLE_CLIENT_PEERS];            // peer devices we want connected
+    Peer* peers[ATOLL_BLE_CLIENT_PEERS];                     // peer devices we want connected
     static const uint8_t peersMax = ATOLL_BLE_CLIENT_PEERS;  // convenience for iterations
 
     BleClient() {
@@ -56,8 +56,8 @@ class BleClient : public Task,
 
     virtual int8_t peerIndex(const char* address);
     virtual bool peerExists(const char* address);
-    virtual bool addPeer(BlePeerDevice* device);
-    virtual uint8_t removePeer(BlePeerDevice* device, bool markOnly = true);
+    virtual bool addPeer(Peer* peer);
+    virtual uint8_t removePeer(Peer* peer, bool markOnly = true);
     virtual uint8_t removePeer(const char* address, bool markOnly = true);
 
     virtual void onNotify(BLECharacteristic* pCharacteristic);

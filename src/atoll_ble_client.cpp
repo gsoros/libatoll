@@ -38,7 +38,8 @@ void BleClient::loop() {
         } else if (peers[i]->shouldConnect &&
                    !peers[i]->isConnected() &&
                    !peers[i]->connecting) {
-            log_i("connecting peer %s", peers[i]->name);
+            log_i("connecting peer %s %s(%d)",
+                  peers[i]->name, peers[i]->address, peers[i]->addressType);
             peers[i]->connect();
         } else if (!peers[i]->shouldConnect &&
                    peers[i]->isConnected()) {
@@ -104,12 +105,12 @@ bool BleClient::peerExists(const char* address) {
     return res;
 }
 
-bool BleClient::addPeer(BlePeerDevice* peer) {
+bool BleClient::addPeer(Peer* peer) {
     if (nullptr == peer) {
         log_e("peer is null");
         return false;
     }
-    if (strlen(peer->address) < sizeof(BlePeerDevice::address) - 1) {
+    if (strlen(peer->address) < sizeof(Peer::address) - 1) {
         log_e("not adding peer, address too short (%d)", strlen(peer->address));
         return false;
     }
@@ -152,7 +153,7 @@ uint8_t BleClient::removePeer(const char* address, bool markOnly) {
     return removed;
 }
 
-uint8_t BleClient::removePeer(BlePeerDevice* peer, bool markOnly) {
+uint8_t BleClient::removePeer(Peer* peer, bool markOnly) {
     if (nullptr == peer) return 0;
     return removePeer(peer->address, markOnly);
 }

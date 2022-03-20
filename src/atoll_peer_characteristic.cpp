@@ -1,13 +1,13 @@
-#include "atoll_ble_peer_characteristic.h"
+#include "atoll_peer_characteristic.h"
 #include "atoll_ble_client.h"
 
 using namespace Atoll;
 
-BlePeerCharacteristic::~BlePeerCharacteristic() {
+PeerCharacteristic::~PeerCharacteristic() {
     log_i("destructing %s", label);
 }
 
-bool BlePeerCharacteristic::subscribe(BLEClient* client) {
+bool PeerCharacteristic::subscribe(BLEClient* client) {
     if (!characteristic) {
         if (!service)
             service = client->getService(serviceUuid);
@@ -43,7 +43,7 @@ bool BlePeerCharacteristic::subscribe(BLEClient* client) {
     return true;
 }
 
-bool BlePeerCharacteristic::unsubscribe() {
+bool PeerCharacteristic::unsubscribe() {
     if (!characteristic) return false;
     bool res = characteristic->unsubscribe();
     return res;

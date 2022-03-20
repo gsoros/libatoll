@@ -1,12 +1,12 @@
-#ifndef __atoll_ble_peer_characteristic_template_h
-#define __atoll_ble_peer_characteristic_template_h
+#ifndef __atoll_peer_characteristic_template_h
+#define __atoll_peer_characteristic_template_h
 
-#include "atoll_ble_peer_characteristic.h"
+#include "atoll_peer_characteristic.h"
 
 namespace Atoll {
 
 template <class T>
-class BlePeerCharacteristicTemplate : public BlePeerCharacteristic {
+class PeerCharacteristicTemplate : public PeerCharacteristic {
    public:
     T lastValue = T();
 
@@ -38,7 +38,7 @@ class BlePeerCharacteristicTemplate : public BlePeerCharacteristic {
         size_t length,
         bool isNotify) {
         lastValue = decode(data, length);
-        log_i("BlePeerCharacteristicTemplate<T>::onNotify %d", lastValue);
+        log_i("PeerCharacteristicTemplate<T>::onNotify %d", lastValue);
     }
 };
 
