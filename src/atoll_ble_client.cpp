@@ -6,7 +6,7 @@ using namespace Atoll;
 BleClient::~BleClient() {
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
-        delete peers[i];
+        delete peers[i];  // delete nullptr should be safe!
     }
 }
 
@@ -29,10 +29,22 @@ void BleClient::loop() {
     if (!enabled) return;
     if (scan->isScanning()) return;
     for (int8_t i = 0; i < peersMax; i++) {
+        // log_i("checking peer %d", i);
         if (nullptr == peers[i]) continue;
         if (0 == strcmp(peers[i]->address, "")) continue;
-        if (!peers[i]->isConnected() && !peers[i]->connecting)
+        if (peers[i]->markedForRemoval) {
+            log_i("removing peer %s", peers[i]->name);
+            removePeer(peers[i], false);
+        } else if (peers[i]->shouldConnect &&
+                   !peers[i]->isConnected() &&
+                   !peers[i]->connecting) {
+            log_i("connecting peer %s", peers[i]->name);
             peers[i]->connect();
+        } else if (!peers[i]->shouldConnect &&
+                   peers[i]->isConnected()) {
+            log_i("disconnecting peer %s", peers[i]->name);
+            peers[i]->disconnect();
+        }
     }
     delay(2000);
 }
@@ -70,6 +82,7 @@ void BleClient::startScan(uint32_t duration) {
 // get index of existing peer address
 // or first unused index for an empty address
 int8_t BleClient::peerIndex(const char* address) {
+    log_i("searching index for address '%s'", address);
     size_t addressLen = strlen(address);
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i] && !addressLen) {
@@ -81,58 +94,85 @@ int8_t BleClient::peerIndex(const char* address) {
             return i;
         }
     }
-    // log_i("could not find index of address '%s'", address);
+    log_i("could not find index of address '%s'", address);
     return -1;
 }
 
 bool BleClient::peerExists(const char* address) {
-    return 0 <= peerIndex(address);
+    bool res = 0 <= peerIndex(address);
+    log_i("peer with address '%s' %s", address, res ? "exists" : "does not exist");
+    return res;
 }
 
-bool BleClient::addPeer(BlePeerDevice* device) {
-    int8_t index = peerIndex(device->address);
-    if (index < 0) index = peerIndex("");
-    if (index < 0) {
-        log_e("cannot add peer %s", device->name);
+bool BleClient::addPeer(BlePeerDevice* peer) {
+    if (nullptr == peer) {
+        log_e("peer is null");
         return false;
     }
-    log_i("adding peer %s %s", device->name, device->address);
-    peers[index] = device;
+    if (strlen(peer->address) < sizeof(BlePeerDevice::address) - 1) {
+        log_e("not adding peer, address too short (%d)", strlen(peer->address));
+        return false;
+    }
+    if (strlen(peer->type) < 1) {
+        log_e("not adding peer with empty type");
+        return false;
+    }
+    if (strlen(peer->name) < 1) {
+        log_e("not adding peer with empty name");
+        return false;
+    }
+    int8_t index = peerIndex(peer->address);
+    if (index < 0) index = peerIndex("");
+    if (index < 0) {
+        log_e("cannot add peer %s", peer->name);
+        return false;
+    }
+    log_i("adding peer %s %s", peer->name, peer->address);
+    peers[index] = peer;
     return true;
 }
 
-void BleClient::removePeer(BlePeerDevice* device) {
+uint8_t BleClient::removePeer(const char* address, bool markOnly) {
+    if (strlen(address) < 1) return 0;
+    uint8_t removed = 0;
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
-        if (0 == strcmp(peers[i]->address, device->address)) {
-            delete peers[i];
-            peers[i] = nullptr;
+        if (0 == strcmp(peers[i]->address, address)) {
+            if (markOnly) {
+                peers[i]->markedForRemoval = true;
+                log_i("peer marked for removal: %s", peers[i]->name);
+            } else {
+                log_i("deleting peer %s", peers[i]->name);
+                delete peers[i];  // delete nullptr should be safe!
+                peers[i] = nullptr;
+            }
+            removed++;
         }
     }
+    return removed;
+}
+
+uint8_t BleClient::removePeer(BlePeerDevice* peer, bool markOnly) {
+    if (nullptr == peer) return 0;
+    return removePeer(peer->address, markOnly);
 }
 
 void BleClient::onNotify(BLECharacteristic* pCharacteristic) {
-    log_i("TODO");
+    log_i("not implemented");
 }
 
 void BleClient::loadSettings() {
-    if (!preferencesStartLoad()) return;
-    log_i("TODO");
-    // hosts = unpackHosts(preferences->getString("hosts"));
-    preferencesEnd();
+    log_i("not implemented");
 }
 
 void BleClient::saveSettings() {
-    if (!preferencesStartSave()) return;
-    log_i("TODO");
-    // preferences->putString("hosts", packHosts());
-    preferencesEnd();
+    log_i("not implemented");
 }
 
 void BleClient::printSettings() {
-    log_i("TODO");
-    // log_i("hosts: %s", packHosts());
+    log_i("not implemented");
 }
+
 /**
  * @brief Called when a new scan result is detected.
  *

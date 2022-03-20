@@ -53,12 +53,12 @@ class BleClient : public Task,
     virtual void stop();
 
     virtual void startScan(uint32_t duration);
-    // virtual void connect(BlePeerDevice* device);
 
     virtual int8_t peerIndex(const char* address);
     virtual bool peerExists(const char* address);
     virtual bool addPeer(BlePeerDevice* device);
-    virtual void removePeer(BlePeerDevice* device);
+    virtual uint8_t removePeer(BlePeerDevice* device, bool markOnly = true);
+    virtual uint8_t removePeer(const char* address, bool markOnly = true);
 
     virtual void onNotify(BLECharacteristic* pCharacteristic);
 

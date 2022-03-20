@@ -49,6 +49,7 @@ class ApiReply {
     char arg[ATOLL_API_ARG_LENGTH] = "";
     ApiResult *result;
     char value[ATOLL_API_VALUE_LENGTH] = "";
+    bool log = true;  // set false to suppress logging when processing commands
 };
 
 typedef ApiResult *(*ApiProcessor)(ApiReply *reply);
@@ -85,7 +86,7 @@ class Api {
     static void setup();
     static bool addCommand(ApiCommand command);
     static bool addResult(ApiResult result);
-    static ApiReply process(const char *commandWithArg);
+    static ApiReply process(const char *commandWithArg, bool log = true);
 
     static ApiResult *result(uint8_t code, bool logOnError = true);
     static ApiResult *result(const char *name, bool logOnError = true);

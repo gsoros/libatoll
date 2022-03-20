@@ -181,9 +181,10 @@ ApiResult *Api::error() {
 
 // Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
-ApiReply Api::process(const char *commandWithArg) {
-    log_i("Processing command %s", commandWithArg);
+ApiReply Api::process(const char *commandWithArg, bool log) {
+    log_i("Processing command %s%s", commandWithArg, log ? "" : " (logging suppressed)");
     Atoll::ApiReply reply;
+    reply.log = log;
     char commandStr[ATOLL_API_COMMAND_NAME_LENGTH] = "";
     int commandWithArgLength = strlen(commandWithArg);
     char *eqSign = strstr(commandWithArg, "=");
@@ -232,7 +233,8 @@ ApiResult *Api::initProcessor(ApiReply *reply) {
     ApiResult *successResult = success();
     for (int i = 0; i < numCommands; i++) {
         if (0 == strcmp(commands[i].name, "init")) continue;
-        ApiReply reply = process(commands[i].name);  // calling command without arg
+        // calling command without arg, suppress logging
+        ApiReply reply = process(commands[i].name, false);
         if (reply.result == successResult)
             snprintf(token, sizeof(token), "%d:%s=%s;",
                      commands[i].code,

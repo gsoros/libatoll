@@ -4,11 +4,14 @@
 using namespace Atoll;
 
 BlePeerDevice::~BlePeerDevice() {
-    log_i("checking to delete client");
+    log_i("calling deleteClient() for %s", name);
+    disconnect();
     deleteClient();
 }
 
 void BlePeerDevice::connect() {
+    log_i("connecting to %s", name);
+
     // https://github.com/h2zero/NimBLE-Arduino/blob/master/examples/NimBLE_Client/NimBLE_Client.ino
     if (connecting) {
         log_i("already connecting to %s", name);
@@ -23,7 +26,7 @@ void BlePeerDevice::connect() {
     if (BLEDevice::getClientListSize()) {
         setClient(BLEDevice::getClientByPeerAddress((BLEAddress)address));
         if (hasClient()) {
-            if (connectClient(false)) {
+            if (!connectClient(false)) {
                 log_i("reconnect failed");
                 goto end;
             }
@@ -39,14 +42,14 @@ void BlePeerDevice::connect() {
         setClient(BLEDevice::createClient());
         log_i("new client created");
         if (!connectClient()) {
-            deleteClient();
-            log_i("failed to connect");
+            // deleteClient();
+            log_i("failed to connect (1)");
             goto end;
         }
     }
     if (!isConnected()) {
         if (!connectClient()) {
-            log_i("failed to connect");
+            log_i("failed to connect (2)");
             goto end;
         }
     }
@@ -63,6 +66,14 @@ void BlePeerDevice::subscribeChars() {
         if (nullptr != chars[i]) {
             log_i("subscribing %s", chars[i]->label);
             chars[i]->subscribe(client);
+        }
+}
+
+void BlePeerDevice::unsubscribeChars() {
+    for (int8_t i = 0; i < charsMax; i++)
+        if (nullptr != chars[i]) {
+            log_i("unsubscribing %s", chars[i]->label);
+            chars[i]->unsubscribe();
         }
 }
 
@@ -124,7 +135,7 @@ uint8_t BlePeerDevice::deleteChars(const char* label) {
     uint8_t deleted = 0;
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i] && 0 == strcmp(chars[i]->label, label)) {
-            delete chars[i];
+            delete chars[i];  // delete nullptr should be safe!
             removeCharAt(i);
             deleted++;
         }
@@ -136,6 +147,7 @@ uint8_t BlePeerDevice::deleteChars(const char* label) {
  * @param [in] device->client A pointer to the calling client object.
  */
 void BlePeerDevice::onConnect(BLEClient* client) {
+    connected = true;
     log_i("subscribing");
     subscribeChars();
 }
@@ -144,7 +156,10 @@ void BlePeerDevice::onConnect(BLEClient* client) {
  * @brief Called when disconnected from the server.
  * @param [in] device->client A pointer to the calling client object.
  */
-void BlePeerDevice::onDisconnect(BLEClient* client) { log_i("TODO"); }
+void BlePeerDevice::onDisconnect(BLEClient* client) {
+    connected = false;
+    log_i("disconnected");
+}
 
 /**
  * @brief Called when server requests to update the connection parameters.
@@ -193,5 +208,5 @@ bool BlePeerDevice::onConfirmPIN(uint32_t pin) {
 void BlePeerDevice::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) {
     char buf[length];
     strncpy(buf, (char*)data, length);
-    log_i("char: %s, data: '%s', len: %d", c->getUUID().toString().c_str(), buf, length);
+    log_i("uuid: %s, data: '%s', len: %d", c->getUUID().toString().c_str(), buf, length);
 }

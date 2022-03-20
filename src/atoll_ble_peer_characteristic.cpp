@@ -43,7 +43,7 @@ bool BlePeerCharacteristic::subscribe(BLEClient* client) {
     return true;
 }
 
-bool BlePeerCharacteristic::unSubscribe() {
+bool BlePeerCharacteristic::unsubscribe() {
     if (!characteristic) return false;
     bool res = characteristic->unsubscribe();
     return res;

@@ -23,7 +23,7 @@ class BlePeerCharacteristic {
     virtual ~BlePeerCharacteristic();  // virt dtor so we can safely delete
 
     virtual bool subscribe(BLEClient* client);
-    virtual bool unSubscribe();
+    virtual bool unsubscribe();
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) = 0;
 };
 
