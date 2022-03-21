@@ -10,7 +10,7 @@ class Ble {
    public:
     static void init(const char *deviceName) {
         if (initDone) {
-            log_e("init already done");
+            log_i("init already done");
             return;
         }
 
@@ -18,7 +18,8 @@ class Ble {
         BLEDevice::setScanDuplicateCacheSize(200);
 
         BLEDevice::init(deviceName);
-        // BLEDevice::setMTU(517);
+
+        BLEDevice::setMTU(517);
         initDone = true;
     }
 

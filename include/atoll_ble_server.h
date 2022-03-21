@@ -21,10 +21,6 @@
 #define HOSTNAME "libAtollBle_unnamed"
 #endif
 
-#ifndef BLE_APPEARANCE
-#define BLE_APPEARANCE APPEARANCE_CYCLING_POWER_SENSOR
-#endif
-
 namespace Atoll {
 
 class BleServer : public Task,

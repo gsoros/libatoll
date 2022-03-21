@@ -157,16 +157,18 @@ class Peer : public BLEClientCallbacks {
         }
         client->setClientCallbacks(this, false);
 
-        // minInterval  | The minimum connection interval in 1.25ms units.
-        // maxInterval  | The maximum connection interval in 1.25ms units.
-        // latency      | The number of packets allowed to skip (extends max interval).
-        // timeout      | The timeout time in 10ms units before disconnecting.
+        // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
+        // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
+        // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
+        // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
         // scanInterval | The scan interval to use when attempting to connect in 0.625ms units.
         // scanWindow   | The scan window to use when attempting to connect in 0.625ms units.
         //      if (maxinterval * latency > timeout) {return invalidParams;)
         // client->setConnectionParams(12, 12, 0, 51, 16, 16);
-        // client->setConnectionParams(50, 50, 2, 1000, 16, 16);
-        client->setConnectTimeout(5);
+        // client->setConnectionParams(6, 500, 1, 500, 16, 16);
+        // client->setConnectionParams(6, 300, 0, 3200);
+
+        client->setConnectTimeout(3);
     }
 
     virtual BLEClient* getClient() {
@@ -233,7 +235,8 @@ class Peer : public BLEClientCallbacks {
 
     virtual bool
     connectClient(bool deleteAttibutes = true) {
-        return client->connect((BLEAddress)address, deleteAttibutes);
+        log_i("connecting to %s(%d)", address, addressType);
+        return client->connect(BLEAddress(address, addressType), deleteAttibutes);
     }
 
     // client callbacks

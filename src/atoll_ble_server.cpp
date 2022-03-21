@@ -23,7 +23,9 @@ void BleServer::setup(const char *deviceName, ::Preferences *p, const char *asUu
     server = BLEDevice::createServer();
     server->setCallbacks(this);
     advertising = server->getAdvertising();
+#ifdef BLE_APPEARANCE
     advertising->setAppearance(BLE_APPEARANCE);
+#endif
     // advertising->setManufacturerData("G");
     // advertising->setScanResponse(false);
     // advertising->setMinPreferred(0x0);
