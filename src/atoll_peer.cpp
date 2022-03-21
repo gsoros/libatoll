@@ -27,7 +27,7 @@ void Peer::connect() {
         setClient(BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType)));
         if (hasClient()) {
             if (!connectClient(false)) {
-                log_i("reconnect failed");
+                // log_i("reconnect failed");
                 goto end;
             }
             log_i("reconnected client");
@@ -57,7 +57,7 @@ void Peer::connect() {
     goto end;
 
 end:
-    log_i("end");
+    // log_i("end");
     connecting = false;
 }
 

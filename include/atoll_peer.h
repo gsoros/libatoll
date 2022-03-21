@@ -235,7 +235,7 @@ class Peer : public BLEClientCallbacks {
 
     virtual bool
     connectClient(bool deleteAttibutes = true) {
-        log_i("connecting to %s(%d)", address, addressType);
+        // log_i("connecting to %s(%d)", address, addressType);
         return client->connect(BLEAddress(address, addressType), deleteAttibutes);
     }
 
