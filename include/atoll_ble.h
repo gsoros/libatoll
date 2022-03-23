@@ -19,7 +19,7 @@ class Ble {
 
         BLEDevice::init(deviceName);
 
-        BLEDevice::setMTU(517);
+        // BLEDevice::setMTU(517);
         initDone = true;
     }
 

@@ -2,19 +2,40 @@
 
 using namespace Atoll;
 
+Wifi *Wifi::instance;
+Ota *Wifi::ota;
+
 void Wifi::setup(
     const char *hostName,
     ::Preferences *p,
-    const char *preferencesNS) {
+    const char *preferencesNS,
+    Wifi *instance,
+    Api *api,
+    Ota *ota) {
     strncpy(this->hostName, hostName, sizeof(this->hostName));
     preferencesSetup(p, preferencesNS);
+    this->instance = instance;
+    this->ota = ota;
+
     loadDefaultSettings();
     loadSettings();
     applySettings();
     registerCallbacks();
+
+    if (nullptr == instance) return;
+    if (nullptr == api) return;
+    api->addCommand(ApiCommand("wifi", enabledProcessor));
+    api->addCommand(ApiCommand("wifiAp", apProcessor));
+    api->addCommand(ApiCommand("wifiApSSID", apSSIDProcessor));
+    api->addCommand(ApiCommand("wifiApPassword", apPasswordProcessor));
+    api->addCommand(ApiCommand("wifiSta", staProcessor));
+    api->addCommand(ApiCommand("wifiStaSSID", staSSIDProcessor));
+    api->addCommand(ApiCommand("wifiStaPassword", staPasswordProcessor));
 };
 
-void Wifi::loop(){};
+void Wifi::loop() {
+    taskStop();
+};
 
 void Wifi::off() {
     log_i("[Wifi] Shutting down");
@@ -96,17 +117,18 @@ void Wifi::applySettings() {
     log_i("[Wifi] Applying settings, connections will be reset");
     Serial.flush();
     delay(1000);
-    wifi_mode_t newWifiMode;
+    wifi_mode_t oldMode = WiFi.getMode();
+    wifi_mode_t wifiMode;
     if (settings.enabled && (settings.apEnabled || settings.staEnabled)) {
         if (settings.apEnabled && settings.staEnabled)
-            newWifiMode = WIFI_MODE_APSTA;
+            wifiMode = WIFI_MODE_APSTA;
         else if (settings.apEnabled)
-            newWifiMode = WIFI_MODE_AP;
+            wifiMode = WIFI_MODE_AP;
         else
-            newWifiMode = WIFI_MODE_STA;
+            wifiMode = WIFI_MODE_STA;
     } else
-        newWifiMode = WIFI_MODE_NULL;
-    WiFi.mode(newWifiMode);
+        wifiMode = WIFI_MODE_NULL;
+    WiFi.mode(wifiMode);
     if (settings.enabled && settings.apEnabled) {
         if (0 == strcmp("", const_cast<char *>(settings.apSSID))) {
             log_e("Warning: cannot enable AP with empty SSID");
@@ -124,6 +146,33 @@ void Wifi::applySettings() {
             log_i("Connecting WiFi STA to AP '%s'", settings.staSSID);
             WiFi.begin(settings.staSSID, settings.staPassword);
         }
+    }
+
+    if (oldMode == wifiMode) {
+        log_i("mode unchanged, not manipulating ota and wifiserial");
+        return;
+    }
+    if (wifiMode == WIFI_MODE_NULL) {
+        if (nullptr != ota)
+            ota->taskStop();
+#ifdef FEATURE_SERIAL
+        if (nullptr != wifiSerial)
+            board.wifiSerial.taskStop();
+#endif
+    } else {
+        if (nullptr != ota) {
+            ota->off();
+            ota->taskStop();
+            ota->setup(hostName);
+            ota->taskStart("Ota");
+        }
+#ifdef FEATURE_SERIAL
+        if (nullptr != wifiSerial) {
+            board.wifiSerial.taskStop();
+            board.wifiSerial.setup();
+            board.wifiSerial.taskStart("wifiSerial");
+        }
+#endif
     }
 };
 
@@ -158,4 +207,114 @@ void Wifi::registerCallbacks() {
         log_i("WiFi STA disconnected");
     },
                  SYSTEM_EVENT_STA_LOST_IP);
+}
+
+ApiResult *Wifi::enabledProcessor(ApiReply *reply) {
+    if (nullptr == instance) return Api::error();
+    // set wifi
+    bool newValue = true;  // enable wifi by default
+    if (0 < strlen(reply->arg)) {
+        if (0 == strcmp("false", reply->arg) || 0 == strcmp("0", reply->arg))
+            newValue = false;
+        instance->setEnabled(newValue);
+    }
+    // get wifi
+    strncpy(reply->value, instance->isEnabled() ? "1" : "0", sizeof(reply->value));
+    return Api::success();
+}
+
+ApiResult *Wifi::apProcessor(ApiReply *reply) {
+    if (nullptr == instance) return Api::error();
+    // set
+    bool newValue = true;  // enable by default
+    if (0 < strlen(reply->arg)) {
+        if (0 == strcmp("false", reply->arg) ||
+            0 == strcmp("0", reply->arg))
+            newValue = false;
+        instance->settings.apEnabled = newValue;
+        instance->saveSettings();
+        instance->applySettings();
+    }
+    // get
+    strncpy(reply->value, instance->settings.apEnabled ? "1" : "0",
+            sizeof(reply->value));
+    return Api::success();
+}
+
+ApiResult *Wifi::apSSIDProcessor(ApiReply *reply) {
+    if (nullptr == instance) return Api::error();
+    // set
+    if (0 < strlen(reply->arg)) {
+        strncpy(instance->settings.apSSID, reply->arg,
+                sizeof(instance->settings.apSSID));
+        instance->saveSettings();
+        instance->applySettings();
+    }
+    // get
+    strncpy(reply->value, instance->settings.apSSID,
+            sizeof(reply->value));
+    return Api::success();
+}
+
+ApiResult *Wifi::apPasswordProcessor(ApiReply *reply) {
+    if (nullptr == instance) return Api::error();
+    // set
+    if (0 < strlen(reply->arg)) {
+        strncpy(instance->settings.apPassword, reply->arg,
+                sizeof(instance->settings.apPassword));
+        instance->saveSettings();
+        instance->applySettings();
+    }
+    // get
+    strncpy(reply->value, instance->settings.apPassword,
+            sizeof(reply->value));
+    return Api::success();
+}
+
+ApiResult *Wifi::staProcessor(ApiReply *reply) {
+    if (nullptr == instance) return Api::error();
+    // set
+    bool newValue = true;  // enable by default
+    if (0 < strlen(reply->arg)) {
+        if (0 == strcmp("false", reply->arg) ||
+            0 == strcmp("0", reply->arg))
+            newValue = false;
+        instance->settings.staEnabled = newValue;
+        instance->saveSettings();
+        instance->applySettings();
+    }
+    // get
+    strncpy(reply->value, instance->settings.staEnabled ? "1" : "0",
+            sizeof(reply->value));
+    return Api::success();
+}
+
+ApiResult *Wifi::staSSIDProcessor(ApiReply *reply) {
+    if (nullptr == instance) return Api::error();
+    // set
+    if (0 < strlen(reply->arg)) {
+        strncpy(instance->settings.staSSID, reply->arg,
+                sizeof(instance->settings.staSSID));
+        instance->saveSettings();
+        instance->applySettings();
+    }
+    // get
+    strncpy(reply->value, instance->settings.staSSID,
+            sizeof(reply->value));
+    return Api::success();
+}
+
+ApiResult *Wifi::staPasswordProcessor(ApiReply *reply) {
+    if (nullptr == instance) return Api::error();
+    // set
+    if (0 < strlen(reply->arg)) {
+        strncpy(instance->settings.staPassword, reply->arg,
+                sizeof(instance->settings.staPassword));
+        instance->saveSettings();
+        instance->applySettings();
+    }
+    // get
+    strncpy(reply->value, instance->settings.staPassword,
+            sizeof(reply->value));
+    return Api::success();
 }

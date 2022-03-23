@@ -24,7 +24,8 @@ class Ota : public Task {
     void onError(ota_error_t error);
 
    private:
-    uint8_t lastProgressPercent = 0;
+    uint16_t savedTaskFreq = 10;
+    uint16_t taskFreqWhenUploading = 40;
 };
 
 }  // namespace Atoll

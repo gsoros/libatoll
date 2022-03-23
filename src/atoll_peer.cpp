@@ -10,7 +10,7 @@ Peer::~Peer() {
 }
 
 void Peer::connect() {
-    log_i("connecting to %s", name);
+    // log_i("connecting to %s", name);
 
     // https://github.com/h2zero/NimBLE-Arduino/blob/master/examples/NimBLE_Client/NimBLE_Client.ino
     if (connecting) {
@@ -49,7 +49,7 @@ void Peer::connect() {
     }
     if (!isConnected()) {
         if (!connectClient()) {
-            log_i("failed to connect (2)");
+            // log_i("failed to connect (2)");
             goto end;
         }
     }
@@ -82,14 +82,14 @@ void Peer::unsubscribeChars() {
 // returns -1 on error
 int8_t Peer::charIndex(const char* label) {
     size_t len = strlen(label);
-    log_i("checking char label '%s' len: %d", label, len);
+    // log_i("checking char label '%s' len: %d", label, len);
     for (int8_t i = 0; i < charsMax; i++) {
         if (nullptr == chars[i] && !len) {
-            log_i("found unused index %d for empty label", i);
+            // log_i("found unused index %d for empty label", i);
             return i;
         }
         if (len && nullptr != chars[i] && 0 == strcmp(chars[i]->label, label)) {
-            log_i("found index %d of char '%s'", i, label);
+            // log_i("found index %d of char '%s'", i, label);
             return i;
         }
     }

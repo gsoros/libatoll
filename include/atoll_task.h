@@ -67,6 +67,7 @@ class Task {
     }
 
     void taskSetFreq(const uint16_t freq) {
+        log_i("%s new freq: %d", taskName, freq);
         taskFreq = freq;
         _taskSetDelayFromFreq();
     }

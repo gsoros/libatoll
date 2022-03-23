@@ -7,10 +7,17 @@
 
 #include "atoll_ble_constants.h"
 #include "atoll_task.h"
-#include "atoll_preferences.h"
 
-#ifndef BLE_CHAR_VALUE_MAXLENGTH
-#define BLE_CHAR_VALUE_MAXLENGTH 128
+#ifndef ATOLL_BLE_SERVER_CHAR_VALUE_MAXLENGTH
+#ifdef BLE_CHAR_VALUE_MAXLENGTH
+#define ATOLL_BLE_SERVER_CHAR_VALUE_MAXLENGTH BLE_CHAR_VALUE_MAXLENGTH
+#else
+#define ATOLL_BLE_SERVER_CHAR_VALUE_MAXLENGTH 512
+#endif
+#endif
+
+#ifndef ATOLL_BLE_SERVER_MAX_SERVICES
+#define ATOLL_BLE_SERVER_MAX_SERVICES 8
 #endif
 
 #ifndef SETTINGS_STR_LENGTH
@@ -24,64 +31,70 @@
 namespace Atoll {
 
 class BleServer : public Task,
-                  public Preferences,
-                  // public BLEClientCallbacks,
                   public BLEServerCallbacks,
                   public BLECharacteristicCallbacks {
    public:
     uint32_t taskStack = 4096;                        // task stack size in bytes
     char deviceName[SETTINGS_STR_LENGTH] = HOSTNAME;  // advertised device name
     bool enabled = true;                              // whether bluetooth is enabled
-    BLEServer *server;                                // pointer to the ble server
-    BLEUUID disUUID;                                  // device information service uuid
-    BLEService *dis;                                  // device information service
-    BLECharacteristic *diChar;                        // device information characteristic
-    BLEUUID blsUUID;                                  // battery level service uuid
-    BLEService *bls;                                  // battery level service
-    BLECharacteristic *blChar;                        // battery level characteristic
-    BLEUUID asUUID;                                   // api service uuid
-    BLEService *as;                                   // api service
-    BLECharacteristic *apiTxChar;                     // api tx characteristic
-    BLECharacteristic *apiRxChar;                     // api xx characteristic
-    BLEAdvertising *advertising;                      // pointer to advertising object
 
-    uint8_t lastBatteryLevel = 0;
-    unsigned long lastBatteryNotification = 0;
-    bool secureApi = false;     // whether to use LESC for API service
-    uint32_t passkey = 696669;  // passkey for API service, max 6 digits
-
-    BleServer() {}
+    BleServer();
     virtual ~BleServer();
 
-    virtual void setup(const char *deviceName, ::Preferences *p, const char *asUuidStr);
-    void loop();
+    virtual void setup(const char *deviceName);
+    bool createDeviceInformationService();
+    virtual void loop();
+
+    virtual BLEService *createService(const BLEUUID &uuid);
+    virtual void advertiseService(const BLEUUID &uuid, uint8_t advType = 0);
+    virtual BLEService *getService(const BLEUUID &uuid);
+    virtual BLECharacteristic *getChar(const BLEUUID &serviceUuid, const BLEUUID &charUuid);
+
     void startServices();
-    void startDiService();
-    void startBlService();
-    void startApiService();
-    void notifyBl(const ulong t, const uint8_t level);
-    // void handleApiCommand(const char *command);
-    void setApiValue(const char *value);
-    const char *characteristicStr(BLECharacteristic *c);
+    void notify(const BLEUUID &serviceUuid,
+                const BLEUUID &charUuid,
+                uint8_t *data,
+                size_t size);
     void stop();
 
     void onConnect(BLEServer *pServer, ble_gap_conn_desc *desc);
     void onDisconnect(BLEServer *pServer);
+
     void startAdvertising();
 
-    void onRead(BLECharacteristic *pCharacteristic);
-    void onWrite(BLECharacteristic *pCharacteristic);
-    void onNotify(BLECharacteristic *pCharacteristic);
-    void onSubscribe(BLECharacteristic *pCharacteristic, ble_gap_conn_desc *desc, uint16_t subValue);
+    void start();
 
-    void setSecureApi(bool state);
-    void setPasskey(uint32_t newPasskey);
-    void loadSettings();
-    void saveSettings();
-    void printSettings();
+    void onRead(BLECharacteristic *c) {
+        log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
+    }
+
+    void onWrite(BLECharacteristic *c) {
+        log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
+    }
+
+    void onNotify(BLECharacteristic *c) {
+        log_i("%d", c->getValue<int>());
+    }
+
+    void onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {
+        log_i("client ID: %d Address: %s ...",
+              desc->conn_handle,
+              BLEAddress(desc->peer_ota_addr).toString().c_str());
+        if (subValue == 0)
+            log_i("... unsubscribed from %s", c->getUUID().toString().c_str());
+        else if (subValue == 1)
+            log_i("... subscribed to notfications for %s", c->getUUID().toString().c_str());
+        else if (subValue == 2)
+            log_i("... Subscribed to indications for %s", c->getUUID().toString().c_str());
+        else if (subValue == 3)
+            log_i("... subscribed to notifications and indications for %s", c->getUUID().toString().c_str());
+    }
 
    private:
-    CircularBuffer<uint16_t, 32> _clients;  // keeps track of connected client handles, in order to gracefully disconnect them before deep sleep or reboot; TODO add has() to CircularBuffer
+    // keeps track of connected client handles, in order to gracefully disconnect them before deep sleep or reboot; TODO add has() to CircularBuffer
+    CircularBuffer<uint16_t, 8> _clients;   //
+    BLEServer *server = nullptr;            // pointer to the ble server
+    BLEAdvertising *advertising = nullptr;  // pointer to advertising object
 };
 
 }  // namespace Atoll

@@ -2,6 +2,9 @@
 #define __atoll_api_h
 
 #include <Arduino.h>
+#include "atoll_preferences.h"
+#include "atoll_ble_server.h"
+#include "atoll_api_rx_callbacks.h"
 
 #ifndef ATOLL_API_COMMAND_STR_LENGTH
 #define ATOLL_API_COMMAND_STR_LENGTH 512
@@ -26,6 +29,14 @@
 #endif
 #ifndef ATOLL_API_MAX_RESULTS
 #define ATOLL_API_MAX_RESULTS 16
+#endif
+
+#ifndef API_SERVICE_UUID
+#ifdef ESPCC_API_SERVICE_UUID
+#define API_SERVICE_UUID ESPCC_API_SERVICE_UUID
+#else
+#error API_SERVICE_UUID is undefined
+#endif
 #endif
 
 namespace Atoll {
@@ -81,9 +92,15 @@ class ApiCommand {
     };
 };
 
-class Api {
+class Api : public Preferences {
    public:
-    static void setup();
+    static Api *instance;
+    static BleServer *bleServer;
+    static bool secureBle;    // whether to use LESC for BLE API service
+    static uint32_t passkey;  // passkey for BLE API service, max 6 digits
+
+    static void setup(Api *instance, ::Preferences *p, const char *preferencesNS, BleServer *bleServer = nullptr, const char *serviceUuid = nullptr);
+    static bool addBleService(BleServer *bleServer, const char *serviceUuid);
     static bool addCommand(ApiCommand command);
     static bool addResult(ApiResult result);
     static ApiReply process(const char *commandWithArg, bool log = true);
@@ -102,6 +119,10 @@ class Api {
     static const uint16_t replyLength = ATOLL_API_REPLY_LENGTH;
     static const uint16_t valueLength = ATOLL_API_VALUE_LENGTH;
 
+    static void loadSettings();
+    static void saveSettings();
+    static void printSettings();
+
    protected:
     static ApiCommand commands[ATOLL_API_MAX_COMMANDS];
     static uint8_t numCommands;
@@ -111,6 +132,8 @@ class Api {
     static ApiResult *initProcessor(ApiReply *reply);
     static ApiResult *hostnameProcessor(ApiReply *reply);
     static ApiResult *buildProcessor(ApiReply *reply);
+
+   private:
 };
 
 }  // namespace Atoll

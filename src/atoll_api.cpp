@@ -7,7 +7,23 @@ uint8_t Api::numCommands;
 ApiResult Api::results[ATOLL_API_MAX_RESULTS];
 uint8_t Api::numResults;
 
-void Api::setup() {
+Api *Api::instance = nullptr;
+BleServer *Api::bleServer = nullptr;
+bool Api::secureBle = false;     // whether to use LESC for BLE API service
+uint32_t Api::passkey = 696669;  // passkey for BLE API service, max 6 digits
+
+void Api::setup(
+    Api *instance,
+    ::Preferences *p,
+    const char *preferencesNS,
+    BleServer *bleServer,
+    const char *serviceUuid) {
+    Atoll::Api::instance = instance;
+    Atoll::Api::bleServer = bleServer;
+
+    if (nullptr != instance)
+        instance->preferencesSetup(p, preferencesNS);
+
     numCommands = 0;
     numResults = 0;
 
@@ -23,6 +39,69 @@ void Api::setup() {
     addCommand(ApiCommand("init", Atoll::Api::initProcessor));
     addCommand(ApiCommand("hostname", Atoll::Api::hostnameProcessor));
     addCommand(ApiCommand("build", Atoll::Api::buildProcessor));
+
+    if (nullptr != bleServer && nullptr != serviceUuid)
+        addBleService(bleServer, serviceUuid);
+}
+
+bool Api::addBleService(BleServer *bleServer, const char *serviceUuid) {
+    log_i("adding API service to BleServer");
+    if (nullptr == bleServer) {
+        log_e("bleServer is null");
+        return false;
+    }
+    if (secureBle) {
+        log_i("setting up secure BLE API");
+        NimBLEDevice::setSecurityAuth(true, true, true);
+        NimBLEDevice::setSecurityPasskey(passkey);
+        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
+    }
+
+    BLEService *s = bleServer->createService(BLEUUID(serviceUuid));
+    if (nullptr == s) {
+        log_e("could not create service");
+        return false;
+    }
+    uint32_t properties = NIMBLE_PROPERTY::WRITE;
+    if (secureBle)
+        properties |= NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::WRITE_AUTHEN;
+    BLECharacteristic *rx = s->createCharacteristic(
+        BLEUUID(API_RX_CHAR_UUID),
+        properties);
+    if (nullptr == rx) {
+        log_e("could not create char");
+        return false;
+    }
+    rx->setCallbacks(new ApiRxCallbacks);
+
+    char str[SETTINGS_STR_LENGTH] = "";
+    strncpy(str, "Ready", sizeof(str));
+    properties = NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::INDICATE | NIMBLE_PROPERTY::NOTIFY;
+    if (secureBle)
+        properties |= NIMBLE_PROPERTY::READ_ENC | NIMBLE_PROPERTY::READ_AUTHEN;
+    BLECharacteristic *tx = s->createCharacteristic(
+        BLEUUID(API_TX_CHAR_UUID),
+        properties);
+    if (nullptr == tx) {
+        log_e("could not create char");
+        return false;
+    }
+    tx->setValue((uint8_t *)str, strlen(str));
+    snprintf(str, sizeof(str), "%s API v0.1", bleServer->deviceName);
+    BLEDescriptor *d = rx->createDescriptor(
+        BLEUUID(API_DESC_UUID),
+        NIMBLE_PROPERTY::READ);
+    if (nullptr == d) {
+        log_e("could not create descriptor");
+        return false;
+    }
+    d->setValue((uint8_t *)str, strlen(str));
+    if (!s->start()) {
+        log_e("could notstart service");
+        return false;
+    }
+    bleServer->advertiseService(BLEUUID(serviceUuid), 1);
+    return true;
 }
 
 // call with newCommand.code = 0 to assign the next available code
@@ -133,6 +212,24 @@ uint8_t Api::nextAvailableResultCode() {
         return candidate;
     log_e("could not find an available code");
     return 0;
+}
+
+void Api::loadSettings() {
+    if (!instance->preferencesStartLoad()) return;
+    secureBle = instance->preferences->getBool("secureBle", secureBle);
+    passkey = (uint32_t)instance->preferences->getInt("passkey", passkey);
+    instance->preferencesEnd();
+}
+
+void Api::saveSettings() {
+    if (!instance->preferencesStartSave()) return;
+    instance->preferences->putBool("secureBle", secureBle);
+    instance->preferences->putInt("passkey", (int32_t)passkey);
+    instance->preferencesEnd();
+}
+
+void Api::printSettings() {
+    log_i("SecureBle: %s Passkey: %d", secureBle ? "Yes" : "No", passkey);
 }
 
 ApiCommand *Api::command(uint8_t code, bool logOnError) {

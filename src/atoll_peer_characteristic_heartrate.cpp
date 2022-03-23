@@ -6,7 +6,7 @@ PeerCharacteristicHeartrate::PeerCharacteristicHeartrate() {
     strncpy(label, "Heartrate", sizeof(label));
     serviceUuid = BLEUUID(HEART_RATE_SERVICE_UUID);
     charUuid = BLEUUID(HEART_RATE_MEASUREMENT_CHAR_UUID);
-    log_i("PeerCharacteristicHeartrate construct, label: %s, char: %s", label, charUuid.toString().c_str());
+    // log_i("PeerCharacteristicHeartrate construct, label: %s, char: %s", label, charUuid.toString().c_str());
 }
 
 uint16_t PeerCharacteristicHeartrate::decode(const uint8_t* data, const size_t length) {

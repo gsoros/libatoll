@@ -81,9 +81,9 @@ class Peer : public BLEClientCallbacks {
         size_t typeLen,
         char* name,
         size_t nameLen) {
-        log_i("unpacking '%s'", packed);
+        // log_i("unpacking '%s'", packed);
         size_t packedLen = strlen(packed);
-        log_i("packedLen: %d", packedLen);
+        // log_i("packedLen: %d", packedLen);
         if (packedLen < sizeof(Peer::address) + 7) {
             log_e("packed string too short (%d)", packedLen);
             return false;
@@ -95,7 +95,7 @@ class Peer : public BLEClientCallbacks {
         }
         char tAddress[sizeof(Peer::address)] = "";
         size_t tAddressLen = colon - packed;
-        log_i("tAddressLen: %d", tAddressLen);
+        // log_i("tAddressLen: %d", tAddressLen);
         if (addressLen < tAddressLen) {
             log_e("address buffer too small");
             return false;
@@ -105,7 +105,7 @@ class Peer : public BLEClientCallbacks {
         // rest of packed, without address and colon
         char rest[packedLen - tAddressLen] = "";
         strncpy(rest, colon + 1, sizeof(rest) - 1);
-        log_i("rest: '%s' size: %d", rest, sizeof(rest) - 1);
+        // log_i("rest: '%s' size: %d", rest, sizeof(rest) - 1);
         colon = strchr(rest, ',');
         if (nullptr == colon) {
             log_e("second colon not present");
@@ -115,7 +115,7 @@ class Peer : public BLEClientCallbacks {
         strncpy(tAddressTypeStr, rest, colon - rest);
         uint8_t tAddressTypeLen = strlen(tAddressTypeStr);
         uint8_t tAddressType = atoi(tAddressTypeStr);
-        log_i("tAddressType: %d", tAddressType);
+        // log_i("tAddressType: %d", tAddressType);
 
         colon = strrchr(packed, ',');
         if (nullptr == colon) {
@@ -124,7 +124,7 @@ class Peer : public BLEClientCallbacks {
         }
         char tType[sizeof(Peer::type)] = "";
         size_t tTypeLen = colon - tAddressLen - tAddressTypeLen - 2 - packed;
-        log_i("tTypeLen: %d", tTypeLen);
+        // log_i("tTypeLen: %d", tTypeLen);
         if (typeLen < tTypeLen) {
             log_e("type buffer too small");
             return false;
@@ -132,20 +132,20 @@ class Peer : public BLEClientCallbacks {
         strncpy(tType, packed + tAddressTypeLen + tAddressLen + 2, tTypeLen);
         char tName[sizeof(Peer::name)] = "";
         size_t tNameLen = packedLen - tAddressLen - tAddressTypeLen - tTypeLen - 3;
-        log_i("tNameLen: %d", tNameLen);
+        // log_i("tNameLen: %d", tNameLen);
         if (nameLen < tNameLen) {
             log_e("name buffer too small");
             return false;
         }
         strncpy(tName, packed + tAddressLen + tAddressTypeLen + tTypeLen + 3, tNameLen);
-        log_i("tAddress: %s, tAddressType: %d, tType: %s, tName: %s",
-              tAddress, tAddressType, tType, tName);
+        // log_i("tAddress: %s, tAddressType: %d, tType: %s, tName: %s",
+        //       tAddress, tAddressType, tType, tName);
         strncpy(address, tAddress, addressLen);
         *addressType = tAddressType;
         strncpy(type, tType, typeLen);
         strncpy(name, tName, nameLen);
-        log_i("address: %s, addressType: %d, type: %s, name: %s",
-              address, *addressType, type, name);
+        // log_i("address: %s, addressType: %d, type: %s, name: %s",
+        //       address, *addressType, type, name);
         return true;
     }
 
@@ -233,8 +233,7 @@ class Peer : public BLEClientCallbacks {
     PeerCharacteristic* chars[ATOLL_BLE_PEER_DEVICE_MAX_CHARACTERISTICS];  // characteristics
     int8_t charsMax = ATOLL_BLE_PEER_DEVICE_MAX_CHARACTERISTICS;           // convenience for iterating
 
-    virtual bool
-    connectClient(bool deleteAttibutes = true) {
+    virtual bool connectClient(bool deleteAttibutes = true) {
         // log_i("connecting to %s(%d)", address, addressType);
         return client->connect(BLEAddress(address, addressType), deleteAttibutes);
     }

@@ -38,8 +38,8 @@ void BleClient::loop() {
         } else if (peers[i]->shouldConnect &&
                    !peers[i]->isConnected() &&
                    !peers[i]->connecting) {
-            log_i("connecting peer %s %s(%d)",
-                  peers[i]->name, peers[i]->address, peers[i]->addressType);
+            // log_i("connecting peer %s %s(%d)",
+            //      peers[i]->name, peers[i]->address, peers[i]->addressType);
             peers[i]->connect();
         } else if (!peers[i]->shouldConnect &&
                    peers[i]->isConnected()) {
@@ -83,19 +83,19 @@ void BleClient::startScan(uint32_t duration) {
 // get index of existing peer address
 // or first unused index for an empty address
 int8_t BleClient::peerIndex(const char* address) {
-    log_i("searching index for address '%s'", address);
+    // log_i("searching index for address '%s'", address);
     size_t addressLen = strlen(address);
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i] && !addressLen) {
-            log_i("found unused index %d for empty address", i);
+            // log_i("found unused index %d for empty address", i);
             return i;
         }
         if (nullptr != peers[i] && 0 == strcmp(peers[i]->address, address)) {
-            log_i("found index %d of address '%s'", i, address);
+            // log_i("found index %d of address '%s'", i, address);
             return i;
         }
     }
-    log_i("could not find index of address '%s'", address);
+    // log_i("could not find index of address '%s'", address);
     return -1;
 }
 
@@ -128,7 +128,7 @@ bool BleClient::addPeer(Peer* peer) {
         log_e("cannot add peer %s", peer->name);
         return false;
     }
-    log_i("adding peer %s %s", peer->name, peer->address);
+    // log_i("adding peer %s %s(%d)", peer->name, peer->address, peer->addressType);
     peers[index] = peer;
     return true;
 }

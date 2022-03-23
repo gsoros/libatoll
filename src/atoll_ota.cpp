@@ -39,7 +39,7 @@ void Ota::setup(const char *hostName, uint16_t port) {
 
 void Ota::loop() {
     if (WiFi.getMode() == WIFI_MODE_NULL) {
-        log_i("[OTA] Wifi is disabled, task should be stopped\n");
+        log_i("[OTA] Wifi is disabled, task should be stopped");
         return;
     }
     ArduinoOTA.handle();
@@ -53,8 +53,12 @@ void Ota::off() {
 
 void Ota::onStart() {
     log_i("[OTA] Update start");
+    savedTaskFreq = taskFreq;
+    taskSetFreq(taskFreqWhenUploading);
+
     // log_i("[OTA] Disabling sleep");
     //  board.sleepEnabled = false;
+
     if (ArduinoOTA.getCommand() == U_FLASH)
         log_i("[OTA] Flash");
     else {  // U_SPIFFS
@@ -63,16 +67,20 @@ void Ota::onStart() {
 }
 
 void Ota::onEnd() {
-    log_i("[OTA] Enabling sleep");
+    // log_i("[OTA] Enabling sleep");
     // board.sleepEnabled = true;
+
+    taskSetFreq(savedTaskFreq);
+
     log_i("[OTA] End");
 }
 
 void Ota::onProgress(uint progress, uint total) {
-    uint8_t progressPercent = (uint8_t)((float)progress / (float)total * 100.0);
-    if (progressPercent > this->lastProgressPercent) {
-        log_i("[OTA] %d%%\n", progressPercent);
-        this->lastProgressPercent = progressPercent;
+    static uint8_t lastPercent = 0;
+    uint8_t percent = (uint8_t)((float)progress / (float)total * 100.0);
+    if (percent > lastPercent) {
+        log_i("[OTA] %d%%", percent);
+        lastPercent = percent;
     }
 }
 
