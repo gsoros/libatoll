@@ -10,6 +10,14 @@
 #define ATOLL_TOUCH_NUM_PADS 4
 #endif
 
+#if ATOLL_TOUCH_NUM_PADS < 1
+#error at least one pad is required
+#endif
+
+#if 4 < ATOLL_TOUCH_NUM_PADS
+#error maximum 4 pads are supported
+#endif
+
 namespace Atoll {
 
 extern void IRAM_ATTR touchISR0();

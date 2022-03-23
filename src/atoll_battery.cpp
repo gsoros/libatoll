@@ -105,12 +105,22 @@ float Battery::voltageAvg() {
 }
 
 int Battery::calculateLevel() {
-    level = map(voltageAvg() * 1000,
-                BATTERY_EMPTY * 1000,
-                BATTERY_FULL * 1000,
-                0,
-                100000) /
-            1000;
+    // level = map(voltageAvg() * 1000,
+    //             BATTERY_EMPTY * 1000,
+    //             BATTERY_FULL * 1000,
+    //             0,
+    //             100000) /
+    //         1000;
+    // log_i("old method: %d", level);
+
+    // based on https://github.com/G6EJD/LiPo_Battery_Capacity_Estimator
+    double v = (double)voltageAvg();
+    level = (uint8_t)(2808.3808 * pow(v, 4) -
+                      43560.9157 * pow(v, 3) +
+                      252848.5888 * pow(v, 2) -
+                      650767.4615 * v +
+                      626532.5703);
+    // log_i("new method: %d", level);
     if (100 < level)
         level = 100;
     return level;

@@ -85,7 +85,7 @@ void Ota::onProgress(uint progress, uint total) {
 }
 
 void Ota::onError(ota_error_t error) {
-    log_i("[OTA] Error[%u]: ", error);
+    log_i("[OTA] Error %u", error);
     if (error == OTA_AUTH_ERROR)
         log_i("Auth Failed");
     else if (error == OTA_BEGIN_ERROR)
