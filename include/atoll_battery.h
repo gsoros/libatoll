@@ -10,26 +10,35 @@
 #include "atoll_api.h"
 #include "atoll_ble_server.h"
 
-#ifndef BATTERY_PIN
-#define BATTERY_PIN 35
+#ifndef ATOLL_BATTERY_PIN
+#define ATOLL_BATTERY_PIN 35
 #endif
 
-#ifndef BATTERY_RINGBUF_SIZE
-#define BATTERY_RINGBUF_SIZE 10  // circular buffer size
+#ifndef ATOLL_BATTERY_RINGBUF_SIZE
+#define ATOLL_BATTERY_RINGBUF_SIZE 10  // circular buffer size
 #endif
 
-#ifndef BATTERY_EMPTY
-#define BATTERY_EMPTY 3.2F
+#ifndef ATOLL_BATTERY_EMPTY
+#define ATOLL_BATTERY_EMPTY 3.2f
 #endif
 
-#ifndef BATTERY_FULL
-#define BATTERY_FULL 4.2F
+#ifndef ATOLL_BATTERY_FULL
+#define ATOLL_BATTERY_FULL 4.2f
+#endif
+
+#ifndef ATOLL_BATTERY_CHARGE_START_VOLTAGE_RISE
+#define ATOLL_BATTERY_CHARGE_START_VOLTAGE_RISE 0.1f
+#endif
+
+#ifndef ATOLL_BATTERY_CHARGE_END_VOLTAGE_DROP
+#define ATOLL_BATTERY_CHARGE_END_VOLTAGE_DROP 0.1f
 #endif
 
 namespace Atoll {
 
 class Battery : public Task, public Preferences {
    public:
+    uint8_t pin = ATOLL_BATTERY_PIN;
     float corrF = 1.0;
     float voltage = 0.0;
     float pinVoltage = 0.0;
@@ -37,8 +46,11 @@ class Battery : public Task, public Preferences {
     static Battery *instance;
     BleServer *bleServer = nullptr;
 
+    virtual ~Battery();
+
     void setup(
         ::Preferences *p,
+        int16_t pin = -1,
         Battery *instance = nullptr,
         Api *api = nullptr,
         BleServer *bleServer = nullptr);
@@ -46,7 +58,8 @@ class Battery : public Task, public Preferences {
     void notifyChar(uint8_t *value);
     void output();
     void loop();
-    int calculateLevel();
+    void detectChargingEvent(float oldVoltage);
+    uint8_t calculateLevel();
     float voltageAvg();
     float measureVoltage(bool useCorrection = true);
     void loadSettings();
@@ -57,7 +70,7 @@ class Battery : public Task, public Preferences {
     static ApiResult *batteryProcessor(ApiReply *reply);
 
    private:
-    CircularBuffer<float, BATTERY_RINGBUF_SIZE> _voltageBuf;
+    CircularBuffer<float, ATOLL_BATTERY_RINGBUF_SIZE> _voltageBuf;
 };
 
 }  // namespace Atoll

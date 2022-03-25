@@ -54,7 +54,7 @@ void Ota::off() {
 void Ota::onStart() {
     log_i("[OTA] Update start");
     savedTaskFreq = taskFreq;
-    taskSetFreq(taskFreqWhenUploading);
+    taskSetFreq(ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING);
 
     // log_i("[OTA] Disabling sleep");
     //  board.sleepEnabled = false;
@@ -87,15 +87,15 @@ void Ota::onProgress(uint progress, uint total) {
 void Ota::onError(ota_error_t error) {
     log_i("[OTA] Error %u", error);
     if (error == OTA_AUTH_ERROR)
-        log_i("Auth Failed");
+        log_i("^^^ = Auth Failed");
     else if (error == OTA_BEGIN_ERROR)
-        log_i("Begin Failed");
+        log_i("^^^ = Begin Failed");
     else if (error == OTA_CONNECT_ERROR)
-        log_i("Connect Failed");
+        log_i("^^^ = Connect Failed");
     else if (error == OTA_RECEIVE_ERROR)
-        log_i("Receive Failed");
+        log_i("^^^ = Receive Failed");
     else if (error == OTA_END_ERROR)
-        log_i("End Failed");
+        log_i("^^^ = End Failed");
     // log_i("[OTA] Enabling sleep");
     //  board.sleepEnabled = true;
 }

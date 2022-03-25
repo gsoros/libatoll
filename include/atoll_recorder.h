@@ -2,6 +2,8 @@
 #define __atoll_recorder_h
 
 #include <Arduino.h>
+#include "FS.h"
+#include <LITTLEFS.h>
 
 #include "atoll_task.h"
 #include "atoll_gps.h"
@@ -24,12 +26,12 @@ class Recorder : public Task {
         uint8_t heartrate;  // bpm
     };
 
-    uint16_t interval = 1000;                          // recording interval in milliseconds
-    DataPoint buffer[ATOLL_RECORDER_BUFFER_SIZE];      // recording buffer
-    uint16_t bufferSize = ATOLL_RECORDER_BUFFER_SIZE;  //
-    uint16_t numDataPoints = 0;                        //
-    bool isRecording = false;                          //
-    GPS *gps = nullptr;                                //
+    uint16_t interval = 1000;                       // recording interval in milliseconds
+    DataPoint buffer[ATOLL_RECORDER_BUFFER_SIZE];   // recording buffer
+    uint16_t bufSize = ATOLL_RECORDER_BUFFER_SIZE;  //
+    uint16_t bufLastIndex = 0;                      //
+    bool isRecording = false;                       //
+    GPS *gps = nullptr;                             //
 
     void setup(GPS *gps) {
         this->gps = gps;
@@ -40,7 +42,7 @@ class Recorder : public Task {
         ulong t = millis();
         if ((lastDataPointTime < t - interval) && interval < t) {
             addDataPoint();
-            if (bufferSize == numDataPoints)
+            if (bufSize == bufLastIndex)
                 saveBuffer();
         }
     }
@@ -86,29 +88,29 @@ class Recorder : public Task {
             log_e("invalid time");
             return;
         }
-        buffer[numDataPoints].time = time;
-        buffer[numDataPoints].lat = gpsl->lat();
-        buffer[numDataPoints].lon = gpsl->lng();
-        buffer[numDataPoints].alt = (int16_t)(gps->gps.altitude.meters());
+        buffer[bufLastIndex].time = time;
+        buffer[bufLastIndex].lat = gpsl->lat();
+        buffer[bufLastIndex].lon = gpsl->lng();
+        buffer[bufLastIndex].alt = (int16_t)(gps->gps.altitude.meters());
 
-        log_i("#%d time: %d loc: %.9f %.9f alt: %d, dist: %.9fm",
-              numDataPoints,
-              time,
-              buffer[numDataPoints].lat,
-              buffer[numDataPoints].lon,
-              buffer[numDataPoints].alt,
-              gps->gps.distanceBetween(gpsl->lat(), gpsl->lng(), (float)gpsl->lat(), (float)gpsl->lng()));
+        // log_i("#%d time: %d loc: %.9f %.9f alt: %d, dist: %.9fm",
+        //       bufLastIndex,
+        //       time,
+        //       buffer[bufLastIndex].lat,
+        //       buffer[bufLastIndex].lon,
+        //       buffer[bufLastIndex].alt,
+        //       gps->gps.distanceBetween(gpsl->lat(), gpsl->lng(), (float)gpsl->lat(), (float)gpsl->lng()));
 
-        numDataPoints++;
+        bufLastIndex++;
     }
 
     void saveBuffer() {
         log_i("saving buffer");
-        numDataPoints = 0;
+        bufLastIndex = 0;
     }
 
     void emptyBuffer() {
-        for (uint16_t i = 0; i < bufferSize; i++)
+        for (uint16_t i = 0; i < bufSize; i++)
             buffer[i] = DataPoint();
     }
 

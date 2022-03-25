@@ -8,6 +8,10 @@
 
 #include "atoll_task.h"
 
+#ifndef ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING
+#define ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING 20
+#endif
+
 namespace Atoll {
 
 class Ota : public Task {
@@ -25,7 +29,6 @@ class Ota : public Task {
 
    private:
     uint16_t savedTaskFreq = 10;
-    uint16_t taskFreqWhenUploading = 40;
 };
 
 }  // namespace Atoll
