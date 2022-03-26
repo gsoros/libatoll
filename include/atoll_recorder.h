@@ -2,8 +2,6 @@
 #define __atoll_recorder_h
 
 #include <Arduino.h>
-#include "FS.h"
-#include <LITTLEFS.h>
 
 #include "atoll_task.h"
 #include "atoll_gps.h"
@@ -32,12 +30,14 @@ class Recorder : public Task {
     uint16_t bufLastIndex = 0;                      //
     bool isRecording = false;                       //
     GPS *gps = nullptr;                             //
+    bool fsMounted = false;
 
     void setup(GPS *gps) {
         this->gps = gps;
     }
 
-    void loop() {
+    void
+    loop() {
         static ulong lastDataPointTime = 0;
         ulong t = millis();
         if ((lastDataPointTime < t - interval) && interval < t) {
@@ -83,17 +83,16 @@ class Recorder : public Task {
         tms.tm_min = gpst->minute();
         tms.tm_sec = gpst->second();
 
-        time_t time = mktime(&tms);
-        if (-1 == time) {
+        buffer[bufLastIndex].time = mktime(&tms);
+        if (-1 == buffer[bufLastIndex].time) {
             log_e("invalid time");
             return;
         }
-        buffer[bufLastIndex].time = time;
         buffer[bufLastIndex].lat = gpsl->lat();
         buffer[bufLastIndex].lon = gpsl->lng();
-        buffer[bufLastIndex].alt = (int16_t)(gps->gps.altitude.meters());
+        buffer[bufLastIndex].alt = (int16_t)gps->gps.altitude.meters();
 
-        // log_i("#%d time: %d loc: %.9f %.9f alt: %d, dist: %.9fm",
+        // log_i("#%d time: %d loc: %.9f %.9f alt: %d, double vs float: %.9fm",
         //       bufLastIndex,
         //       time,
         //       buffer[bufLastIndex].lat,
@@ -105,7 +104,10 @@ class Recorder : public Task {
     }
 
     void saveBuffer() {
-        log_i("saving buffer");
+        log_i("saving buffer, %d entries %d bytes each, total %d bytes",
+              sizeof(buffer) / sizeof(buffer[0]),
+              sizeof(buffer[0]),
+              sizeof(buffer));
         bufLastIndex = 0;
     }
 
