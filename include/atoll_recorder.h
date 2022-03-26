@@ -2,6 +2,7 @@
 #define __atoll_recorder_h
 
 #include <Arduino.h>
+#include <CircularBuffer.h>
 
 #include "atoll_task.h"
 #include "atoll_gps.h"
@@ -9,6 +10,18 @@
 
 #ifndef ATOLL_RECORDER_BUFFER_SIZE
 #define ATOLL_RECORDER_BUFFER_SIZE 60
+#endif
+
+#ifndef ATOLL_RECORDER_POWER_RINGBUF_SIZE
+#define ATOLL_RECORDER_POWER_RINGBUF_SIZE 32
+#endif
+
+#ifndef ATOLL_RECORDER_CADENCE_RINGBUF_SIZE
+#define ATOLL_RECORDER_CADENCE_RINGBUF_SIZE 8
+#endif
+
+#ifndef ATOLL_RECORDER_HR_RINGBUF_SIZE
+#define ATOLL_RECORDER_HR_RINGBUF_SIZE 8
 #endif
 
 namespace Atoll {
@@ -34,7 +47,7 @@ class Recorder : public Task {
     GPS *gps = nullptr;                             //
     FS *fs = nullptr;                               //
     const char basePath[5] = "/rec";                //
-    char filePath[30] = "";
+    char filePath[30] = "";                         //
 
     void setup(GPS *gps, Fs *fs) {
         if (nullptr == gps) {
@@ -53,8 +66,7 @@ class Recorder : public Task {
         this->fs = fs->fsp();
     }
 
-    void
-    loop() {
+    void loop() {
         static ulong lastDataPointTime = 0;
         ulong t = millis();
         if ((lastDataPointTime < t - interval) && interval < t) {
@@ -108,22 +120,29 @@ class Recorder : public Task {
         tms.tm_min = gpst->minute();
         tms.tm_sec = gpst->second();
 
-        buffer[bufLastIndex].time = mktime(&tms);
-        if (-1 == buffer[bufLastIndex].time) {
+        DataPoint *point = &buffer[bufLastIndex];
+
+        point->time = mktime(&tms);
+        if (-1 == point->time) {
             log_e("invalid time");
             return;
         }
-        buffer[bufLastIndex].lat = gpsl->lat();
-        buffer[bufLastIndex].lon = gpsl->lng();
-        buffer[bufLastIndex].alt = (int16_t)gps->gps.altitude.meters();
+        point->lat = gpsl->lat();
+        point->lon = gpsl->lng();
+        point->alt = (int16_t)gps->gps.altitude.meters();
 
-        // log_i("#%d time: %d loc: %.9f %.9f alt: %d, double vs float: %.9fm",
-        //       bufLastIndex,
-        //       time,
-        //       buffer[bufLastIndex].lat,
-        //       buffer[bufLastIndex].lon,
-        //       buffer[bufLastIndex].alt,
-        //       gps->gps.distanceBetween(gpsl->lat(), gpsl->lng(), (float)gpsl->lat(), (float)gpsl->lng()));
+        point->power = avgPower(true);
+        point->cadence = avgCadence(true);
+        point->heartrate = avgHeartrate(true);
+        log_i("#%d time: %d loc: %.9f %.9f alt: %dm, %dW %drpm %dbpm",
+              bufLastIndex,
+              time,
+              point->lat,
+              point->lon,
+              point->alt,
+              point->power,
+              point->cadence,
+              point->heartrate);
 
         bufLastIndex++;
     }
@@ -256,6 +275,97 @@ class Recorder : public Task {
             log_e("could not save buffer");
         resetBuffer();
         return true;
+    }
+
+    CircularBuffer<uint16_t, ATOLL_RECORDER_POWER_RINGBUF_SIZE> powerBuf;
+    SemaphoreHandle_t powerMutex = xSemaphoreCreateMutex();
+
+    void onPower(uint16_t value) {
+        if (!aquireMutex(powerMutex)) {
+            log_e("could not aquire powerMutex to add %d", value);
+            return;
+        }
+        powerBuf.push(value);
+        releaseMutex(powerMutex);
+    }
+
+    // TODO fix CircularBuffer.avg()
+    uint16_t avgPower(bool clearBuffer = false) {
+        if (!aquireMutex(powerMutex)) {
+            log_e("could not aquire powerMutex to compute avg");
+            return 0;
+        }
+        uint16_t avg = 0;
+        for (decltype(powerBuf)::index_t i = 0; i < powerBuf.size(); i++)
+            avg += powerBuf[i] / powerBuf.size();
+        if (clearBuffer) powerBuf.clear();
+        releaseMutex(powerMutex);
+        return avg;
+    }
+
+    CircularBuffer<uint8_t, ATOLL_RECORDER_CADENCE_RINGBUF_SIZE> cadenceBuf;
+    SemaphoreHandle_t cadenceMutex = xSemaphoreCreateMutex();
+
+    void onCadence(uint8_t value) {
+        if (!aquireMutex(cadenceMutex)) {
+            log_e("could not aquire cadenceMutex to add %d", value);
+            return;
+        }
+        cadenceBuf.push(value);
+        releaseMutex(cadenceMutex);
+    }
+
+    // TODO fix CircularBuffer.avg()
+    uint16_t avgCadence(bool clearBuffer = false) {
+        if (!aquireMutex(cadenceMutex)) {
+            log_e("could not aquire cadenceMutex to compute avg");
+            return 0;
+        }
+        uint16_t avg = 0;
+        for (decltype(cadenceBuf)::index_t i = 0; i < cadenceBuf.size(); i++)
+            avg += cadenceBuf[i] / cadenceBuf.size();
+        if (clearBuffer) cadenceBuf.clear();
+        releaseMutex(cadenceMutex);
+        return avg;
+    }
+
+    CircularBuffer<uint8_t, ATOLL_RECORDER_HR_RINGBUF_SIZE> heartrateBuf;
+    SemaphoreHandle_t heartrateMutex = xSemaphoreCreateMutex();
+
+    void onHeartrate(uint8_t value) {
+        if (!aquireMutex(heartrateMutex)) {
+            log_e("could not aquire heartrateMutex to add %d", value);
+            return;
+        }
+        heartrateBuf.push(value);
+        releaseMutex(heartrateMutex);
+    }
+
+    // TODO fix CircularBuffer.avg()
+    uint16_t avgHeartrate(bool clearBuffer = false) {
+        if (!aquireMutex(heartrateMutex)) {
+            log_e("could not aquire heartrateMutex to compute avg");
+            return 0;
+        }
+        uint16_t avg = 0;
+        for (decltype(heartrateBuf)::index_t i = 0; i < heartrateBuf.size(); i++)
+            avg += heartrateBuf[i] / heartrateBuf.size();
+        if (clearBuffer) heartrateBuf.clear();
+        releaseMutex(heartrateMutex);
+        return avg;
+    }
+
+    bool aquireMutex(SemaphoreHandle_t mutex, uint32_t timeout = 100) {
+        // log_i("aquireMutex %d", mutex);
+        if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
+            return true;
+        log_e("Could not aquire mutex");
+        return false;
+    }
+
+    void releaseMutex(SemaphoreHandle_t mutex) {
+        // log_i("releaseMutex %d", mutex);
+        xSemaphoreGive(mutex);
     }
 };
 

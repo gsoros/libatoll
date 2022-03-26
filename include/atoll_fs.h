@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include "FS.h"
 
+#include "atoll_serial.h"
+
 namespace Atoll {
 
 class Fs {
@@ -85,10 +87,14 @@ class Fs {
         }
 
         log_i("Read from file:");
+#ifdef FEATURE_SERIAL
         while (file.available()) {
             Serial.write(file.read());
         }
         Serial.println();
+#else
+        log_i("No FEATURE_SERIAL");
+#endif
         file.close();
     }
 

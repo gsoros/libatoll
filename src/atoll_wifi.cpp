@@ -1,10 +1,12 @@
 #include "atoll_wifi.h"
+#include "atoll_serial.h"
 
 using namespace Atoll;
 
 Wifi *Wifi::instance;
 Ota *Wifi::ota;
 Recorder *Wifi::recorder;
+WifiSerial *Wifi::wifiSerial;
 
 void Wifi::setup(
     const char *hostName,
@@ -13,12 +15,14 @@ void Wifi::setup(
     Wifi *instance,
     Api *api,
     Ota *ota,
-    Recorder *recorder) {
+    Recorder *recorder,
+    WifiSerial *wifiSerial) {
     strncpy(this->hostName, hostName, sizeof(this->hostName));
     preferencesSetup(p, preferencesNS);
     this->instance = instance;
     this->ota = ota;
     this->recorder = recorder;
+    this->wifiSerial = wifiSerial;
 
     loadDefaultSettings();
     loadSettings();
@@ -41,7 +45,7 @@ void Wifi::loop() {
 };
 
 void Wifi::off() {
-    log_i("[Wifi] Shutting down");
+    log_i("shutting down");
     settings.enabled = false;
     applySettings();
     taskStop();
@@ -90,35 +94,37 @@ void Wifi::saveSettings() {
 };
 
 void Wifi::printSettings() {
-    log_i("[Wifi] Wifi %sabled",
+    log_i("Wifi %sabled",
           settings.enabled ? "En" : "Dis");
     printAPSettings();
     printSTASettings();
 };
 
 void Wifi::printAPSettings() {
-    log_i("[Wifi] AP %sabled '%s' '%s'",
+    log_i("AP %sabled '%s' '%s'",
           settings.apEnabled ? "En" : "Dis",
           settings.apSSID,
           "***"  // settings.apPassword
     );
     if (settings.apEnabled)
-        log_i("[Wifi] AP online, IP: %s", WiFi.softAPIP().toString().c_str());
+        log_i("AP online, IP: %s", WiFi.softAPIP().toString().c_str());
 };
 
 void Wifi::printSTASettings() {
-    log_i("[Wifi] STA %sabled '%s' '%s'",
+    log_i("STA %sabled '%s' '%s'",
           settings.staEnabled ? "En" : "Dis",
           settings.staSSID,
           "***"  // settings.staPassword
     );
     if (WiFi.isConnected())
-        log_i("[Wifi] STA connected, local IP: %s", WiFi.localIP().toString().c_str());
+        log_i("STA connected, local IP: %s", WiFi.localIP().toString().c_str());
 };
 
 void Wifi::applySettings() {
-    log_i("[Wifi] Applying settings, connections will be reset");
+    log_i("Applying settings, connections will be reset");
+#ifdef FEATURE_SERIAL
     Serial.flush();
+#endif
     delay(1000);
     wifi_mode_t oldMode = WiFi.getMode();
     wifi_mode_t wifiMode;
@@ -156,14 +162,19 @@ void Wifi::applySettings() {
         return;
     }
     if (wifiMode == WIFI_MODE_NULL) {
-        if (nullptr != ota)
+        if (nullptr != ota) {
+            log_i("stopping Ota");
             ota->taskStop();
+        }
 #ifdef FEATURE_SERIAL
-        if (nullptr != wifiSerial)
-            board.wifiSerial.taskStop();
+        if (nullptr != wifiSerial) {
+            log_i("stopping wifiSerial");
+            wifiSerial->taskStop();
+        }
 #endif
     } else {
         if (nullptr != ota) {
+            log_i("restarting Ota");
             ota->off();
             ota->taskStop();
             ota->setup(hostName, recorder);
@@ -171,9 +182,10 @@ void Wifi::applySettings() {
         }
 #ifdef FEATURE_SERIAL
         if (nullptr != wifiSerial) {
-            board.wifiSerial.taskStop();
-            board.wifiSerial.setup();
-            board.wifiSerial.taskStart();
+            log_i("restarting wifiSerial");
+            wifiSerial->taskStop();
+            wifiSerial->setup();
+            wifiSerial->taskStart();
         }
 #endif
     }

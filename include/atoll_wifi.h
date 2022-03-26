@@ -10,6 +10,7 @@
 #include "atoll_api.h"
 #include "atoll_ota.h"
 #include "atoll_recorder.h"
+#include "atoll_wifi_serial.h"
 
 #ifndef SETTINGS_STR_LENGTH
 #define SETTINGS_STR_LENGTH 32
@@ -37,6 +38,7 @@ class Wifi : public Preferences, public Task {
     static Wifi *instance;
     static Ota *ota;
     static Recorder *recorder;
+    static WifiSerial *wifiSerial;
 
     void setup(
         const char *hostName,
@@ -45,7 +47,8 @@ class Wifi : public Preferences, public Task {
         Wifi *instance = nullptr,
         Api *api = nullptr,
         Ota *ota = nullptr,
-        Recorder *recorder = nullptr);
+        Recorder *recorder = nullptr,
+        WifiSerial *wifiSerial = nullptr);
 
     void loop();
     void off();

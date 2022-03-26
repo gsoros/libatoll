@@ -10,7 +10,9 @@ BleClient::~BleClient() {
     }
 }
 
-void BleClient::setup(const char* deviceName, ::Preferences* p) {
+void BleClient::setup(
+    const char* deviceName,
+    ::Preferences* p) {
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
     preferencesSetup(p, "BleClient");
     loadSettings();
