@@ -37,7 +37,7 @@ class Touch : public Task, public Preferences {
         ulong longTouch = 0;
     };
 
-    char taskName[TASK_NAME_LEN] = "Touch";
+    const char *taskName() { return "Touch"; }
     static struct Pad pads[ATOLL_TOUCH_NUM_PADS];
     static const unsigned char numPads;
 

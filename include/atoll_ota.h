@@ -17,7 +17,7 @@ namespace Atoll {
 
 class Ota : public Task {
    public:
-    char taskName[TASK_NAME_LEN] = "Ota";
+    const char *taskName() { return "Ota"; }
     Recorder *recorder = nullptr;
 
     void setup();

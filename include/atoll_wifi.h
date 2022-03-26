@@ -30,7 +30,7 @@ class Wifi : public Preferences, public Task {
         char staPassword[SETTINGS_STR_LENGTH];
     } Settings;
 
-    char taskName[TASK_NAME_LEN] = "Wifi";
+    const char *taskName() { return "Wifi"; }
     char hostName[SETTINGS_STR_LENGTH] = "libAtollWifi_unnamed";
     Settings settings;
 

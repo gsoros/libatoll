@@ -25,7 +25,7 @@ class Recorder : public Task {
         uint8_t heartrate = 0;  // bpm
     };
 
-    char taskName[TASK_NAME_LEN] = "Recorder";
+    const char *taskName() { return "Recorder"; }
     uint16_t interval = 1000;                       // recording interval in milliseconds
     DataPoint buffer[ATOLL_RECORDER_BUFFER_SIZE];   // recording buffer
     uint16_t bufSize = ATOLL_RECORDER_BUFFER_SIZE;  //
@@ -132,7 +132,7 @@ class Recorder : public Task {
         size_t toWrite = sizeof(DataPoint) * bufLastIndex;
         if (0 == toWrite) {
             log_e("buffer is empty");
-            return false;
+            return true;
         }
         log_i("saving buffer, %d entries %d bytes each, total %d bytes",
               bufLastIndex,
