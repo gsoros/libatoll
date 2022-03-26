@@ -4,6 +4,7 @@ using namespace Atoll;
 
 Wifi *Wifi::instance;
 Ota *Wifi::ota;
+Recorder *Wifi::recorder;
 
 void Wifi::setup(
     const char *hostName,
@@ -11,11 +12,13 @@ void Wifi::setup(
     const char *preferencesNS,
     Wifi *instance,
     Api *api,
-    Ota *ota) {
+    Ota *ota,
+    Recorder *recorder) {
     strncpy(this->hostName, hostName, sizeof(this->hostName));
     preferencesSetup(p, preferencesNS);
     this->instance = instance;
     this->ota = ota;
+    this->recorder = recorder;
 
     loadDefaultSettings();
     loadSettings();
@@ -163,14 +166,14 @@ void Wifi::applySettings() {
         if (nullptr != ota) {
             ota->off();
             ota->taskStop();
-            ota->setup(hostName);
-            ota->taskStart("Ota");
+            ota->setup(hostName, recorder);
+            ota->taskStart();
         }
 #ifdef FEATURE_SERIAL
         if (nullptr != wifiSerial) {
             board.wifiSerial.taskStop();
             board.wifiSerial.setup();
-            board.wifiSerial.taskStart("wifiSerial");
+            board.wifiSerial.taskStart();
         }
 #endif
     }

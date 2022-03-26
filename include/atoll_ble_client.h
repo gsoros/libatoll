@@ -32,6 +32,7 @@ class BleClient : public Task,
                   // public BLEServerCallbacks,
                   public BLEAdvertisedDeviceCallbacks {
    public:
+    char taskName[TASK_NAME_LEN] = "BleClient";
     uint32_t taskStack = 4096;                               // task stack size in bytes
     char deviceName[SETTINGS_STR_LENGTH] = HOSTNAME;         // device name
     bool enabled = true;                                     // whether ble client is enabled

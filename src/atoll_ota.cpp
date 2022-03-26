@@ -2,9 +2,13 @@
 
 using namespace Atoll;
 
-void Ota::setup() { setup("libAtollOta_unnamed"); }
-void Ota::setup(const char *hostName) { setup(hostName, 3232); }
-void Ota::setup(const char *hostName, uint16_t port) {
+void Ota::setup() {
+    setup("libAtollOta_unnamed");
+}
+void Ota::setup(const char *hostName, Recorder *recorder) {
+    setup(hostName, 3232, recorder);
+}
+void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
     log_i("[OTA] Setup hostname: %s port: %d", hostName, port);
     if (WiFi.getMode() == WIFI_MODE_NULL) {
         log_i("[OTA] Wifi is disabled, not starting");
@@ -33,8 +37,8 @@ void Ota::setup(const char *hostName, uint16_t port) {
         .onError([this](ota_error_t error) {
             onError(error);
         });
-
     ArduinoOTA.begin();
+    this->recorder = recorder;
 }
 
 void Ota::loop() {
@@ -63,6 +67,10 @@ void Ota::onStart() {
         log_i("[OTA] Flash");
     else {  // U_SPIFFS
         log_i("[OTA] FS");
+    }
+    if (nullptr != recorder) {
+        log_i("stopping recorder");
+        recorder->stop();
     }
 }
 

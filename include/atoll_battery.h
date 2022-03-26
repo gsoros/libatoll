@@ -38,6 +38,7 @@ namespace Atoll {
 
 class Battery : public Task, public Preferences {
    public:
+    char taskName[TASK_NAME_LEN] = "Battery";
     uint8_t pin = ATOLL_BATTERY_PIN;
     float corrF = 1.0;
     float voltage = 0.0;

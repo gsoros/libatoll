@@ -12,7 +12,7 @@ namespace Atoll {
 class Task {
    public:
     TaskHandle_t taskHandle = NULL;
-    char taskName[TASK_NAME_LEN];
+    char taskName[TASK_NAME_LEN] = "unnamed task";
     uint16_t taskFreq = 10;     // desired task frequency in Hz
     uint32_t taskStack = 4096;  // task stack size in bytes
     uint8_t taskPriority = 1;
@@ -35,10 +35,10 @@ class Task {
     }
     void taskStart(const char *name, uint16_t freq, uint32_t stack, uint8_t priority) {
         if (taskRunning()) taskStop();
-        strncpy(taskName, name, TASK_NAME_LEN);
+        strncpy(taskName, name, sizeof(taskName));
         taskFreq = freq;
         _taskSetDelayFromFreq();
-        log_i("[Task] Starting %s at %dHz (delay: %dms), stack %d",
+        log_i("Starting task '%s' at %dHz (delay: %dms), stack %d",
               name, freq, _xTaskDelay, stack);
         BaseType_t err = xTaskCreatePinnedToCore(
             _taskLoop,
@@ -49,7 +49,7 @@ class Task {
             &taskHandle,
             taskCore);
         if (pdPASS != err)
-            log_e("Failed to start task %s, error %d", taskName, err);
+            log_e("Failed to start task '%s', error %d", taskName, err);
         // else
         //     log_i("[Task] Started %s", name);
     }

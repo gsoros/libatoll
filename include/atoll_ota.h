@@ -7,6 +7,7 @@
 #include <WiFiUdp.h>
 
 #include "atoll_task.h"
+#include "atoll_recorder.h"
 
 #ifndef ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING
 #define ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING 20
@@ -16,9 +17,12 @@ namespace Atoll {
 
 class Ota : public Task {
    public:
+    char taskName[TASK_NAME_LEN] = "Ota";
+    Recorder *recorder = nullptr;
+
     void setup();
-    void setup(const char *hostName);
-    void setup(const char *hostName, uint16_t port);
+    void setup(const char *hostName, Recorder *recorder = nullptr);
+    void setup(const char *hostName, uint16_t port, Recorder *recorder = nullptr);
     void loop();
     void off();
 

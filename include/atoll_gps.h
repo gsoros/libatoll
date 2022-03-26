@@ -12,6 +12,7 @@ namespace Atoll {
 
 class GPS : public Atoll::Task {
    public:
+    char taskName[TASK_NAME_LEN] = "GPS";
     SoftwareSerial ss;
     TinyGPSPlus gps;
     Touch *touch = nullptr;

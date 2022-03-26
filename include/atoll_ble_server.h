@@ -34,6 +34,7 @@ class BleServer : public Task,
                   public BLEServerCallbacks,
                   public BLECharacteristicCallbacks {
    public:
+    char taskName[TASK_NAME_LEN] = "BleServer";
     uint32_t taskStack = 4096;                        // task stack size in bytes
     char deviceName[SETTINGS_STR_LENGTH] = HOSTNAME;  // advertised device name
     bool enabled = true;                              // whether bluetooth is enabled

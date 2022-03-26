@@ -8,6 +8,7 @@
 #include "atoll_fs.h"
 
 namespace Atoll {
+
 class Lfs : public Fs {
    public:
     void setup() {
@@ -19,9 +20,18 @@ class Lfs : public Fs {
             }
         }
         mounted = true;
-        log_i("fs bytes total: %d, used: %d, free: %d", LITTLEFS.totalBytes(), LITTLEFS.usedBytes(), LITTLEFS.totalBytes() - LITTLEFS.usedBytes());
+
+        log_i("bytes total: %d, used: %d, free: %d",
+              LITTLEFS.totalBytes(),
+              LITTLEFS.usedBytes(),
+              LITTLEFS.totalBytes() - LITTLEFS.usedBytes());
+    }
+
+    fs::FS *fsp() {
+        return &LITTLEFS;
     }
 };
+
 }  // namespace Atoll
 
 #endif

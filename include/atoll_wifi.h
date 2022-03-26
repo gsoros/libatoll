@@ -9,6 +9,7 @@
 #include "atoll_task.h"
 #include "atoll_api.h"
 #include "atoll_ota.h"
+#include "atoll_recorder.h"
 
 #ifndef SETTINGS_STR_LENGTH
 #define SETTINGS_STR_LENGTH 32
@@ -29,11 +30,13 @@ class Wifi : public Preferences, public Task {
         char staPassword[SETTINGS_STR_LENGTH];
     } Settings;
 
+    char taskName[TASK_NAME_LEN] = "Wifi";
     char hostName[SETTINGS_STR_LENGTH] = "libAtollWifi_unnamed";
     Settings settings;
 
     static Wifi *instance;
     static Ota *ota;
+    static Recorder *recorder;
 
     void setup(
         const char *hostName,
@@ -41,7 +44,8 @@ class Wifi : public Preferences, public Task {
         const char *preferencesNS,
         Wifi *instance = nullptr,
         Api *api = nullptr,
-        Ota *ota = nullptr);
+        Ota *ota = nullptr,
+        Recorder *recorder = nullptr);
 
     void loop();
     void off();

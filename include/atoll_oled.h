@@ -19,6 +19,7 @@ class Oled : public Task {
     };
 
    public:
+    char taskName[TASK_NAME_LEN] = "Oled";
     uint8_t width;
     uint8_t height;
     uint8_t feedbackWidth;
