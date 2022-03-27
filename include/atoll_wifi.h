@@ -59,7 +59,7 @@ class Wifi : public Preferences, public Task {
     void printAPSettings();
     void printSTASettings();
     void applySettings();
-    void setEnabled(bool state);
+    void setEnabled(bool state, bool save = true);
     bool isEnabled();
     bool connected();
     void registerCallbacks();

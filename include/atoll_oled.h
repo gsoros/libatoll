@@ -155,7 +155,7 @@ class Oled : public Task {
     void onPower(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
-            printfField(0, true, 1, 0, "%03d", value);
+            printfField(0, true, 1, 0, "%3d", value);
             lastValue = value;
             lastPower = millis();
         }
@@ -164,7 +164,7 @@ class Oled : public Task {
     void onCadence(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
-            printfField(1, true, 1, 0, "%03d", value);
+            printfField(1, true, 1, 0, "%3d", value);
             lastValue = value;
             lastCadence = millis();
         }
@@ -173,7 +173,7 @@ class Oled : public Task {
     void onHeartrate(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
-            printfField(2, true, 1, 0, "%03d", value);
+            printfField(2, true, 1, 0, "%3d", value);
             lastValue = value;
             lastHeartrate = millis();
         }

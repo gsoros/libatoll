@@ -11,7 +11,7 @@ namespace Atoll {
 class Task {
    public:
     TaskHandle_t taskHandle = NULL;
-    uint16_t taskFreq = 10;     // desired task frequency in Hz
+    float taskFreq = 10;        // desired task frequency in Hz
     uint32_t taskStack = 4096;  // task stack size in bytes
     uint8_t taskPriority = 1;
     uint8_t taskCore = TASK_DEFAULT_CORE;
@@ -21,23 +21,23 @@ class Task {
     virtual void taskStart() {
         taskStart(taskName(), taskFreq, taskStack, taskPriority);
     }
-    virtual void taskStart(uint16_t freq) {
+    virtual void taskStart(float freq) {
         taskStart(taskName(), freq, taskStack, taskPriority);
     }
     virtual void taskStart(const char *name) {
         taskStart(name, taskFreq, taskStack, taskPriority);
     }
-    virtual void taskStart(const char *name, uint16_t freq) {
+    virtual void taskStart(const char *name, float freq) {
         taskStart(name, freq, taskStack, taskPriority);
     }
-    virtual void taskStart(const char *name, uint16_t freq, uint32_t stack) {
+    virtual void taskStart(const char *name, float freq, uint32_t stack) {
         taskStart(name, freq, stack, taskPriority);
     }
-    virtual void taskStart(const char *name, uint16_t freq, uint32_t stack, uint8_t priority) {
+    virtual void taskStart(const char *name, float freq, uint32_t stack, uint8_t priority) {
         if (taskRunning()) taskStop();
         taskFreq = freq;
         _taskSetDelayFromFreq();
-        log_i("Starting task '%s' at %dHz (delay: %dms), stack %d",
+        log_i("Starting task '%s' at %.2fHz (delay: %dms), stack %d",
               name, freq, _xTaskDelay, stack);
         BaseType_t err = xTaskCreatePinnedToCore(
             _taskLoop,
@@ -65,8 +65,8 @@ class Task {
         taskHandle = NULL;
     }
 
-    virtual void taskSetFreq(const uint16_t freq) {
-        log_i("%s new freq: %d", taskName(), freq);
+    virtual void taskSetFreq(const float freq) {
+        log_i("%s new freq: %.2f", taskName(), freq);
         taskFreq = freq;
         _taskSetDelayFromFreq();
     }

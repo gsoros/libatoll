@@ -191,10 +191,10 @@ void Wifi::applySettings() {
     }
 };
 
-void Wifi::setEnabled(bool state) {
+void Wifi::setEnabled(bool state, bool save) {
     settings.enabled = state;
     applySettings();
-    saveSettings();
+    if (save) saveSettings();
 };
 
 bool Wifi::isEnabled() {

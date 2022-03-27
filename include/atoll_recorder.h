@@ -28,6 +28,18 @@
 #define ATOLL_RECORDER_HR_RINGBUF_SIZE 8
 #endif
 
+#ifndef ATOLL_RECORDER_BASE_PATH
+#define ATOLL_RECORDER_BASE_PATH "/rec"
+#endif
+
+#ifndef ATOLL_RECORDER_EXT_STATS
+#define ATOLL_RECORDER_EXT_STATS ".stx"
+#endif
+
+#ifndef ATOLL_RECORDER_CONTINUE_PATH
+#define ATOLL_RECORDER_CONTINUE_PATH "/rec/continue"
+#endif
+
 namespace Atoll {
 
 class Recorder : public Task {
@@ -42,17 +54,25 @@ class Recorder : public Task {
         uint8_t heartrate = 0;  // bpm
     };
 
+    struct Stats {
+        double distance = 0.0;  // distance in meters
+        uint16_t altGain = 0;   // altitude gain in meters
+    };
+
     const char *taskName() { return "Recorder"; }
-    uint16_t interval = ATOLL_RECORDER_INTERVAL;    // recording interval in milliseconds
-    DataPoint buffer[ATOLL_RECORDER_BUFFER_SIZE];   // recording buffer
-    uint16_t bufSize = ATOLL_RECORDER_BUFFER_SIZE;  // for convenience
-    uint16_t bufIndex = 0;                          // current buffer index
-    bool isRecording = false;                       //
-    GPS *gps = nullptr;                             //
-    FS *fs = nullptr;                               //
-    const char basePath[5] = "/rec";                // base path to the recordings
-    char filePath[30] = "";                         // path to the current recording
-    char lastRecPath[10] = "/last.rec";             // path to the file containing the path to the last recording
+    uint16_t interval = ATOLL_RECORDER_INTERVAL;              // recording interval in milliseconds
+    DataPoint buffer[ATOLL_RECORDER_BUFFER_SIZE];             // recording buffer
+    uint16_t bufSize = ATOLL_RECORDER_BUFFER_SIZE;            // for convenience
+    uint16_t bufIndex = 0;                                    // current buffer index
+    Stats stats;                                              // current recording stats
+    bool isRecording = false;                                 //
+    GPS *gps = nullptr;                                       //
+    FS *fs = nullptr;                                         //
+    const char *basePath = ATOLL_RECORDER_BASE_PATH;          // base path to the recordings
+    char filePath[32] = "";                                   // full path to the current recording
+    char statsPath[32] = "";                                  // full path to the file containing the current stats
+    const char *extStats = ATOLL_RECORDER_EXT_STATS;          // stats file extension
+    const char *continuePath = ATOLL_RECORDER_CONTINUE_PATH;  // full path to the file containing the path to the recording to be continued after an interruption
 
     void setup(GPS *gps, Fs *fs) {
         if (nullptr == gps) {
@@ -80,6 +100,7 @@ class Recorder : public Task {
                 if (!saveBuffer())
                     log_e("could not save buffer");
                 resetBuffer();
+                saveStats();
             }
         }
     }
@@ -125,6 +146,11 @@ class Recorder : public Task {
         tms.tm_min = gpst->minute();
         tms.tm_sec = gpst->second();
 
+        if (sizeof(buffer) <= bufIndex) {
+            log_e("index %d out of range", bufIndex);
+            return;
+        }
+
         DataPoint *point = &buffer[bufIndex];
 
         point->time = mktime(&tms);
@@ -136,15 +162,30 @@ class Recorder : public Task {
         point->lon = gpsl->lng();
         point->alt = (int16_t)gps->gps.altitude.meters();
 
+        static double prevLat = 0.0;
+        static double prevLon = 0.0;
+        static int16_t prevAlt = 0.0;
+        static bool prevPositionValid = false;
+        if (prevPositionValid) {
+            stats.distance += gps->gps.distanceBetween(prevLat, prevLon, point->lat, point->lon);
+            if (prevAlt < point->alt) stats.altGain += point->alt - prevAlt;
+        } else
+            prevPositionValid = true;
+        prevLat = point->lat;
+        prevLon = point->lon;
+        prevAlt = point->alt;
+
         point->power = avgPower(true);
         point->cadence = avgCadence(true);
         point->heartrate = avgHeartrate(true);
-        log_i("#%d time: %d loc: %.9f %.9f alt: %dm, %dW %drpm %dbpm",
+        log_i("#%d time: %d loc: %.9f %.9f alt: %dm, gain: %dm, dist: %.1fm %dW %drpm %dbpm",
               bufIndex,
               time,
               point->lat,
               point->lon,
               point->alt,
+              stats.altGain,
+              stats.distance,
               point->power,
               point->cadence,
               point->heartrate);
@@ -184,15 +225,70 @@ class Recorder : public Task {
                 return false;
             }
             log_e("buffer is %d bytes but wrote only %d bytes to %s",
-                  toWrite,
-                  wrote,
-                  path);
+                  toWrite, wrote, path);
             file.close();
             return false;
         }
         log_i("wrote %d bytes to %s (%d bytes)", wrote, path, file.size());
         file.close();
         bufIndex = 0;
+        return true;
+    }
+
+    bool saveStats() {
+        if (stats.distance < 1.0) {
+            log_i("distance is less than a meter");
+            return false;
+        }
+        const char *sp = currentStatsPath();
+        if (nullptr == sp || strlen(sp) < 1) {
+            log_e("could not get current stats path");
+            return false;
+        }
+        File file = fs->open(sp, FILE_WRITE);
+        if (!file) {
+            log_e("could not open %s for writing", sp);
+            return false;
+        }
+        size_t wrote = file.write((uint8_t *)&stats, sizeof(stats));
+        if (sizeof(stats) != wrote) {
+            if (0 == wrote) {
+                log_e("cannot write to %s", sp);
+                file.close();
+                return false;
+            }
+            log_e("stats is %d bytes but wrote only %d bytes to %s",
+                  sizeof(stats), wrote, sp);
+            file.close();
+            return false;
+        }
+        log_i("wrote %d bytes to %s", wrote, sp);
+        file.close();
+        return true;
+    }
+
+    bool loadStats() {
+        const char *sp = currentStatsPath();
+        if (nullptr == sp || strlen(sp) < 1) {
+            log_e("could not get current stats path");
+            return false;
+        }
+        File file = fs->open(sp);
+        if (!file) {
+            log_e("could not open %s for reading", sp);
+            return false;
+        }
+        Stats tmpStats;
+        size_t read = file.read((uint8_t *)&tmpStats, sizeof(tmpStats));
+        if (read < sizeof(tmpStats)) {
+            log_e("cannot read from %s", sp);
+            file.close();
+            return false;
+        }
+        log_i("read %d bytes from %s", read, sp);
+        file.close();
+        stats.distance += tmpStats.distance;
+        log_i("distance: %.0f, altGain: %d", stats.distance, stats.altGain);
         return true;
     }
 
@@ -221,7 +317,7 @@ class Recorder : public Task {
             log_e("first datapoint is not valid");
             return nullptr;
         }
-        file = fs->open(lastRecPath);
+        file = fs->open(continuePath);
         if (file) {
             char testPath[sizeof(filePath)] = "";
             file.read((uint8_t *)testPath, sizeof(testPath));
@@ -233,12 +329,12 @@ class Recorder : public Task {
                         file.close();
                         strncpy(filePath, testPath, sizeof(filePath));
                         log_i("continuing recording of %s", filePath);
+                        loadStats();
                         return filePath;
                     }
                 }
             }
         }
-
         // struct tm:
         // Member	Type	Meaning	                    Range
         // tm_sec	int	    seconds after the minute	0-60*
@@ -251,31 +347,38 @@ class Recorder : public Task {
         // tm_yday	int 	days since January 1	    0-365
         // tm_isdst	int 	Daylight Saving Time flag
         struct tm *tms = gmtime(&buffer[0].time);
-        // snprintf(filePath, sizeof(filePath), "%s/%d-%01d-%01d_%01d:%01d.rec",
-        //          basePath,
-        //          tms->tm_year + 1900,
-        //          tms->tm_mon + 1,
-        //          tms->tm_mday,
-        //          tms->tm_hour,
-        //          tms->tm_min);
-        snprintf(filePath, sizeof(filePath), "%s/%02d%02d%02d%02d.rec",
+        snprintf(filePath, sizeof(filePath), "%s/%02d%02d%02d%02d",
                  basePath,
                  tms->tm_mon + 1,
                  tms->tm_mday,
                  tms->tm_hour,
                  tms->tm_min);
         log_i("recording to %s", filePath);
-        file = fs->open(lastRecPath, FILE_WRITE);
+        file = fs->open(continuePath, FILE_WRITE);
         if (file) {
-            if (file.write((uint8_t *)filePath, strlen(filePath)) < strlen(filePath))
-                log_e("could not save path to last recording");
+            if (file.write((uint8_t *)filePath, strlen(filePath)) == strlen(filePath))
+                log_i("wrote continue file %s", continuePath);
+            else
+                log_e("could not write continue file %s", continuePath);
             file.close();
         }
         return filePath;
     }
 
-    void
-    resetBuffer(bool clearPoints = false) {
+    const char *currentStatsPath() {
+        if (0 != strcmp(statsPath, ""))
+            return statsPath;
+
+        char *fp = currentFilePath();
+        if (nullptr == fp) {
+            log_i("could not get current file path");
+            return nullptr;
+        }
+        snprintf(statsPath, sizeof(statsPath), "%s%s", fp, extStats);
+        return statsPath;
+    }
+
+    void resetBuffer(bool clearPoints = false) {
         bufIndex = 0;
         if (clearPoints)
             for (uint16_t i = 0; i < bufSize; i++)
@@ -305,8 +408,12 @@ class Recorder : public Task {
         if (!saveBuffer())
             log_e("could not save buffer");
         resetBuffer();
+        saveStats();
         strncpy(filePath, "", sizeof(filePath));
-        if (forgetLast) fs->remove(lastRecPath);
+        if (forgetLast) {
+            fs->remove(continuePath);
+            stats = Stats();
+        }
         return true;
     }
 
