@@ -12,6 +12,10 @@
 #define ATOLL_RECORDER_BUFFER_SIZE 60
 #endif
 
+#ifndef ATOLL_RECORDER_INTERVAL
+#define ATOLL_RECORDER_INTERVAL 1000
+#endif
+
 #ifndef ATOLL_RECORDER_POWER_RINGBUF_SIZE
 #define ATOLL_RECORDER_POWER_RINGBUF_SIZE 32
 #endif
@@ -39,15 +43,16 @@ class Recorder : public Task {
     };
 
     const char *taskName() { return "Recorder"; }
-    uint16_t interval = 1000;                       // recording interval in milliseconds
+    uint16_t interval = ATOLL_RECORDER_INTERVAL;    // recording interval in milliseconds
     DataPoint buffer[ATOLL_RECORDER_BUFFER_SIZE];   // recording buffer
-    uint16_t bufSize = ATOLL_RECORDER_BUFFER_SIZE;  //
-    uint16_t bufLastIndex = 0;                      //
+    uint16_t bufSize = ATOLL_RECORDER_BUFFER_SIZE;  // for convenience
+    uint16_t bufIndex = 0;                          // current buffer index
     bool isRecording = false;                       //
     GPS *gps = nullptr;                             //
     FS *fs = nullptr;                               //
-    const char basePath[5] = "/rec";                //
-    char filePath[30] = "";                         //
+    const char basePath[5] = "/rec";                // base path to the recordings
+    char filePath[30] = "";                         // path to the current recording
+    char lastRecPath[10] = "/last.rec";             // path to the file containing the path to the last recording
 
     void setup(GPS *gps, Fs *fs) {
         if (nullptr == gps) {
@@ -71,7 +76,7 @@ class Recorder : public Task {
         ulong t = millis();
         if ((lastDataPointTime < t - interval) && interval < t) {
             addDataPoint();
-            if (bufSize == bufLastIndex) {
+            if (bufSize == bufIndex) {
                 if (!saveBuffer())
                     log_e("could not save buffer");
                 resetBuffer();
@@ -120,7 +125,7 @@ class Recorder : public Task {
         tms.tm_min = gpst->minute();
         tms.tm_sec = gpst->second();
 
-        DataPoint *point = &buffer[bufLastIndex];
+        DataPoint *point = &buffer[bufIndex];
 
         point->time = mktime(&tms);
         if (-1 == point->time) {
@@ -135,7 +140,7 @@ class Recorder : public Task {
         point->cadence = avgCadence(true);
         point->heartrate = avgHeartrate(true);
         log_i("#%d time: %d loc: %.9f %.9f alt: %dm, %dW %drpm %dbpm",
-              bufLastIndex,
+              bufIndex,
               time,
               point->lat,
               point->lon,
@@ -144,17 +149,17 @@ class Recorder : public Task {
               point->cadence,
               point->heartrate);
 
-        bufLastIndex++;
+        bufIndex++;
     }
 
     bool saveBuffer() {
-        size_t toWrite = sizeof(DataPoint) * bufLastIndex;
+        size_t toWrite = sizeof(DataPoint) * bufIndex;
         if (0 == toWrite) {
             log_e("buffer is empty");
             return true;
         }
         log_i("saving buffer, %d entries %d bytes each, total %d bytes",
-              bufLastIndex,
+              bufIndex,
               sizeof(DataPoint),
               toWrite);
         if (nullptr == fs) {
@@ -187,7 +192,7 @@ class Recorder : public Task {
         }
         log_i("wrote %d bytes to %s (%d bytes)", wrote, path, file.size());
         file.close();
-        bufLastIndex = 0;
+        bufIndex = 0;
         return true;
     }
 
@@ -216,6 +221,24 @@ class Recorder : public Task {
             log_e("first datapoint is not valid");
             return nullptr;
         }
+        file = fs->open(lastRecPath);
+        if (file) {
+            char testPath[sizeof(filePath)] = "";
+            file.read((uint8_t *)testPath, sizeof(testPath));
+            file.close();
+            if (strlen(basePath) + 5 <= strlen(testPath)) {
+                if (fs->exists(testPath)) {
+                    file = fs->open(testPath, FILE_APPEND);
+                    if (file) {
+                        file.close();
+                        strncpy(filePath, testPath, sizeof(filePath));
+                        log_i("continuing recording of %s", filePath);
+                        return filePath;
+                    }
+                }
+            }
+        }
+
         // struct tm:
         // Member	Type	Meaning	                    Range
         // tm_sec	int	    seconds after the minute	0-60*
@@ -241,11 +264,19 @@ class Recorder : public Task {
                  tms->tm_mday,
                  tms->tm_hour,
                  tms->tm_min);
+        log_i("recording to %s", filePath);
+        file = fs->open(lastRecPath, FILE_WRITE);
+        if (file) {
+            if (file.write((uint8_t *)filePath, strlen(filePath)) < strlen(filePath))
+                log_e("could not save path to last recording");
+            file.close();
+        }
         return filePath;
     }
 
-    void resetBuffer(bool clearPoints = false) {
-        bufLastIndex = 0;
+    void
+    resetBuffer(bool clearPoints = false) {
+        bufIndex = 0;
         if (clearPoints)
             for (uint16_t i = 0; i < bufSize; i++)
                 buffer[i] = DataPoint();
@@ -266,14 +297,16 @@ class Recorder : public Task {
         isRecording = true;
         return true;
     }
-    bool stop() {
+
+    bool stop(bool forgetLast = true) {
         if (!isRecording) return false;
         log_i("stopping recording");
         isRecording = false;
-        strncpy(filePath, "", sizeof(filePath));
         if (!saveBuffer())
             log_e("could not save buffer");
         resetBuffer();
+        strncpy(filePath, "", sizeof(filePath));
+        if (forgetLast) fs->remove(lastRecPath);
         return true;
     }
 
@@ -293,6 +326,10 @@ class Recorder : public Task {
     uint16_t avgPower(bool clearBuffer = false) {
         if (!aquireMutex(powerMutex)) {
             log_e("could not aquire powerMutex to compute avg");
+            return 0;
+        }
+        if (powerBuf.isEmpty()) {
+            releaseMutex(powerMutex);
             return 0;
         }
         uint16_t avg = 0;
@@ -316,12 +353,16 @@ class Recorder : public Task {
     }
 
     // TODO fix CircularBuffer.avg()
-    uint16_t avgCadence(bool clearBuffer = false) {
+    uint8_t avgCadence(bool clearBuffer = false) {
         if (!aquireMutex(cadenceMutex)) {
             log_e("could not aquire cadenceMutex to compute avg");
             return 0;
         }
-        uint16_t avg = 0;
+        if (cadenceBuf.isEmpty()) {
+            releaseMutex(cadenceMutex);
+            return 0;
+        }
+        uint8_t avg = 0;
         for (decltype(cadenceBuf)::index_t i = 0; i < cadenceBuf.size(); i++)
             avg += cadenceBuf[i] / cadenceBuf.size();
         if (clearBuffer) cadenceBuf.clear();
@@ -342,12 +383,16 @@ class Recorder : public Task {
     }
 
     // TODO fix CircularBuffer.avg()
-    uint16_t avgHeartrate(bool clearBuffer = false) {
+    uint8_t avgHeartrate(bool clearBuffer = false) {
         if (!aquireMutex(heartrateMutex)) {
             log_e("could not aquire heartrateMutex to compute avg");
             return 0;
         }
-        uint16_t avg = 0;
+        if (heartrateBuf.isEmpty()) {
+            releaseMutex(heartrateMutex);
+            return 0;
+        }
+        uint8_t avg = 0;
         for (decltype(heartrateBuf)::index_t i = 0; i < heartrateBuf.size(); i++)
             avg += heartrateBuf[i] / heartrateBuf.size();
         if (clearBuffer) heartrateBuf.clear();

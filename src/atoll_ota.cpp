@@ -9,9 +9,9 @@ void Ota::setup(const char *hostName, Recorder *recorder) {
     setup(hostName, 3232, recorder);
 }
 void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
-    log_i("[OTA] Setup hostname: %s port: %d", hostName, port);
+    log_i("Setup hostname: %s port: %d", hostName, port);
     if (WiFi.getMode() == WIFI_MODE_NULL) {
-        log_i("[OTA] Wifi is disabled, not starting");
+        log_i("Wifi is disabled, not starting");
         return;
     }
     ArduinoOTA.setHostname(hostName);  // Hostname defaults to esp3232-[MAC]
@@ -43,57 +43,57 @@ void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
 
 void Ota::loop() {
     if (WiFi.getMode() == WIFI_MODE_NULL) {
-        log_i("[OTA] Wifi is disabled, task should be stopped");
+        log_i("Wifi is disabled, task should be stopped");
         return;
     }
     ArduinoOTA.handle();
 }
 
 void Ota::off() {
-    log_i("[OTA] Shutting down");
+    log_i("Shutting down");
     ArduinoOTA.end();
     taskStop();
 }
 
 void Ota::onStart() {
-    log_i("[OTA] Update start");
+    log_i("Update start");
     savedTaskFreq = taskFreq;
     taskSetFreq(ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING);
 
-    // log_i("[OTA] Disabling sleep");
+    // log_i("Disabling sleep");
     //  board.sleepEnabled = false;
 
     if (ArduinoOTA.getCommand() == U_FLASH)
-        log_i("[OTA] Flash");
+        log_i("Flash");
     else {  // U_SPIFFS
-        log_i("[OTA] FS");
+        log_i("FS");
     }
     if (nullptr != recorder) {
-        log_i("stopping recorder");
-        recorder->stop();
+        log_i("pausing recorder");
+        recorder->stop(false);
     }
 }
 
 void Ota::onEnd() {
-    // log_i("[OTA] Enabling sleep");
+    // log_i("Enabling sleep");
     // board.sleepEnabled = true;
 
     taskSetFreq(savedTaskFreq);
 
-    log_i("[OTA] End");
+    log_i("End");
 }
 
 void Ota::onProgress(uint progress, uint total) {
     static uint8_t lastPercent = 0;
     uint8_t percent = (uint8_t)((float)progress / (float)total * 100.0);
     if (percent > lastPercent) {
-        log_i("[OTA] %d%%", percent);
+        log_i("%d%%", percent);
         lastPercent = percent;
     }
 }
 
 void Ota::onError(ota_error_t error) {
-    log_i("[OTA] Error %u", error);
+    log_i("Error %u", error);
     if (error == OTA_AUTH_ERROR)
         log_i("^^^ = Auth Failed");
     else if (error == OTA_BEGIN_ERROR)
@@ -104,6 +104,6 @@ void Ota::onError(ota_error_t error) {
         log_i("^^^ = Receive Failed");
     else if (error == OTA_END_ERROR)
         log_i("^^^ = End Failed");
-    // log_i("[OTA] Enabling sleep");
+    // log_i("Enabling sleep");
     //  board.sleepEnabled = true;
 }
