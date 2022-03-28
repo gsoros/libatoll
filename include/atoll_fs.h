@@ -57,6 +57,8 @@ class Fs {
             }
             file = root.openNextFile();
         }
+        file.close();
+        root.close();
     }
 
     void testCreateDir(const char *path) {

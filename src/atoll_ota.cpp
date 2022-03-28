@@ -70,7 +70,7 @@ void Ota::onStart() {
     }
     if (nullptr != recorder) {
         log_i("pausing recorder");
-        recorder->stop(false);
+        recorder->pause();
     }
 }
 

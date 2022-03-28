@@ -77,7 +77,7 @@ void Battery::notifyChar(uint8_t *value) {
     c->notify();
 }
 
-void Battery::output() {
+void Battery::report() {
     static ulong lastNotification = 0;
     static int16_t lastLevel = -1;
     const ulong delay = 10000;  // min. 10 secs between messages
@@ -97,7 +97,7 @@ void Battery::loop() {
     measureVoltage();
     detectChargingEvent(oldVoltage);
     calculateLevel();
-    output();
+    report();
 }
 
 void Battery::detectChargingEvent(float oldVoltage) {

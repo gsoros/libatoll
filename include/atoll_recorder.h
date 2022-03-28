@@ -7,6 +7,7 @@
 #include "atoll_task.h"
 #include "atoll_gps.h"
 #include "atoll_fs.h"
+#include "atoll_api.h"
 
 #ifndef ATOLL_RECORDER_BUFFER_SIZE
 #define ATOLL_RECORDER_BUFFER_SIZE 60
@@ -37,7 +38,11 @@
 #endif
 
 #ifndef ATOLL_RECORDER_CONTINUE_PATH
-#define ATOLL_RECORDER_CONTINUE_PATH "/rec/continue"
+#define ATOLL_RECORDER_CONTINUE_PATH "/rec/last"
+#endif
+
+#ifndef ATOLL_RECORDER_PATH_LENGTH
+#define ATOLL_RECORDER_PATH_LENGTH 32
 #endif
 
 namespace Atoll {
@@ -68,13 +73,16 @@ class Recorder : public Task {
     bool isRecording = false;                                 //
     GPS *gps = nullptr;                                       //
     FS *fs = nullptr;                                         //
+    Api *api = nullptr;                                       //
+    static Recorder *instance;                                // instance pointer for static access
     const char *basePath = ATOLL_RECORDER_BASE_PATH;          // base path to the recordings
-    char filePath[32] = "";                                   // full path to the current recording
-    char statsPath[32] = "";                                  // full path to the file containing the current stats
-    const char *extStats = ATOLL_RECORDER_EXT_STATS;          // stats file extension
+    const char *statsExt = ATOLL_RECORDER_EXT_STATS;          // stats file extension
     const char *continuePath = ATOLL_RECORDER_CONTINUE_PATH;  // full path to the file containing the path to the recording to be continued after an interruption
 
-    void setup(GPS *gps, Fs *fs) {
+    void setup(GPS *gps,
+               Fs *fs,
+               Api *api = nullptr,
+               Recorder *instance = nullptr) {
         if (nullptr == gps) {
             log_e("no gps");
             return;
@@ -89,6 +97,11 @@ class Recorder : public Task {
             return;
         }
         this->fs = fs->fsp();
+        if (nullptr == instance) return;
+        this->instance = instance;
+        this->api = api;
+        if (nullptr != api)
+            api->addCommand(ApiCommand("rec", recProcessor));
     }
 
     void loop() {
@@ -96,11 +109,12 @@ class Recorder : public Task {
         ulong t = millis();
         if ((lastDataPointTime < t - interval) && interval < t) {
             addDataPoint();
-            if (bufSize == bufIndex) {
+            if (bufSize <= bufIndex) {
                 if (!saveBuffer())
                     log_e("could not save buffer");
                 resetBuffer();
-                saveStats();
+                if (!saveStats())
+                    log_e("could not save stats");
             }
         }
     }
@@ -167,8 +181,10 @@ class Recorder : public Task {
         static int16_t prevAlt = 0.0;
         static bool prevPositionValid = false;
         if (prevPositionValid) {
-            stats.distance += gps->gps.distanceBetween(prevLat, prevLon, point->lat, point->lon);
-            if (prevAlt < point->alt) stats.altGain += point->alt - prevAlt;
+            stats.distance += gps->gps.distanceBetween(
+                prevLat, prevLon, point->lat, point->lon);
+            if (prevAlt < point->alt)
+                stats.altGain += point->alt - prevAlt;
         } else
             prevPositionValid = true;
         prevLat = point->lat;
@@ -199,6 +215,10 @@ class Recorder : public Task {
             log_e("buffer is empty");
             return true;
         }
+        if (0 == buffer[0].time) {
+            log_e("could not get time from first datapoint");
+            return false;
+        }
         log_i("saving buffer, %d entries %d bytes each, total %d bytes",
               bufIndex,
               sizeof(DataPoint),
@@ -207,7 +227,7 @@ class Recorder : public Task {
             log_e("no fs");
             return false;
         }
-        char *path = currentFilePath();
+        const char *path = currentPath();
         if (nullptr == path) {
             log_e("could not get current file path");
             return false;
@@ -267,35 +287,42 @@ class Recorder : public Task {
         return true;
     }
 
-    bool loadStats() {
+    bool loadStats(bool reportFail = true) {
         const char *sp = currentStatsPath();
         if (nullptr == sp || strlen(sp) < 1) {
-            log_e("could not get current stats path");
+            if (reportFail) log_e("could not get current stats path");
             return false;
         }
         File file = fs->open(sp);
         if (!file) {
-            log_e("could not open %s for reading", sp);
+            if (reportFail) log_e("could not open %s for reading", sp);
             return false;
         }
         Stats tmpStats;
         size_t read = file.read((uint8_t *)&tmpStats, sizeof(tmpStats));
         if (read < sizeof(tmpStats)) {
-            log_e("cannot read from %s", sp);
+            if (reportFail) log_e("cannot read from %s", sp);
             file.close();
             return false;
         }
         log_i("read %d bytes from %s", read, sp);
         file.close();
         stats.distance += tmpStats.distance;
-        log_i("distance: %.0f, altGain: %d", stats.distance, stats.altGain);
+        stats.altGain += tmpStats.altGain;
+        log_i("distance: %.1f, altGain: %d", stats.distance, stats.altGain);
         return true;
     }
 
-    char *currentFilePath() {
-        if (0 != strcmp(filePath, ""))
-            return filePath;
-
+    // reset or get full path to the current recording or null
+    const char *currentPath(bool reset = false) {
+        static char path[ATOLL_RECORDER_PATH_LENGTH] = "";
+        if (reset) {
+            strncpy(path, "", sizeof(path));
+            return nullptr;
+        }
+        if (!isRecording) return nullptr;
+        if (0 != strcmp(path, ""))
+            return path;
         if (nullptr == fs) {
             log_e("no fs");
             return nullptr;
@@ -313,27 +340,32 @@ class Recorder : public Task {
             return nullptr;
         }
         file.close();
-        if (0 == buffer[0].time) {
-            log_e("first datapoint is not valid");
-            return nullptr;
-        }
         file = fs->open(continuePath);
         if (file) {
-            char testPath[sizeof(filePath)] = "";
+            char testPath[sizeof(path)] = "";
             file.read((uint8_t *)testPath, sizeof(testPath));
             file.close();
             if (strlen(basePath) + 5 <= strlen(testPath)) {
                 if (fs->exists(testPath)) {
                     file = fs->open(testPath, FILE_APPEND);
                     if (file) {
+                        if (0 == file.size() % sizeof(DataPoint)) {
+                            file.close();
+                            strncpy(path, testPath, sizeof(path));
+                            log_i("continuing recording of %s", path);
+                            // loadStats(); already called by start()
+                            return path;
+                        } else
+                            log_e("%s size %d is not multiple of %d (corrupt file?)",
+                                  path, file.size(), sizeof(DataPoint));
                         file.close();
-                        strncpy(filePath, testPath, sizeof(filePath));
-                        log_i("continuing recording of %s", filePath);
-                        loadStats();
-                        return filePath;
                     }
                 }
             }
+        }
+        if (0 == buffer[0].time) {
+            log_e("could not get time from first datapoint");
+            return nullptr;
         }
         // struct tm:
         // Member	Type	Meaning	                    Range
@@ -347,35 +379,40 @@ class Recorder : public Task {
         // tm_yday	int 	days since January 1	    0-365
         // tm_isdst	int 	Daylight Saving Time flag
         struct tm *tms = gmtime(&buffer[0].time);
-        snprintf(filePath, sizeof(filePath), "%s/%02d%02d%02d%02d",
+        snprintf(path, sizeof(path), "%s/%02d%02d%02d%02d",
                  basePath,
                  tms->tm_mon + 1,
                  tms->tm_mday,
                  tms->tm_hour,
                  tms->tm_min);
-        log_i("recording to %s", filePath);
+        log_i("recording to %s", path);
         file = fs->open(continuePath, FILE_WRITE);
         if (file) {
-            if (file.write((uint8_t *)filePath, strlen(filePath)) == strlen(filePath))
+            if (file.write((uint8_t *)path, strlen(path)) == strlen(path))
                 log_i("wrote continue file %s", continuePath);
             else
                 log_e("could not write continue file %s", continuePath);
             file.close();
         }
-        return filePath;
+        return path;
     }
 
-    const char *currentStatsPath() {
-        if (0 != strcmp(statsPath, ""))
-            return statsPath;
-
-        char *fp = currentFilePath();
+    // reset or get full path to the file containing the current stats or null
+    const char *currentStatsPath(bool reset = false) {
+        static char path[ATOLL_RECORDER_PATH_LENGTH] = "";
+        if (reset) {
+            strncpy(path, "", sizeof(path));
+            return nullptr;
+        }
+        if (0 != strcmp(path, ""))
+            return path;
+        const char *fp = currentPath();
         if (nullptr == fp) {
             log_i("could not get current file path");
             return nullptr;
         }
-        snprintf(statsPath, sizeof(statsPath), "%s%s", fp, extStats);
-        return statsPath;
+        snprintf(path, sizeof(path), "%s%s", fp, statsExt);
+        return path;
     }
 
     void resetBuffer(bool clearPoints = false) {
@@ -384,6 +421,8 @@ class Recorder : public Task {
             for (uint16_t i = 0; i < bufSize; i++)
                 buffer[i] = DataPoint();
     }
+
+    bool resume() { return start(); }
 
     bool start() {
         if (nullptr == fs) {
@@ -395,22 +434,30 @@ class Recorder : public Task {
             log_e("already recording");
             return false;
         }
-        strncpy(filePath, "", sizeof(filePath));
+        currentPath(true);  // reset
         resetBuffer();
         isRecording = true;
+        loadStats(false);
         return true;
     }
 
-    bool stop(bool forgetLast = true) {
+    bool pause() { return stop(false); }
+
+    bool end() { return stop(true); }
+
+    bool stop(bool forgetLast = false) {
         if (!isRecording) return false;
-        log_i("stopping recording");
-        isRecording = false;
+        log_i("%sing recording", forgetLast ? "stopp" : "paus");
         if (!saveBuffer())
             log_e("could not save buffer");
+        if (!saveStats())
+            log_e("could not save stats");
+        isRecording = false;
         resetBuffer();
-        saveStats();
-        strncpy(filePath, "", sizeof(filePath));
+        currentPath(true);       // reset
+        currentStatsPath(true);  // reset
         if (forgetLast) {
+            log_i("recording end");
             fs->remove(continuePath);
             stats = Stats();
         }
@@ -519,6 +566,8 @@ class Recorder : public Task {
         // log_i("releaseMutex %d", mutex);
         xSemaphoreGive(mutex);
     }
+
+    static ApiResult *recProcessor(ApiReply *reply);
 };
 
 }  // namespace Atoll

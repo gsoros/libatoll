@@ -42,10 +42,13 @@ class SdCard : public Fs {
         switch (cardType) {
             case CARD_MMC:
                 log_i("card type: MMC");
+                break;
             case CARD_SD:
                 log_i("card type: SDSC");
+                break;
             case CARD_SDHC:
                 log_i("card type: SDHC");
+                break;
             default:
                 log_i("card type: unknown");
         }
