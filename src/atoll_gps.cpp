@@ -7,8 +7,9 @@ GPS::~GPS() {}
 void GPS::loop() {
     // log_i("loop");
     while (ss.available() > 0) {
-        char c = ss.read();
-        gps.encode(c);
+        gps.encode(ss.read());
+        // char c = ss.read();
+        // gps.encode(c);
         // Serial.print(c);
     }
 

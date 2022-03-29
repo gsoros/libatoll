@@ -17,8 +17,8 @@ class SplitStream : public Stream {
     void setup(
         Stream *stream0,
         Stream *stream1,
-        bool stream0_enabled,
-        bool stream1_enabled);
+        bool stream0_enabled = true,
+        bool stream1_enabled = true);
 
     int available();
     int read();

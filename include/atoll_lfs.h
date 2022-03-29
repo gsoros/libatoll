@@ -27,8 +27,12 @@ class Lfs : public Fs {
               LITTLEFS.totalBytes() - LITTLEFS.usedBytes());
     }
 
-    fs::FS *fsp() {
+    fs::FS *pFs() {
         return &LITTLEFS;
+    }
+
+    fs::FS &refFs() {
+        return LITTLEFS;
     }
 };
 

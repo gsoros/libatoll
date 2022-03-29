@@ -3,7 +3,6 @@
 
 #ifdef FEATURE_SERIAL
 #include "atoll_split_stream.h"
-#include "atoll_wifi_serial.h"
 #else
 #include "atoll_null_serial.h"
 #endif

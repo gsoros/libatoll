@@ -14,7 +14,9 @@ class Fs {
 
     virtual void setup() = 0;
 
-    virtual fs::FS *fsp() = 0;
+    virtual fs::FS *pFs() = 0;
+
+    virtual fs::FS &refFs() = 0;
 
     void test() {
         testListDir("/", 0);
@@ -35,7 +37,7 @@ class Fs {
     void testListDir(const char *path, uint8_t levels) {
         log_i("Listing directory: %s", path);
 
-        File root = fsp()->open(path);
+        File root = pFs()->open(path);
         if (!root) {
             log_i("Failed to open directory");
             return;
@@ -63,7 +65,7 @@ class Fs {
 
     void testCreateDir(const char *path) {
         log_i("Creating Dir: %s", path);
-        if (fsp()->mkdir(path)) {
+        if (pFs()->mkdir(path)) {
             log_i("Dir created");
         } else {
             log_i("mkdir failed");
@@ -72,7 +74,7 @@ class Fs {
 
     void testRemoveDir(const char *path) {
         log_i("Removing Dir: %s", path);
-        if (fsp()->rmdir(path)) {
+        if (pFs()->rmdir(path)) {
             log_i("Dir removed");
         } else {
             log_i("rmdir failed");
@@ -82,7 +84,7 @@ class Fs {
     void testReadFile(const char *path) {
         log_i("Reading file: %s", path);
 
-        File file = fsp()->open(path);
+        File file = pFs()->open(path);
         if (!file) {
             log_i("Failed to open file for reading");
             return;
@@ -103,7 +105,7 @@ class Fs {
     void testWriteFile(const char *path, const char *message) {
         log_i("Writing file: %s", path);
 
-        File file = fsp()->open(path, FILE_WRITE);
+        File file = pFs()->open(path, FILE_WRITE);
         if (!file) {
             log_i("Failed to open file for writing");
             return;
@@ -119,7 +121,7 @@ class Fs {
     void testAppendFile(const char *path, const char *message) {
         log_i("Appending to file: %s", path);
 
-        File file = fsp()->open(path, FILE_APPEND);
+        File file = pFs()->open(path, FILE_APPEND);
         if (!file) {
             log_i("Failed to open file for appending");
             return;
@@ -134,7 +136,7 @@ class Fs {
 
     void testRenameFile(const char *path1, const char *path2) {
         log_i("Renaming file %s to %s", path1, path2);
-        if (fsp()->rename(path1, path2)) {
+        if (pFs()->rename(path1, path2)) {
             log_i("File renamed");
         } else {
             log_i("Rename failed");
@@ -143,7 +145,7 @@ class Fs {
 
     void testDeleteFile(const char *path) {
         log_i("Deleting file: %s", path);
-        if (fsp()->remove(path)) {
+        if (pFs()->remove(path)) {
             log_i("File deleted");
         } else {
             log_i("Delete failed");
@@ -155,7 +157,7 @@ class Fs {
         size_t len = 0;
         ulong start = millis();
 
-        File file = fsp()->open(path, FILE_WRITE);
+        File file = pFs()->open(path, FILE_WRITE);
         if (!file) {
             log_i("Failed to open file for writing");
             return;
@@ -166,7 +168,7 @@ class Fs {
         log_i("%u bytes written in %u ms", 2048 * 512, millis() - start);
         file.close();
 
-        file = fsp()->open(path);
+        file = pFs()->open(path);
         if (!file) {
             log_i("Failed to open file for reading");
             return;

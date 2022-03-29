@@ -30,7 +30,7 @@ class Uploader : public Task {
         this->recorder = recorder;
         if (!fs->mounted)
             log_e("fs not mounted");
-        this->fs = fs->fsp();
+        this->fs = fs->pFs();
         this->recorder = recorder;
     }
 
@@ -65,13 +65,9 @@ class Uploader : public Task {
             strncpy(filePath, file.name(), sizeof(filePath));
             file.close();
             snprintf(gpxPath, sizeof(gpxPath), "%s.gpx", filePath);
-            rec2gpx(filePath, gpxPath);
+            // rec2gpx(filePath, gpxPath);
         }
         dir.close();
-    }
-
-    void rec2gpx(const char *in, const char *out) {
-        log_i("TODO generate %s", out);
     }
 };
 

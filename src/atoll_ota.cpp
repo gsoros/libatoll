@@ -9,7 +9,7 @@ void Ota::setup(const char *hostName, Recorder *recorder) {
     setup(hostName, 3232, recorder);
 }
 void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
-    log_i("Setup hostname: %s port: %d", hostName, port);
+    log_i("hostname: %s port: %d", hostName, port);
     if (WiFi.getMode() == WIFI_MODE_NULL) {
         log_i("Wifi is disabled, not starting");
         return;
@@ -57,17 +57,23 @@ void Ota::off() {
 
 void Ota::onStart() {
     log_i("Update start");
-    savedTaskFreq = taskFreq;
-    taskSetFreq(ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING);
-
-    // log_i("Disabling sleep");
-    //  board.sleepEnabled = false;
 
     if (ArduinoOTA.getCommand() == U_FLASH)
         log_i("Flash");
     else {  // U_SPIFFS
         log_i("FS");
     }
+
+    log_i("setting cpu freq to 240 MHz");
+    setCpuFrequencyMhz(240);
+
+    log_i("setting task freq to %d Hz", ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING);
+    savedTaskFreq = taskFreq;
+    taskSetFreq(ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING);
+
+    // log_i("Disabling sleep");
+    //  board.sleepEnabled = false;
+
     if (nullptr != recorder) {
         log_i("pausing recorder");
         recorder->pause();

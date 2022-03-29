@@ -60,8 +60,12 @@ class SdCard : public Fs {
               SD.totalBytes() - SD.usedBytes());
     }
 
-    fs::FS *fsp() {
+    fs::FS *pFs() {
         return &SD;
+    }
+
+    fs::FS &refFs() {
+        return SD;
     }
 };
 
