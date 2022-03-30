@@ -7,6 +7,15 @@ Oled::~Oled() {
 }
 
 void Oled::loop() {
+    ulong t = millis();
+    if ((lastPower < t - 3000) && (lastCadence < t - 3000))
+        if (systemTimeLastSet())
+            showTime();
+    if (lastHeartrate < t - 3000)
+        if (systemTimeLastSet())
+            showDate();
+    // else
+    //    showSomething();
     /*
     static const uint8_t contrastMax = __UINT8_MAX__;
     static int16_t contrast = contrastMax;

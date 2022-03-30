@@ -6,6 +6,7 @@
 
 #include "atoll_task.h"
 #include "atoll_touch.h"
+#include "atoll_time.h"
 
 namespace Atoll {
 
@@ -82,14 +83,14 @@ class Oled : public Task {
 
     virtual ~Oled();
 
-    void setup() {
+    virtual void setup() {
         device->begin();
         device->setFont(u8g2_font_logisoso32_tn);
     }
 
-    void loop();
+    virtual void loop();
 
-    void printfField(
+    virtual void printfField(
         uint8_t fieldIndex,
         bool send,
         uint8_t color,
@@ -118,7 +119,7 @@ class Oled : public Task {
         releaseMutex();
     }
 
-    void fill(Area *a, uint8_t color, bool send = true, bool setClip = true) {
+    virtual void fill(Area *a, uint8_t color, bool send = true, bool setClip = true) {
         if (send && !aquireMutex()) return;
         uint8_t oldColor = device->getDrawColor();
         if (setClip) device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
@@ -131,28 +132,27 @@ class Oled : public Task {
         releaseMutex();
     }
 
-    void onGps(TinyGPSPlus *gps) {
-        // log_i("%d", gps->hdop.value());
+    virtual void showTime() {
+        tm time = localTm();
         if (!aquireMutex()) return;
-        if (lastPower < millis() - 3000)
-            printfField(0, false, 1, 0, "%02d%d",
-                        gps->time.hour(), gps->time.minute() / 10);
-        if (lastCadence < millis() - 3000)
-            printfField(1, false, 1, 0, "%d%02d",
-                        gps->time.minute() % 10, gps->time.second());
-        if (lastHeartrate < millis() - 30000)
-            printfField(2, false, 1, 0, "%d%02d",
-                        gps->date.month() % 10, gps->date.day());
+        printfField(0, false, 1, 0, "%02d%d",
+                    time.tm_hour, time.tm_min / 10);
+        printfField(1, false, 1, 0, "%d%02d",
+                    time.tm_min % 10, time.tm_sec);
         device->sendBuffer();
         releaseMutex();
     }
 
-    void onSatellites(uint32_t satellites) {
-        if (lastHeartrate < millis() - 30000)
-            printfField(2, true, 1, 0, "-%02d", satellites);
+    virtual void showDate() {
+        tm time = localTm();
+        if (!aquireMutex()) return;
+        printfField(2, false, 1, 0, "%d%02d",
+                    (time.tm_mon + 1) % 10, time.tm_mday);
+        device->sendBuffer();
+        releaseMutex();
     }
 
-    void onPower(uint16_t value) {
+    virtual void onPower(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
             printfField(0, true, 1, 0, "%3d", value);
@@ -161,7 +161,7 @@ class Oled : public Task {
         }
     }
 
-    void onCadence(uint16_t value) {
+    virtual void onCadence(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
             printfField(1, true, 1, 0, "%3d", value);
@@ -170,7 +170,7 @@ class Oled : public Task {
         }
     }
 
-    void onHeartrate(uint16_t value) {
+    virtual void onHeartrate(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
             printfField(2, true, 1, 0, "%3d", value);
@@ -179,9 +179,9 @@ class Oled : public Task {
         }
     }
 
-    void onTouchEvent(Touch::Pad *pad, Touch::Event event);
+    virtual void onTouchEvent(Touch::Pad *pad, Touch::Event event);
 
-    bool setContrast(uint8_t contrast) {
+    virtual bool setContrast(uint8_t contrast) {
         if (!aquireMutex()) return false;
         device->setContrast(contrast);
         releaseMutex();
@@ -191,11 +191,13 @@ class Oled : public Task {
    protected:
     SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
     U8G2 *device;
+    ulong lastTime = 0;
     ulong lastPower = 0;
     ulong lastCadence = 0;
     ulong lastHeartrate = 0;
+    uint32_t satellites = 0;
 
-    bool aquireMutex(uint32_t timeout = 100) {
+    virtual bool aquireMutex(uint32_t timeout = 100) {
         // log_i("aquireMutex");
         if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
             return true;
@@ -203,7 +205,7 @@ class Oled : public Task {
         return false;
     }
 
-    void releaseMutex() {
+    virtual void releaseMutex() {
         // log_i("releaseMutex");
         xSemaphoreGive(mutex);
     }

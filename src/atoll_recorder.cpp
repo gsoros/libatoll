@@ -51,41 +51,14 @@ void Recorder::addDataPoint() {
         log_e("no gps");
         return;
     }
-    if (!gps->gps.date.isValid()) {
-        log_i("gps date invalid");
-        return;
-    }
-    if (!gps->gps.time.isValid()) {
-        log_i("gps time invalid");
+    if (!systemTimeLastSet()) {
+        log_i("not adding data point, waiting for system time update");
         return;
     }
     if (!gps->gps.location.isValid()) {
         log_i("gps location invalid");
         return;
     }
-    TinyGPSDate *gpsd = &gps->gps.date;
-    TinyGPSTime *gpst = &gps->gps.time;
-    TinyGPSLocation *gpsl = &gps->gps.location;
-
-    // struct tm:
-    // Member	Type	Meaning	                    Range
-    // tm_sec	int	    seconds after the minute	0-60*
-    // tm_min	int 	minutes after the hour	    0-59
-    // tm_hour	int	    hours since midnight	    0-23
-    // tm_mday	int 	day of the month	        1-31
-    // tm_mon	int	    months since January	    0-11
-    // tm_year	int 	years since 1900
-    // tm_wday	int	    days since Sunday	        0-6
-    // tm_yday	int 	days since January 1	    0-365
-    // tm_isdst	int 	Daylight Saving Time flag
-    struct tm tms;
-    tms.tm_year = gpsd->year() - 1900;
-    tms.tm_mon = gpsd->month() - 1;
-    tms.tm_mday = gpsd->day();
-    tms.tm_hour = gpst->hour();
-    tms.tm_min = gpst->minute();
-    tms.tm_sec = gpst->second();
-
     if (sizeof(buffer) <= bufIndex) {
         log_e("index %d out of range", bufIndex);
         return;
@@ -93,13 +66,9 @@ void Recorder::addDataPoint() {
 
     DataPoint *point = &buffer[bufIndex];
 
-    point->time = mktime(&tms);
-    if (-1 == point->time) {
-        log_e("invalid time");
-        return;
-    }
-    point->lat = gpsl->lat();
-    point->lon = gpsl->lng();
+    point->time = time(nullptr);
+    point->lat = gps->gps.location.lat();
+    point->lon = gps->gps.location.lng();
     point->alt = (int16_t)gps->gps.altitude.meters();
 
     static double prevLat = 0.0;
@@ -120,9 +89,9 @@ void Recorder::addDataPoint() {
     point->power = avgPower(true);
     point->cadence = avgCadence(true);
     point->heartrate = avgHeartrate(true);
-    log_i("#%d time: %d loc: %.9f %.9f alt: %dm, gain: %dm, dist: %.1fm %dW %drpm %dbpm",
+    log_i("#%d time: %ld loc: %.9f %.9f alt: %dm, gain: %dm, dist: %.1fm %dW %drpm %dbpm",
           bufIndex,
-          time,
+          point->time,
           point->lat,
           point->lon,
           point->alt,
@@ -378,7 +347,7 @@ bool Recorder::stop(bool forgetLast) {
         log_e("could not save buffer");
     if (!saveStats())
         log_e("could not save stats");
-    char recPath[strlen(currentPath())] = "";
+    char recPath[strlen(currentPath()) + 1] = "";
     char gpxPath[sizeof(recPath) + 5] = "";
     if (forgetLast) {
         strncpy(recPath, currentPath(), sizeof(recPath));
@@ -537,6 +506,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
     <type>1</type>
     <trkseg>)====";
 
+    // TODO break up tags
     const char *pointFormat = R"====(
       <trkpt lat="%.7f" lon="%.7f">
         <ele>%d</ele>
@@ -579,11 +549,15 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
     uint16_t pointBufLen = 0;
     bool metaTrkAdded = false;
     uint32_t points = 0;
+    time_t prevTime = 0;
     while (rec.read((uint8_t *)&point, sizeof(point)) == sizeof(point)) {
         if (0 == point.time) {
             log_e("point %d time is zero", points);
             continue;
         }
+        if (point.time < prevTime)
+            log_e("point #%d time < prevTime", points);
+        prevTime = point.time;
         gmtime_r(&point.time, &tms);
         // struct tm:
         // Member	Type	Meaning	                    Range
@@ -616,6 +590,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
             metaTrkAdded = true;
             // Serial.print(metaTrk);
         }
+        // TODO only add alt, power, cadence, heartrate if values are not zero
         snprintf(pointBuf, sizeof(pointBuf), pointFormat,
                  point.lat,
                  point.lon,
