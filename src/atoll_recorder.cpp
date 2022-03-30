@@ -508,7 +508,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
         return false;
     }
     if (fs->exists(gpxPath)) {
-        log_e("%s already exist", gpxPath);
+        log_e("%s already exists", gpxPath);
         return false;
     }
     File rec = fs->open(recPath);
@@ -655,7 +655,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
 
 ApiResult *Recorder::recProcessor(ApiReply *reply) {
     if (nullptr == instance) return Api::error();
-    if (0 < strlen(reply->arg)) {
+    if (0 <= strlen(reply->arg)) {
     }
     return Api::success();
 }
