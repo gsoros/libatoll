@@ -1,5 +1,6 @@
 #include "atoll_recorder.h"
 #include "atoll_serial.h"
+#include "atoll_log.h"
 
 using namespace Atoll;
 
@@ -10,16 +11,16 @@ void Recorder::setup(GPS *gps,
                      Api *api,
                      Recorder *instance) {
     if (nullptr == gps) {
-        log_e("no gps");
+        logE("no gps");
         return;
     }
     this->gps = gps;
     if (nullptr == fs) {
-        log_e("no fs");
+        logE("no fs");
         return;
     }
     if (!fs->mounted) {
-        log_e("fs not mounted");
+        logE("fs not mounted");
         return;
     }
     this->fs = fs->pFs();
@@ -37,10 +38,10 @@ void Recorder::loop() {
         addDataPoint();
         if (bufSize <= bufIndex) {
             if (!saveBuffer())
-                log_e("could not save buffer");
+                logE("could not save buffer");
             resetBuffer();
             if (!saveStats())
-                log_e("could not save stats");
+                logE("could not save stats");
         }
     }
 }
@@ -48,19 +49,19 @@ void Recorder::loop() {
 void Recorder::addDataPoint() {
     if (!isRecording) return;
     if (nullptr == gps) {
-        log_e("no gps");
+        logE("no gps");
         return;
     }
     if (!systemTimeLastSet()) {
-        log_i("not adding data point, waiting for system time update");
+        logI("not adding data point, waiting for system time update");
         return;
     }
     if (!gps->gps.location.isValid()) {
-        log_i("gps location invalid");
+        logI("gps location invalid");
         return;
     }
     if (sizeof(buffer) <= bufIndex) {
-        log_e("index %d out of range", bufIndex);
+        logE("index %d out of range", bufIndex);
         return;
     }
 
@@ -89,17 +90,17 @@ void Recorder::addDataPoint() {
     point->power = avgPower(true);
     point->cadence = avgCadence(true);
     point->heartrate = avgHeartrate(true);
-    log_i("#%d time: %ld loc: %.9f %.9f alt: %dm, gain: %dm, dist: %.1fm %dW %drpm %dbpm",
-          bufIndex,
-          point->time,
-          point->lat,
-          point->lon,
-          point->alt,
-          stats.altGain,
-          stats.distance,
-          point->power,
-          point->cadence,
-          point->heartrate);
+    logI("#%d time: %ld loc: %.9f %.9f alt: %dm, gain: %dm, dist: %.1fm %dW %drpm %dbpm",
+         bufIndex,
+         point->time,
+         point->lat,
+         point->lon,
+         point->alt,
+         stats.altGain,
+         stats.distance,
+         point->power,
+         point->cadence,
+         point->heartrate);
 
     bufIndex++;
 }
@@ -107,44 +108,44 @@ void Recorder::addDataPoint() {
 bool Recorder::saveBuffer() {
     size_t toWrite = sizeof(DataPoint) * bufIndex;
     if (0 == toWrite) {
-        log_e("buffer is empty");
+        logE("buffer is empty");
         return true;
     }
     if (0 == buffer[0].time) {
-        log_e("could not get time from first datapoint");
+        logE("could not get time from first datapoint");
         return false;
     }
-    log_i("saving buffer, %d entries %d bytes each, total %d bytes",
-          bufIndex,
-          sizeof(DataPoint),
-          toWrite);
+    logI("saving buffer, %d entries %d bytes each, total %d bytes",
+         bufIndex,
+         sizeof(DataPoint),
+         toWrite);
     if (nullptr == fs) {
-        log_e("no fs");
+        logE("no fs");
         return false;
     }
     const char *path = currentPath();
     if (nullptr == path) {
-        log_e("could not get current file path");
+        logE("could not get current file path");
         return false;
     }
     File file = fs->open(path, FILE_APPEND);
     if (!file) {
-        log_e("could not open %s for appending", path);
+        logE("could not open %s for appending", path);
         return false;
     }
     size_t wrote = file.write((uint8_t *)buffer, toWrite);
     if (toWrite != wrote) {
         if (0 == wrote) {
-            log_e("cannot write to %s", path);
+            logE("cannot write to %s", path);
             file.close();
             return false;
         }
-        log_e("buffer is %d bytes but wrote only %d bytes to %s",
-              toWrite, wrote, path);
+        logE("buffer is %d bytes but wrote only %d bytes to %s",
+             toWrite, wrote, path);
         file.close();
         return false;
     }
-    log_i("wrote %d bytes to %s (%d bytes)", wrote, path, file.size());
+    logI("wrote %d bytes to %s (%d bytes)", wrote, path, file.size());
     file.close();
     bufIndex = 0;
     return true;
@@ -152,32 +153,32 @@ bool Recorder::saveBuffer() {
 
 bool Recorder::saveStats() {
     if (stats.distance < 1.0) {
-        log_i("distance is less than a meter");
+        logI("distance is less than a meter");
         return false;
     }
     const char *sp = currentStatsPath();
     if (nullptr == sp || strlen(sp) < 1) {
-        log_e("could not get current stats path");
+        logE("could not get current stats path");
         return false;
     }
     File file = fs->open(sp, FILE_WRITE);
     if (!file) {
-        log_e("could not open %s for writing", sp);
+        logE("could not open %s for writing", sp);
         return false;
     }
     size_t wrote = file.write((uint8_t *)&stats, sizeof(stats));
     if (sizeof(stats) != wrote) {
         if (0 == wrote) {
-            log_e("cannot write to %s", sp);
+            logE("cannot write to %s", sp);
             file.close();
             return false;
         }
-        log_e("stats is %d bytes but wrote only %d bytes to %s",
-              sizeof(stats), wrote, sp);
+        logE("stats is %d bytes but wrote only %d bytes to %s",
+             sizeof(stats), wrote, sp);
         file.close();
         return false;
     }
-    log_i("wrote %d bytes to %s", wrote, sp);
+    logI("wrote %d bytes to %s", wrote, sp);
     file.close();
     return true;
 }
@@ -185,26 +186,26 @@ bool Recorder::saveStats() {
 bool Recorder::loadStats(bool reportFail) {
     const char *sp = currentStatsPath();
     if (nullptr == sp || strlen(sp) < 1) {
-        if (reportFail) log_e("could not get current stats path");
+        if (reportFail) logE("could not get current stats path");
         return false;
     }
     File file = fs->open(sp);
     if (!file) {
-        if (reportFail) log_e("could not open %s for reading", sp);
+        if (reportFail) logE("could not open %s for reading", sp);
         return false;
     }
     Stats tmpStats;
     size_t read = file.read((uint8_t *)&tmpStats, sizeof(tmpStats));
     if (read < sizeof(tmpStats)) {
-        if (reportFail) log_e("cannot read from %s", sp);
+        if (reportFail) logE("cannot read from %s", sp);
         file.close();
         return false;
     }
-    log_i("read %d bytes from %s", read, sp);
+    logI("read %d bytes from %s", read, sp);
     file.close();
     stats.distance += tmpStats.distance;
     stats.altGain += tmpStats.altGain;
-    log_i("distance: %.1f, altGain: %d", stats.distance, stats.altGain);
+    logI("distance: %.1f, altGain: %d", stats.distance, stats.altGain);
     return true;
 }
 
@@ -219,19 +220,19 @@ const char *Recorder::currentPath(bool reset) {
     if (0 != strcmp(path, ""))
         return path;
     if (nullptr == fs) {
-        log_e("no fs");
+        logE("no fs");
         return nullptr;
     }
     File file = fs->open(basePath);
     if (!file) {
         if (!fs->mkdir(basePath)) {
-            log_e("could not create %s", basePath);
+            logE("could not create %s", basePath);
             return nullptr;
         }
         file = fs->open(basePath);
     }
     if (!file) {
-        log_e("could not open %s", basePath);
+        logE("could not open %s", basePath);
         return nullptr;
     }
     file.close();
@@ -247,19 +248,19 @@ const char *Recorder::currentPath(bool reset) {
                     if (0 == file.size() % sizeof(DataPoint)) {
                         file.close();
                         strncpy(path, testPath, sizeof(path));
-                        log_i("continuing recording of %s", path);
+                        logI("continuing recording of %s", path);
                         // loadStats(); already called by start()
                         return path;
                     } else
-                        log_e("%s size %d is not multiple of %d (corrupt file?)",
-                              path, file.size(), sizeof(DataPoint));
+                        logE("%s size %d is not multiple of %d (corrupt file?)",
+                             path, file.size(), sizeof(DataPoint));
                     file.close();
                 }
             }
         }
     }
     if (0 == buffer[0].time) {
-        log_e("could not get time from first datapoint");
+        logE("could not get time from first datapoint");
         return nullptr;
     }
     // struct tm:
@@ -280,13 +281,13 @@ const char *Recorder::currentPath(bool reset) {
              tms->tm_mday,
              tms->tm_hour,
              tms->tm_min);
-    log_i("recording to %s", path);
+    logI("recording to %s", path);
     file = fs->open(continuePath, FILE_WRITE);
     if (file) {
         if (file.write((uint8_t *)path, strlen(path)) == strlen(path))
-            log_i("wrote continue file %s", continuePath);
+            logI("wrote continue file %s", continuePath);
         else
-            log_e("could not write continue file %s", continuePath);
+            logE("could not write continue file %s", continuePath);
         file.close();
     }
     return path;
@@ -303,7 +304,7 @@ const char *Recorder::currentStatsPath(bool reset) {
         return path;
     const char *fp = currentPath();
     if (nullptr == fp) {
-        log_i("could not get current file path");
+        logI("could not get current file path");
         return nullptr;
     }
     snprintf(path, sizeof(path), "%s%s", fp, statsExt);
@@ -321,12 +322,12 @@ bool Recorder::resume() { return start(); }
 
 bool Recorder::start() {
     if (nullptr == fs) {
-        log_e("no fs");
+        logE("no fs");
         return false;
     }
-    log_i("starting recording");
+    logI("starting recording");
     if (isRecording) {
-        log_e("already recording");
+        logE("already recording");
         return false;
     }
     currentPath(true);  // reset
@@ -342,24 +343,24 @@ bool Recorder::end() { return stop(true); }
 
 bool Recorder::stop(bool forgetLast) {
     if (!isRecording) return false;
-    log_i("%sing recording", forgetLast ? "stopp" : "paus");
+    logI("%sing recording", forgetLast ? "stopp" : "paus");
     if (!saveBuffer())
-        log_e("could not save buffer");
+        logE("could not save buffer");
     if (!saveStats())
-        log_e("could not save stats");
+        logE("could not save stats");
     char recPath[strlen(currentPath()) + 1] = "";
     char gpxPath[sizeof(recPath) + 5] = "";
     if (forgetLast) {
         strncpy(recPath, currentPath(), sizeof(recPath));
         snprintf(gpxPath, sizeof(gpxPath), "%s.gpx", recPath);
-        log_i("rec: %s gpx: %s", recPath, gpxPath);
+        logI("rec: %s gpx: %s", recPath, gpxPath);
     }
     isRecording = false;
     resetBuffer();
     currentPath(true);       // reset
     currentStatsPath(true);  // reset
     if (forgetLast) {
-        log_i("recording end");
+        logI("recording end");
         fs->remove(continuePath);
         stats = Stats();
         rec2gpx(recPath, gpxPath);
@@ -369,7 +370,7 @@ bool Recorder::stop(bool forgetLast) {
 
 void Recorder::onPower(uint16_t value) {
     if (!aquireMutex(powerMutex)) {
-        log_e("could not aquire powerMutex to add %d", value);
+        logE("could not aquire powerMutex to add %d", value);
         return;
     }
     powerBuf.push(value);
@@ -379,7 +380,7 @@ void Recorder::onPower(uint16_t value) {
 // TODO fix CircularBuffer.avg()
 uint16_t Recorder::avgPower(bool clearBuffer) {
     if (!aquireMutex(powerMutex)) {
-        log_e("could not aquire powerMutex to compute avg");
+        logE("could not aquire powerMutex to compute avg");
         return 0;
     }
     if (powerBuf.isEmpty()) {
@@ -396,7 +397,7 @@ uint16_t Recorder::avgPower(bool clearBuffer) {
 
 void Recorder::onCadence(uint8_t value) {
     if (!aquireMutex(cadenceMutex)) {
-        log_e("could not aquire cadenceMutex to add %d", value);
+        logE("could not aquire cadenceMutex to add %d", value);
         return;
     }
     cadenceBuf.push(value);
@@ -406,7 +407,7 @@ void Recorder::onCadence(uint8_t value) {
 // TODO fix CircularBuffer.avg()
 uint8_t Recorder::avgCadence(bool clearBuffer) {
     if (!aquireMutex(cadenceMutex)) {
-        log_e("could not aquire cadenceMutex to compute avg");
+        logE("could not aquire cadenceMutex to compute avg");
         return 0;
     }
     if (cadenceBuf.isEmpty()) {
@@ -423,7 +424,7 @@ uint8_t Recorder::avgCadence(bool clearBuffer) {
 
 void Recorder::onHeartrate(uint8_t value) {
     if (!aquireMutex(heartrateMutex)) {
-        log_e("could not aquire heartrateMutex to add %d", value);
+        logE("could not aquire heartrateMutex to add %d", value);
         return;
     }
     heartrateBuf.push(value);
@@ -433,7 +434,7 @@ void Recorder::onHeartrate(uint8_t value) {
 // TODO fix CircularBuffer.avg()
 uint8_t Recorder::avgHeartrate(bool clearBuffer) {
     if (!aquireMutex(heartrateMutex)) {
-        log_e("could not aquire heartrateMutex to compute avg");
+        logE("could not aquire heartrateMutex to compute avg");
         return 0;
     }
     if (heartrateBuf.isEmpty()) {
@@ -449,50 +450,50 @@ uint8_t Recorder::avgHeartrate(bool clearBuffer) {
 }
 
 bool Recorder::aquireMutex(SemaphoreHandle_t mutex, uint32_t timeout) {
-    // log_i("aquireMutex %d", mutex);
+    // logI("aquireMutex %d", mutex);
     if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
         return true;
-    log_e("Could not aquire mutex");
+    logE("Could not aquire mutex");
     return false;
 }
 
 void Recorder::releaseMutex(SemaphoreHandle_t mutex) {
-    // log_i("releaseMutex %d", mutex);
+    // logI("releaseMutex %d", mutex);
     xSemaphoreGive(mutex);
 }
 
 // creates non-standard gpx that can be parsed by str*v*
 bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
     if (nullptr == instance) {
-        log_e("instance is null");
+        logE("instance is null");
         return false;
     }
     fs::FS *fs = instance->fs;
     if (nullptr == fs) {
-        log_e("fs is null");
+        logE("fs is null");
         return false;
     }
     if (!fs->exists(recPath)) {
-        log_e("%s does not exist", recPath);
+        logE("%s does not exist", recPath);
         return false;
     }
     if (fs->exists(gpxPath)) {
-        log_e("%s already exists", gpxPath);
+        logE("%s already exists", gpxPath);
         return false;
     }
     File rec = fs->open(recPath);
     if (!rec) {
-        log_e("could not open %s", recPath);
+        logE("could not open %s", recPath);
         return false;
     }
     File gpx = fs->open(gpxPath, FILE_WRITE);
     if (!gpx) {
-        log_e("could not open %s", gpxPath);
+        logE("could not open %s", gpxPath);
         rec.close();
         return false;
     }
-    log_i("rec: %s gpx: %s", recPath, gpxPath);
-    log_i("creating %s", gpxPath);
+    logI("rec: %s gpx: %s", recPath, gpxPath);
+    logI("creating %s", gpxPath);
 
     const char *header = R"====(<?xml version="1.0" encoding="UTF-8"?>
 <gpx creator="libAtoll" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd" version="1.1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">)====";
@@ -526,7 +527,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
 </gpx>)====";
 
     if (gpx.write((uint8_t *)header, strlen(header)) != strlen(header)) {
-        log_e("could not write header to %s", gpxPath);
+        logE("could not write header to %s", gpxPath);
         rec.close();
         gpx.close();
         fs->remove(gpxPath);
@@ -552,11 +553,11 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
     time_t prevTime = 0;
     while (rec.read((uint8_t *)&point, sizeof(point)) == sizeof(point)) {
         if (0 == point.time) {
-            log_e("point %d time is zero", points);
+            logE("point %d time is zero", points);
             continue;
         }
         if (point.time < prevTime)
-            log_e("point #%d time < prevTime", points);
+            logE("point #%d time < prevTime", points);
         prevTime = point.time;
         gmtime_r(&point.time, &tms);
         // struct tm:
@@ -581,7 +582,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
             char metaTrk[strlen(metaTrkFormat) + sizeof(time)];
             snprintf(metaTrk, sizeof(metaTrk), metaTrkFormat, time);
             if (gpx.write((uint8_t *)&metaTrk, strlen(metaTrk)) != strlen(metaTrk)) {
-                log_e("could not write meta section to %s", gpxPath);
+                logE("could not write meta section to %s", gpxPath);
                 rec.close();
                 gpx.close();
                 fs->remove(gpxPath);
@@ -601,14 +602,14 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
                  point.cadence);
         pointBufLen = strlen(pointBuf);
         if (gpx.write((uint8_t *)&pointBuf, pointBufLen) != pointBufLen) {
-            log_e("could not write point #%d to %s", points, gpxPath);
+            logE("could not write point #%d to %s", points, gpxPath);
             continue;
         }
         // Serial.print(pointBuf);
         points++;
     }
     if (gpx.write((uint8_t *)footer, strlen(footer)) != strlen(footer)) {
-        log_e("could not write footer to %s", gpxPath);
+        logE("could not write footer to %s", gpxPath);
         rec.close();
         gpx.close();
         fs->remove(gpxPath);
@@ -619,11 +620,11 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPath) {
     gpx.close();  // need to reopen to get size
     gpx = fs->open(gpxPath);
     if (!gpx) {
-        log_e("could not open %s", gpxPath);
+        logE("could not open %s", gpxPath);
         gpx.close();
         return false;
     }
-    log_i("%s created, size: %d bytes", gpxPath, gpx.size());
+    logI("%s created, size: %d bytes", gpxPath, gpx.size());
     gpx.close();
     return true;
 }

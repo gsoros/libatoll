@@ -12,7 +12,7 @@
 #define WIFISERIAL_RINGBUF_RX_SIZE 64
 #endif
 #ifndef WIFISERIAL_RINGBUF_TX_SIZE
-#define WIFISERIAL_RINGBUF_TX_SIZE 128
+#define WIFISERIAL_RINGBUF_TX_SIZE 256
 #endif
 #ifndef WIFISERIAL_PORT
 #define WIFISERIAL_PORT 23
@@ -43,7 +43,7 @@ class WifiSerial : public Task, public Stream {
     WiFiServer _server;
     WiFiClient _client;
     CircularBuffer<char, WIFISERIAL_RINGBUF_RX_SIZE> _rx_buf;
-    CircularBuffer<char, WIFISERIAL_RINGBUF_TX_SIZE> _tx_buf;
+    CircularBuffer<char, WIFISERIAL_RINGBUF_TX_SIZE> _tx_buf;  // TODO mutex
     bool _connected = false;
     bool _disconnect = false;
 };
