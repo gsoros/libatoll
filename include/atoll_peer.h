@@ -3,8 +3,9 @@
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
-// #include "atoll_ble_constants.h"
-// #include "atoll_peer_characteristic.h"
+
+#include "atoll_log.h"
+
 #include "atoll_peer_characteristic_power.h"
 #include "atoll_peer_characteristic_heartrate.h"
 

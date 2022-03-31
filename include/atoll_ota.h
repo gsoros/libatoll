@@ -8,6 +8,7 @@
 
 #include "atoll_task.h"
 #include "atoll_recorder.h"
+#include "atoll_log.h"
 
 #ifndef ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING
 #define ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING 20

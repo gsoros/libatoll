@@ -64,8 +64,8 @@ void Ota::onStart() {
         log_i("FS");
     }
 
-    log_i("setting cpu freq to 240 MHz");
-    setCpuFrequencyMhz(240);
+    // log_i("setting cpu freq to 240 MHz");
+    // setCpuFrequencyMhz(240);
 
     log_i("setting task freq to %d Hz", ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING);
     savedTaskFreq = taskFreq;

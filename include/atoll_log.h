@@ -9,8 +9,15 @@
 #define ATOLL_LOG_BUFFER_SIZE 256
 #endif
 
-#define logI(format, ...) Atoll::log(ARDUHAL_LOG_FORMAT(I, format), ##__VA_ARGS__)
-#define logE(format, ...) Atoll::log(ARDUHAL_LOG_FORMAT(E, format), ##__VA_ARGS__)
+#ifdef log_i
+#undef log_i
+#endif
+#define log_i(format, ...) Atoll::log(ARDUHAL_LOG_FORMAT(I, format), ##__VA_ARGS__)
+
+#ifdef log_e
+#undef log_e
+#endif
+#define log_e(format, ...) Atoll::log(ARDUHAL_LOG_FORMAT(E, format), ##__VA_ARGS__)
 
 namespace Atoll {
 

@@ -4,6 +4,8 @@
 #include <sys/time.h>
 #include "time.h"
 
+#include "atoll_log.h"
+
 // workarounds for intellisense identifier “setenv” is undefined and identifier “tzset” is undefined
 _VOID _EXFUN(tzset, (_VOID));
 int _EXFUN(setenv, (const char *__string, const char *__value, int __overwrite));

@@ -6,6 +6,7 @@
 #include "SPI.h"
 
 #include "atoll_fs.h"
+#include "atoll_log.h"
 
 namespace Atoll {
 

@@ -8,6 +8,7 @@
 #include "atoll_gps.h"
 #include "atoll_fs.h"
 #include "atoll_api.h"
+#include "atoll_log.h"
 
 #ifndef ATOLL_RECORDER_BUFFER_SIZE
 #define ATOLL_RECORDER_BUFFER_SIZE 60
@@ -115,7 +116,7 @@ class Recorder : public Task {
     bool aquireMutex(SemaphoreHandle_t mutex, uint32_t timeout = 100);
     void releaseMutex(SemaphoreHandle_t mutex);
 
-    static bool rec2gpx(const char *in, const char *out);
+    virtual bool rec2gpx(const char *in, const char *out);
 
     static ApiResult *recProcessor(ApiReply *reply);
 };

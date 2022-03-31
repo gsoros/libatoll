@@ -41,6 +41,14 @@ bool GPS::syncSystemTime() {
     if (!gps.time.isValid() || !gps.date.isValid())
         return false;
 
+    log_i("syncing system time to gps time %04d-%02d-%02d %02d:%02d:%02d",
+          gps.date.year(),
+          gps.date.month(),
+          gps.date.day(),
+          gps.time.hour(),
+          gps.time.minute(),
+          gps.time.second());
+
     setSytemTimeFromUtc(
         gps.date.year(),
         gps.date.month(),

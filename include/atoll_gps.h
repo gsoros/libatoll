@@ -8,6 +8,7 @@
 #include "atoll_task.h"
 #include "atoll_touch.h"
 #include "atoll_oled.h"
+#include "atoll_log.h"
 
 namespace Atoll {
 

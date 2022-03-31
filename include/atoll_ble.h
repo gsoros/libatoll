@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 
+#include "atoll_log.h"
+
 namespace Atoll {
 
 class Ble {

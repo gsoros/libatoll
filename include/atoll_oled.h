@@ -7,6 +7,7 @@
 #include "atoll_task.h"
 #include "atoll_touch.h"
 #include "atoll_time.h"
+#include "atoll_log.h"
 
 namespace Atoll {
 

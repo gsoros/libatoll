@@ -4,7 +4,11 @@
 #include "xtensa/core-macros.h"
 #include <Arduino.h>
 
+#include "atoll_log.h"
+
+#ifndef TASK_DEFAULT_CORE
 #define TASK_DEFAULT_CORE 1
+#endif
 
 namespace Atoll {
 
