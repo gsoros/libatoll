@@ -260,8 +260,12 @@ const char *Recorder::currentPath(bool reset) {
     }
     time_t t = buffer[0].time;
     if (0 == t) {
+        if (!systemTimeLastSet()) {
+            log_e("system time has not been set");
+            return nullptr;
+        }
+        t = now();
         log_i("could not get time from first datapoint, using current time");
-        t = time(NULL);
     }
     // struct tm:
     // Member	Type	Meaning	                    Range
