@@ -13,6 +13,11 @@ namespace Atoll {
 
 class Oled : public Task {
    public:
+    enum Color {
+        BG,
+        FG,
+        XOR
+    };
     struct Area {
         uint8_t x;  // top left x
         uint8_t y;  // top left y
@@ -22,12 +27,14 @@ class Oled : public Task {
     };
 
     const char *taskName() { return "Oled"; }
-    uint8_t width;
-    uint8_t height;
-    uint8_t feedbackWidth;
-    uint8_t fieldHeight;
-    Area fields[3];
-    Area feedback[4];
+    uint8_t width;             // screen width
+    uint8_t height;            // screen height
+    uint8_t feedbackWidth;     // touch feedback area width
+    uint8_t fieldWidth;        // width of the number output fields
+    uint8_t fieldHeight;       // height of the number output fields
+    uint8_t fieldVSeparation;  // vertical distance between the number output fields
+    Area fields[3];            // number output fields
+    Area feedback[4];          // touch feedback areas
 
     Oled(
         U8G2 *device,
@@ -41,8 +48,8 @@ class Oled : public Task {
         this->feedbackWidth = feedbackWidth;
         this->fieldHeight = fieldHeight;
 
-        const uint8_t fieldWidth = width - 2 * feedbackWidth;
-        const uint8_t fieldVSeparation = (height - 3 * fieldHeight) / 2;
+        fieldWidth = width - 2 * feedbackWidth;
+        fieldVSeparation = (height - 3 * fieldHeight) / 2;
 
         fields[0].x = feedbackWidth;
         fields[0].y = 0;
@@ -87,6 +94,7 @@ class Oled : public Task {
     virtual void setup() {
         device->begin();
         device->setFont(u8g2_font_logisoso32_tn);
+        // device->setFontMode(1);  // transparent
     }
 
     virtual void loop();
@@ -107,25 +115,29 @@ class Oled : public Task {
         va_end(argp);
         Area *a = &fields[fieldIndex];
         // log_i("%d(%d, %d, %d, %d) %s", fieldIndex, a->x, a->y, a->w, a->h, out);
-        device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
+        // device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
         fill(a, bgColor, false);
         device->setCursor(a->x, a->y + a->h);
-        uint8_t oldColor = device->getDrawColor();
+        // uint8_t oldColor = device->getDrawColor();
         device->setDrawColor(color);
         device->print(out);
-        device->setDrawColor(oldColor);
-        device->setMaxClipWindow();
+        // device->setDrawColor(oldColor);
+        // device->setMaxClipWindow();
         if (!send) return;
         device->sendBuffer();
         releaseMutex();
     }
 
-    virtual void fill(Area *a, uint8_t color, bool send = true, uint32_t timeout = 100) {
+    virtual void fill(
+        Area *a,
+        uint8_t color = Color::BG,
+        bool send = true,
+        uint32_t timeout = 100) {
         if (send && !aquireMutex(timeout)) return;
-        uint8_t oldColor = device->getDrawColor();
+        // uint8_t oldColor = device->getDrawColor();
         device->setDrawColor(color);
         device->drawBox(a->x, a->y, a->w, a->h);
-        device->setDrawColor(oldColor);
+        // device->setDrawColor(oldColor);
         if (!send) return;
         device->sendBuffer();
         releaseMutex();
@@ -134,10 +146,10 @@ class Oled : public Task {
     virtual void showTime() {
         tm time = localTm();
         if (!aquireMutex()) return;
-        printfField(0, false, 1, 0, "%02d%d",
-                    time.tm_hour, time.tm_min / 10);
-        printfField(1, false, 1, 0, "%d%02d",
-                    time.tm_min % 10, time.tm_sec);
+        printfField(0, false, Color::FG, Color::BG,
+                    "%02d%d", time.tm_hour, time.tm_min / 10);
+        printfField(1, false, Color::FG, Color::BG,
+                    "%d%02d", time.tm_min % 10, time.tm_sec);
         device->sendBuffer();
         releaseMutex();
     }
@@ -145,8 +157,8 @@ class Oled : public Task {
     virtual void showDate() {
         tm time = localTm();
         if (!aquireMutex()) return;
-        printfField(2, false, 1, 0, "%d%02d",
-                    (time.tm_mon + 1) % 10, time.tm_mday);
+        printfField(2, false, Color::FG, Color::BG,
+                    "%d%02d", (time.tm_mon + 1) % 10, time.tm_mday);
         device->sendBuffer();
         releaseMutex();
     }
@@ -154,7 +166,8 @@ class Oled : public Task {
     virtual void onPower(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
-            printfField(0, true, 1, 0, "%3d", value);
+            printfField(0, true, Color::FG, Color::BG,
+                        "%3d", value);
             lastValue = value;
             lastPower = millis();
         }
@@ -163,7 +176,8 @@ class Oled : public Task {
     virtual void onCadence(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
-            printfField(1, true, 1, 0, "%3d", value);
+            printfField(1, true, Color::FG, Color::BG,
+                        "%3d", value);
             lastValue = value;
             lastCadence = millis();
         }
@@ -172,7 +186,8 @@ class Oled : public Task {
     virtual void onHeartrate(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
-            printfField(2, true, 1, 0, "%3d", value);
+            printfField(2, true, Color::FG, Color::BG,
+                        "%3d", value);
             lastValue = value;
             lastHeartrate = millis();
         }
