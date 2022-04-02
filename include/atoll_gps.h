@@ -2,7 +2,7 @@
 #define __atoll_gps_h
 
 #include <Arduino.h>
-#include <SoftwareSerial.h>
+#include <HardwareSerial.h>
 #include <TinyGPS++.h>
 
 #include "atoll_task.h"
@@ -15,7 +15,8 @@ namespace Atoll {
 class GPS : public Atoll::Task {
    public:
     const char *taskName() { return "GPS"; }
-    SoftwareSerial ss;
+    // SoftwareSerial ss;
+    HardwareSerial *serial;
     TinyGPSPlus gps;
 
     GPS() {}
@@ -23,10 +24,12 @@ class GPS : public Atoll::Task {
 
     void setup(
         uint32_t baud,
-        SoftwareSerialConfig config,
+        uint32_t config,
         int8_t rxPin,
         int8_t txPin) {
-        ss.begin(baud, config, rxPin, txPin);
+        // ss.begin(baud, config, rxPin, txPin);
+        serial = new HardwareSerial(1);
+        serial->begin(baud, config, rxPin, txPin);
     }
 
     uint32_t satellites() {

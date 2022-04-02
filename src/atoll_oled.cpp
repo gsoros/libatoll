@@ -55,7 +55,7 @@ void Oled::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
         case Touch::Event::end: {
             log_i("pad %d end", pad->index);
             fill(a, 1);
-            fill(a, 0);
+            fill(a, 0, true, 1000);
             return;
         }
         case Touch::Event::doubleTouch: {
@@ -68,15 +68,15 @@ void Oled::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             fill(&b, 0, false);           // area 2 black
             b.y += b.h;                   // move down
             fill(&b, 1);                  // area 3 white
-            delay(Touch::touchTime * 3);  //
-            fill(a, 0);                   // clear
+            delay(Touch::touchTime * 3);  // TODO is delay() a good idea? maybe create a queue schedule?
+            fill(a, 0, true, 1000);       // clear
             return;
         }
         case Touch::Event::longTouch: {
             log_i("pad %d long", pad->index);
             fill(a, 1);
             delay(Touch::touchTime * 3);
-            fill(a, 0);
+            fill(a, 0, true, 1000);
             return;
         }
         case Touch::Event::touching: {
@@ -84,7 +84,7 @@ void Oled::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             if (pad->start + Touch::longTouchTime < millis()) {  // animation completed, still touching
                 fill(a, 1);
                 delay(Touch::touchTime * 3);
-                fill(a, 0);
+                fill(a, 0, true, 1000);
                 return;
             }
             // log_i("pad %d animating", pad->index);

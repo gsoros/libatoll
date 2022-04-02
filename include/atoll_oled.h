@@ -12,15 +12,15 @@
 namespace Atoll {
 
 class Oled : public Task {
+   public:
     struct Area {
         uint8_t x;  // top left x
         uint8_t y;  // top left y
         uint8_t w;  // width
         uint8_t h;  // height
-        bool invert = false;
+        // bool invert = false;  // unused
     };
 
-   public:
     const char *taskName() { return "Oled"; }
     uint8_t width;
     uint8_t height;
@@ -63,7 +63,7 @@ class Oled : public Task {
         feedback[0].y = 0;
         feedback[0].w = feedbackWidth;
         feedback[0].h = height / 2;
-        feedback[0].invert = true;
+        // feedback[0].invert = true;
 
         feedback[1].x = 0;
         feedback[1].y = height / 2;
@@ -74,7 +74,7 @@ class Oled : public Task {
         feedback[2].y = 0;
         feedback[2].w = feedbackWidth;
         feedback[2].h = height / 2;
-        feedback[2].invert = true;
+        // feedback[2].invert = true;
 
         feedback[3].x = width - feedbackWidth;
         feedback[3].y = height / 2;
@@ -108,7 +108,7 @@ class Oled : public Task {
         Area *a = &fields[fieldIndex];
         // log_i("%d(%d, %d, %d, %d) %s", fieldIndex, a->x, a->y, a->w, a->h, out);
         device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
-        fill(a, bgColor, false, false);
+        fill(a, bgColor, false);
         device->setCursor(a->x, a->y + a->h);
         uint8_t oldColor = device->getDrawColor();
         device->setDrawColor(color);
@@ -120,14 +120,12 @@ class Oled : public Task {
         releaseMutex();
     }
 
-    virtual void fill(Area *a, uint8_t color, bool send = true, bool setClip = true) {
-        if (send && !aquireMutex()) return;
+    virtual void fill(Area *a, uint8_t color, bool send = true, uint32_t timeout = 100) {
+        if (send && !aquireMutex(timeout)) return;
         uint8_t oldColor = device->getDrawColor();
-        if (setClip) device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
         device->setDrawColor(color);
         device->drawBox(a->x, a->y, a->w, a->h);
         device->setDrawColor(oldColor);
-        if (setClip) device->setMaxClipWindow();
         if (!send) return;
         device->sendBuffer();
         releaseMutex();

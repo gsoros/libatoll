@@ -49,7 +49,7 @@ void BleClient::loop() {
             peers[i]->disconnect();
         }
     }
-    delay(2000);
+    // delay(2000);
 }
 
 // delete clients and stop scanning

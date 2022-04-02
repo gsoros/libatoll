@@ -35,13 +35,14 @@ void Recorder::loop() {
     ulong t = millis();
     if ((lastDataPointTime < t - interval) && interval < t) {
         addDataPoint();
-        if (bufSize <= bufIndex) {
-            if (!saveBuffer())
-                log_e("could not save buffer");
-            resetBuffer();
-            if (!saveStats())
-                log_e("could not save stats");
+        if (bufIndex < bufSize) return;
+        if (!saveBuffer()) {
+            log_e("could not save buffer");
+            return;
         }
+        resetBuffer();
+        if (!saveStats())
+            log_e("could not save stats");
     }
 }
 
@@ -647,7 +648,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     }
     // Serial.print(footer);
     rec.close();
-    gpx.flush();
+    // gpx.flush();
     gpx.close();  // need to reopen to get size
     gpx = fs->open(gpxPath);
     if (!gpx) {

@@ -3,11 +3,14 @@
 
 using namespace Atoll;
 
-GPS::~GPS() {}
+GPS::~GPS() { delete serial; }
 
 void GPS::loop() {
-    while (ss.available() > 0)
-        gps.encode(ss.read());
+    uint32_t failedChecksum = gps.failedChecksum();
+    while (0 < serial->available())
+        gps.encode(serial->read());
+    if (gps.failedChecksum() != failedChecksum)
+        log_i("checksums failed: %d", gps.failedChecksum());
 
     // if (gps.speed.kmph() < 0.01) return;
     // static unsigned long lastStatus = millis();
