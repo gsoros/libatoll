@@ -36,6 +36,10 @@ class GPS : public Atoll::Task {
         return gps.satellites.value();
     }
 
+    bool locationIsValid() {
+        return gps.location.isValid();
+    }
+
     void loop();
 
     bool syncSystemTime();

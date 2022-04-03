@@ -41,7 +41,7 @@ void GPS::loop() {
 }
 
 bool GPS::syncSystemTime() {
-    if (!gps.time.isValid() || !gps.date.isValid())
+    if (!gps.time.isValid() || !gps.date.isValid() || gps.date.year() < 2022)
         return false;
 
     log_i("syncing system time to gps time %04d-%02d-%02d %02d:%02d:%02d",
