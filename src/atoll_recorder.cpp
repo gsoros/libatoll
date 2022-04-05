@@ -60,6 +60,9 @@ void Recorder::addDataPoint() {
         log_i("gps location invalid");
         return;
     }
+    if (!gps->isMoving()) {
+        return;
+    }
     if (sizeof(buffer) <= bufIndex) {
         log_e("index %d out of range", bufIndex);
         return;
@@ -77,10 +80,15 @@ void Recorder::addDataPoint() {
     static int16_t prevAlt = 0.0;
     static bool prevPositionValid = false;
     if (prevPositionValid) {
-        stats.distance += gps->gps.distanceBetween(
+        double diff = gps->gps.distanceBetween(
             prevLat, prevLon, point->lat, point->lon);
-        if (prevAlt < point->alt)
+        stats.distance += diff;
+        log_i("diff: %f", diff);
+        if (0.01 < diff) onDistanceChanged(stats.distance);
+        if (prevAlt < point->alt) {
             stats.altGain += point->alt - prevAlt;
+            onAltGainChanged(stats.altGain);
+        }
     } else
         prevPositionValid = true;
     prevLat = point->lat;
@@ -90,17 +98,17 @@ void Recorder::addDataPoint() {
     point->power = avgPower(true);
     point->cadence = avgCadence(true);
     point->heartrate = avgHeartrate(true);
-    log_i("#%2d %ld %.7f %.7f ^%d+%dm >%.1fm %4dW %3drpm %3dbpm",
-          bufIndex,
-          point->time,
-          point->lat,
-          point->lon,
-          point->alt,
-          stats.altGain,
-          stats.distance,
-          point->power,
-          point->cadence,
-          point->heartrate);
+    // log_i("#%2d %ld %.7f %.7f ^%d+%dm >%.1fm %4dW %3drpm %3dbpm",
+    //       bufIndex,
+    //       point->time,
+    //       point->lat,
+    //       point->lon,
+    //       point->alt,
+    //       stats.altGain,
+    //       stats.distance,
+    //       point->power,
+    //       point->cadence,
+    //       point->heartrate);
 
     bufIndex++;
 }
@@ -115,10 +123,10 @@ bool Recorder::saveBuffer() {
         log_e("could not get time from first datapoint");
         return false;
     }
-    log_i("saving buffer, %d entries %d bytes each, total %d bytes",
-          bufIndex,
-          sizeof(DataPoint),
-          toWrite);
+    // log_i("saving buffer, %d entries %d bytes each, total %d bytes",
+    //       bufIndex,
+    //       sizeof(DataPoint),
+    //       toWrite);
     if (nullptr == fs) {
         log_e("no fs");
         return false;
@@ -145,7 +153,7 @@ bool Recorder::saveBuffer() {
         file.close();
         return false;
     }
-    log_i("wrote %d bytes to %s (%d bytes)", wrote, path, file.size());
+    // log_i("wrote %d bytes to %s (%d bytes)", wrote, path, file.size());
     file.close();
     bufIndex = 0;
     return true;
@@ -178,7 +186,7 @@ bool Recorder::saveStats() {
         file.close();
         return false;
     }
-    log_i("wrote %d bytes to %s", wrote, sp);
+    // log_i("wrote %d bytes to %s", wrote, sp);
     file.close();
     return true;
 }

@@ -98,6 +98,9 @@ class Recorder : public Task {
     virtual bool end();
     virtual bool stop(bool forgetLast = false);
 
+    virtual void onDistanceChanged(double value){}
+    virtual void onAltGainChanged(uint16_t value){}
+
     CircularBuffer<uint16_t, ATOLL_RECORDER_POWER_RINGBUF_SIZE> powerBuf;
     SemaphoreHandle_t powerMutex = xSemaphoreCreateMutex();
     virtual void onPower(uint16_t value);

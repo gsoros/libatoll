@@ -43,13 +43,13 @@ void BleClient::loop() {
             // log_i("connecting peer %s %s(%d)",
             //      peers[i]->name, peers[i]->address, peers[i]->addressType);
             peers[i]->connect();
+            delay(100);
         } else if (!peers[i]->shouldConnect &&
                    peers[i]->isConnected()) {
             log_i("disconnecting peer %s", peers[i]->name);
             peers[i]->disconnect();
         }
     }
-    // delay(2000);
 }
 
 // delete clients and stop scanning

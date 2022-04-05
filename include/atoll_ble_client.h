@@ -33,7 +33,6 @@ class BleClient : public Task,
                   public BLEAdvertisedDeviceCallbacks {
    public:
     const char* taskName() { return "BleClient"; }
-    uint32_t taskStack = 4096;                               // task stack size in bytes
     char deviceName[SETTINGS_STR_LENGTH] = HOSTNAME;         // device name
     bool enabled = true;                                     // whether ble client is enabled
     BLEScan* scan;                                           // pointer to scan object

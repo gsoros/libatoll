@@ -15,46 +15,31 @@ namespace Atoll {
 class Task {
    public:
     TaskHandle_t taskHandle = NULL;
-    float taskFreq = 10;        // desired task frequency in Hz
-    uint32_t taskStack = 4096;  // task stack size in bytes
-    uint8_t taskPriority = 1;
-    uint8_t taskCore = TASK_DEFAULT_CORE;
+    float taskFreq = 10;  // desired task frequency in Hz
 
     virtual const char *taskName() = 0;
 
-    virtual void taskStart() {
-        taskStart(taskName(), taskFreq, taskStack, taskPriority);
-    }
-    virtual void taskStart(float freq) {
-        taskStart(taskName(), freq, taskStack, taskPriority);
-    }
-    virtual void taskStart(const char *name) {
-        taskStart(name, taskFreq, taskStack, taskPriority);
-    }
-    virtual void taskStart(const char *name, float freq) {
-        taskStart(name, freq, taskStack, taskPriority);
-    }
-    virtual void taskStart(const char *name, float freq, uint32_t stack) {
-        taskStart(name, freq, stack, taskPriority);
-    }
-    virtual void taskStart(const char *name, float freq, uint32_t stack, uint8_t priority) {
+    virtual void taskStart(float freq = 10,
+                           uint32_t stack = 4096,
+                           uint8_t priority = 1,
+                           uint8_t core = TASK_DEFAULT_CORE) {
         if (taskRunning()) taskStop();
         taskFreq = freq;
         _taskSetDelayFromFreq();
         log_i("Starting task '%s' at %.2fHz (delay: %dms), stack %d",
-              name, freq, _xTaskDelay, stack);
+              taskName(), freq, _xTaskDelay, stack);
         BaseType_t err = xTaskCreatePinnedToCore(
             _taskLoop,
-            name,
+            taskName(),
             stack,
             this,
             priority,
             &taskHandle,
-            taskCore);
+            core);
         if (pdPASS != err)
-            log_e("Failed to start task '%s', error %d", name, err);
+            log_e("Failed to start task '%s', error %d", taskName(), err);
         // else
-        //     log_i("[Task] Started %s", name);
+        //     log_i("[Task] Started %s", taskName());
     }
 
     virtual bool taskRunning() {
@@ -63,7 +48,7 @@ class Task {
 
     virtual void taskStop() {
         if (NULL != taskHandle) {
-            log_i("[Task] Stopping %s", taskName());
+            log_i("Stopping %s", taskName());
             vTaskDelete(taskHandle);
         }
         taskHandle = NULL;
@@ -87,19 +72,23 @@ class Task {
 
    private:
     TickType_t _xLastWakeTime;
-    TickType_t _xTaskDelay;  // TODO unit is ticks but actually =ms??
+    TickType_t _xTaskDelay;
 
     static void _taskLoop(void *p) {
         Task *thisPtr = (Task *)p;
         thisPtr->_xLastWakeTime = xTaskGetTickCount();
         for (;;) {
             vTaskDelayUntil(&(thisPtr->_xLastWakeTime), thisPtr->_xTaskDelay);
+            ulong start = millis();
             thisPtr->loop();
+            ulong loopTime = millis() - start;
+            if (thisPtr->_xTaskDelay < loopTime)
+                log_w("%s loop time %dms is higher than taskDelay %dms (taskFreq %.2fHz)",
+                      thisPtr->taskName(), loopTime, thisPtr->_xTaskDelay, thisPtr->taskFreq);
         }
     }
 
     void _taskSetDelayFromFreq() {
-        //_xTaskDelay = 1000 / taskFreq / portTICK_PERIOD_MS;
         _xTaskDelay = pdMS_TO_TICKS(1000 / taskFreq);
     }
 };

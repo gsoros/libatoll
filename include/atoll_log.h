@@ -14,6 +14,11 @@
 #endif
 #define log_i(format, ...) Atoll::log(ARDUHAL_LOG_FORMAT(I, format), ##__VA_ARGS__)
 
+#ifdef log_w
+#undef log_w
+#endif
+#define log_w(format, ...) Atoll::log(ARDUHAL_LOG_FORMAT(W, format), ##__VA_ARGS__)
+
 #ifdef log_e
 #undef log_e
 #endif

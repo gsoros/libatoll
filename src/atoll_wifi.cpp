@@ -140,7 +140,7 @@ void Wifi::applySettings() {
     WiFi.mode(wifiMode);
     if (settings.enabled && settings.apEnabled) {
         if (0 == strcmp("", const_cast<char *>(settings.apSSID))) {
-            log_e("Warning: cannot enable AP with empty SSID");
+            log_w("cannot enable AP with empty SSID");
             settings.apEnabled = false;
         } else {
             log_i("Setting up WiFi AP '%s'", settings.apSSID);
@@ -149,10 +149,10 @@ void Wifi::applySettings() {
     }
     if (settings.enabled && settings.staEnabled) {
         if (0 == strcmp("", const_cast<char *>(settings.staSSID))) {
-            log_e("Warning: cannot enable STA with empty SSID");
+            log_w("cannot enable STA with empty SSID");
             settings.staEnabled = false;
         } else {
-            log_i("Connecting WiFi STA to AP '%s'", settings.staSSID);
+            log_i("connecting to AP '%s'", settings.staSSID);
             WiFi.begin(settings.staSSID, settings.staPassword);
         }
     }
@@ -178,14 +178,14 @@ void Wifi::applySettings() {
             ota->off();
             ota->taskStop();
             ota->setup(hostName, recorder);
-            ota->taskStart();
+            ota->taskStart(1);
         }
 #ifdef FEATURE_SERIAL
         if (nullptr != wifiSerial) {
             log_i("restarting wifiSerial");
             wifiSerial->taskStop();
             wifiSerial->setup();
-            wifiSerial->taskStart();
+            wifiSerial->taskStart(1);
         }
 #endif
     }
