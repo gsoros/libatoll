@@ -83,7 +83,7 @@ void Recorder::addDataPoint() {
         double diff = gps->gps.distanceBetween(
             prevLat, prevLon, point->lat, point->lon);
         stats.distance += diff;
-        log_i("diff: %f", diff);
+        // log_i("diff: %f", diff);
         if (0.01 < diff) onDistanceChanged(stats.distance);
         if (prevAlt < point->alt) {
             stats.altGain += point->alt - prevAlt;
@@ -153,7 +153,7 @@ bool Recorder::saveBuffer() {
         file.close();
         return false;
     }
-    // log_i("wrote %d bytes to %s (%d bytes)", wrote, path, file.size());
+    log_i("wrote %d bytes to %s (was %d bytes)", wrote, path, file.size());
     file.close();
     bufIndex = 0;
     return true;
@@ -287,7 +287,7 @@ const char *Recorder::currentPath(bool reset) {
     // tm_wday	int	    days since Sunday	        0-6
     // tm_yday	int 	days since January 1	    0-365
     // tm_isdst	int 	Daylight Saving Time flag
-    struct tm *tms = gmtime(&t);
+    struct tm *tms = localtime(&t);
     snprintf(path, sizeof(path), "%s/%02d%02d%02d%02d",
              basePath,
              tms->tm_mon + 1,

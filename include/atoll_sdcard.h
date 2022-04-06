@@ -5,6 +5,8 @@
 #include "SD.h"
 #include "SPI.h"
 
+// #include "vfs_fat_internal.h" // for format()
+
 #include "atoll_fs.h"
 #include "atoll_log.h"
 
@@ -28,7 +30,7 @@ class SdCard : public Fs {
 
     void setup() {
         spi.begin(sckPin, misoPin, mosiPin, csPin);
-        if (!SD.begin(csPin, spi)) {
+        if (!SD.begin(csPin, spi, 4000000U, "/sd", (uint8_t)5U, true)) {
             log_e("card mount failed");
             return;
         }
@@ -67,6 +69,46 @@ class SdCard : public Fs {
 
     fs::FS &refFs() {
         return SD;
+    }
+
+    void unmount() {
+        SD.end();
+    }
+
+    int format() {
+        log_e("cannot format");
+        return -1;
+
+        // FRESULT res = FR_OK;
+        // esp_err_t err = ESP_OK;
+        // const size_t workbuf_size = 4096;
+        // void *workbuf = NULL;
+        // log_i("partitioning card");
+
+        // workbuf = ff_memalloc(workbuf_size);
+        // if (workbuf == NULL) {
+        //     return ESP_ERR_NO_MEM;
+        // }
+
+        // BYTE pdrv = 0xFF;  // TODO get physical drive address from SD
+        // DWORD plist[] = {100, 0, 0, 0};
+        // res = f_fdisk(pdrv, plist, workbuf);
+        // if (res != FR_OK) {
+        //     err = ESP_FAIL;
+        //     log_e("f_fdisk failed (%d)", res);
+        // } else {
+        //     size_t alloc_unit_size = 512;
+        //     log_i("formatting card, allocation unit size=%d", alloc_unit_size);
+        //     res = f_mkfs("", FM_FAT, alloc_unit_size, workbuf, workbuf_size);
+        //     if (res != FR_OK) {
+        //         err = ESP_FAIL;
+        //         log_e("f_mkfs failed (%d)", res);
+        //     }
+        // }
+
+        // log_i("partitioning card finished");
+        // free(workbuf);
+        // return (int)err;
     }
 };
 

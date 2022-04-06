@@ -17,6 +17,13 @@ class Fs {
     virtual fs::FS *pFs() = 0;
 
     virtual fs::FS &refFs() = 0;
+
+    virtual void unmount() { log_i("not implemented"); }
+
+    virtual int format() {
+        log_i("not implemented");
+        return -1;
+    }
 };
 
 }  // namespace Atoll

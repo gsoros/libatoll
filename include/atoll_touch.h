@@ -34,6 +34,7 @@ class Touch : public Task, public Preferences {
         volatile ulong last = 0;
         ulong start = 0;
         ulong end = 0;
+        ulong singleTouch = 0;
         ulong longTouch = 0;
     };
 
@@ -45,13 +46,14 @@ class Touch : public Task, public Preferences {
         start,
         touching,
         end,
+        singleTouch,
         doubleTouch,
         longTouch
     };
 
-    static const uint16_t touchTime = 100;        // ms
-    static const uint16_t doubleTouchTime = 300;  // ms
-    static const uint16_t longTouchTime = 800;    // ms
+    static const uint16_t touchTime = 100;        // ms, min time to register a touch
+    static const uint16_t doubleTouchTime = 300;  // ms, max time between two touches to register a double touch
+    static const uint16_t longTouchTime = 800;    // ms, min time to register a long touch
 
     Touch(int pin0 = -1,
           int pin1 = -1,
@@ -99,6 +101,8 @@ class Touch : public Task, public Preferences {
                 return "start";
             case touching:
                 return "touching";
+            case singleTouch:
+                return "singleTouch";
             case doubleTouch:
                 return "doubleTouch";
             case longTouch:
@@ -182,20 +186,31 @@ class Touch : public Task, public Preferences {
         ulong t = millis();
         for (uint8_t i = 0; i < numPads; i++) {
             Pad *p = &pads[i];
+            if (!p->last) continue;         // not touched yet
             if (p->last < t - touchTime) {  // not touched recently
                 if (p->start != 0 &&
                     p->start < t - touchTime) {
                     p->start = 0;
                     p->end = t;
-                    if (0 == p->longTouch)  // don't fire end after longTouch
+                    if (0 == p->longTouch)  // don't fire end after long
                         fireEvent(i, Event::end);
+                    else
+                        p->singleTouch = t;  // don't fire single after long
                     p->longTouch = 0;
+                    continue;
+                }
+                if (p->end && p->end < t - doubleTouchTime && 0 == p->singleTouch) {
+                    fireEvent(i, Event::singleTouch);
+                    p->singleTouch = t;
                 }
                 continue;
             }
+            // touched recently
+            p->singleTouch = 0;
             if (p->start == 0) {
                 if (t - p->end < doubleTouchTime) {
                     p->end = 0;
+                    p->singleTouch = t;  // don't fire single after double
                     fireEvent(i, Event::doubleTouch);
                     continue;
                 }
@@ -213,7 +228,7 @@ class Touch : public Task, public Preferences {
     }
 
     virtual void fireEvent(uint8_t index, Event event) {
-        // log_i("%d %s", index, eventName(event));
+        log_i("%d %s", index, eventName(event));
     }
 
     virtual void attachInterrupts() {
