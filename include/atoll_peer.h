@@ -6,6 +6,7 @@
 
 #include "atoll_log.h"
 
+#include "atoll_peer_characteristic_battery.h"
 #include "atoll_peer_characteristic_power.h"
 #include "atoll_peer_characteristic_heartrate.h"
 
@@ -48,16 +49,24 @@ class Peer : public BLEClientCallbacks {
 
     virtual ~Peer();
 
-    Peer(const char* address, uint8_t addressType, const char* type, const char* name) {
+    Peer(const char* address,
+         uint8_t addressType,
+         const char* type,
+         const char* name,
+         PeerCharacteristicBattery* customBattChar = nullptr) {
         if (strlen(address) < 1) {
             log_e("empty address for %s %s", name, type);
-            strncpy(this->address, "invalid", sizeof(this->address));
+            snprintf(this->address, sizeof(this->address), "%s", "invalid");
         } else
             strncpy(this->address, address, sizeof(this->address));
         this->addressType = addressType;
         strncpy(this->type, type, sizeof(this->type));
         strncpy(this->name, name, sizeof(this->name));
-        for (int8_t i = 0; i < charsMax; i++) removeCharAt(i);  // initialize to nullptrs
+        for (int8_t i = 0; i < charsMax; i++)
+            removeCharAt(i);  // initialize to nullptrs
+        addChar(nullptr != customBattChar
+                    ? customBattChar
+                    : new PeerCharacteristicBattery());
     }
 
     // format: address,addressType,type,name
@@ -240,14 +249,14 @@ class Peer : public BLEClientCallbacks {
     }
 
     // client callbacks
-    virtual void onConnect(BLEClient* pClient);
-    virtual void onDisconnect(BLEClient* pClient);
-    virtual bool onConnParamsUpdateRequest(BLEClient* pClient, const ble_gap_upd_params* params);
-    virtual uint32_t onPassKeyRequest();
-    // virtual void onPassKeyNotify(uint32_t pass_key);
-    // virtual bool onSecurityRequest();
-    virtual void onAuthenticationComplete(ble_gap_conn_desc* desc);
-    virtual bool onConfirmPIN(uint32_t pin);
+    virtual void onConnect(BLEClient* pClient) override;
+    virtual void onDisconnect(BLEClient* pClient) override;
+    virtual bool onConnParamsUpdateRequest(BLEClient* pClient, const ble_gap_upd_params* params) override;
+    virtual uint32_t onPassKeyRequest() override;
+    // virtual void onPassKeyNotify(uint32_t pass_key) override;
+    // virtual bool onSecurityRequest() override;
+    virtual void onAuthenticationComplete(ble_gap_conn_desc* desc) override;
+    virtual bool onConfirmPIN(uint32_t pin) override;
 
     // notification callback
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify);
@@ -260,12 +269,14 @@ class PowerMeter : public Peer {
         uint8_t addressType,
         const char* type,
         const char* name,
-        PeerCharacteristic* customPowerChar = nullptr)
+        PeerCharacteristic* customPowerChar = nullptr,
+        PeerCharacteristicBattery* customBattChar = nullptr)
         : Peer(
               address,
               addressType,
               type,
-              name) {
+              name,
+              customBattChar) {
         addChar(nullptr != customPowerChar
                     ? customPowerChar
                     : new PeerCharacteristicPower());
@@ -281,13 +292,15 @@ class ESPM : public PowerMeter {
         const char* name,
         PeerCharacteristic* customPowerChar = nullptr,
         PeerCharacteristic* customApiRxChar = nullptr,
-        PeerCharacteristic* customApiTxChar = nullptr)
+        PeerCharacteristic* customApiTxChar = nullptr,
+        PeerCharacteristicBattery* customBattChar = nullptr)
         : PowerMeter(
               address,
               addressType,
               type,
               name,
-              customPowerChar) {
+              customPowerChar,
+              customBattChar) {
         // addChar(nullptr != customApiRxChar
         //          ? customApiRxChar
         //          : new PeerCharacteristicApiRx());
@@ -304,12 +317,14 @@ class HeartrateMonitor : public Peer {
         uint8_t addressType,
         const char* type,
         const char* name,
-        PeerCharacteristic* customHrChar = nullptr)
+        PeerCharacteristic* customHrChar = nullptr,
+        PeerCharacteristicBattery* customBattChar = nullptr)
         : Peer(
               address,
               addressType,
               type,
-              name) {
+              name,
+              customBattChar) {
         addChar(nullptr != customHrChar
                     ? customHrChar
                     : new PeerCharacteristicHeartrate());

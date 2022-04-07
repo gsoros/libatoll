@@ -29,6 +29,7 @@ class SdCard : public Fs {
     virtual ~SdCard() {}
 
     void setup() {
+        pinMode(misoPin, INPUT_PULLUP);
         spi.begin(sckPin, misoPin, mosiPin, csPin);
         if (!SD.begin(csPin, spi, 4000000U, "/sd", (uint8_t)5U, true)) {
             log_e("card mount failed");
@@ -56,7 +57,7 @@ class SdCard : public Fs {
                 log_i("card type: unknown");
         }
 
-        log_i("card size: %lluMB, bytes total: %d, used: %d, free: %d",
+        log_i("card size: %lluMB, bytes total: %llu, used: %llu, free: %llu",
               SD.cardSize() / (1024 * 1024),
               SD.totalBytes(),
               SD.usedBytes(),

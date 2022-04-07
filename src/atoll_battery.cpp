@@ -77,19 +77,22 @@ void Battery::notifyChar(uint8_t *value) {
     c->notify();
 }
 
-void Battery::report() {
+// returns true if notification was sent
+bool Battery::report() {
     static ulong lastNotification = 0;
     static int16_t lastLevel = -1;
     const ulong delay = 10000;  // min. 10 secs between messages
-    if ((uint8_t)lastLevel == level) return;
+    if ((uint8_t)lastLevel == level) return false;
     ulong t = millis();
     if (((t < delay) && (0 == lastNotification)) ||
         ((delay < t) && (lastNotification < t - delay))) {
         lastNotification = t;
         lastLevel = (int16_t)level;
-        log_i("%fV, %fVavg, %d%%", voltage, voltageAvg(), level);
+        // log_i("%fV, %fVavg, %d%%", voltage, voltageAvg(), level);
         notifyChar(&level);
+        return true;
     }
+    return false;
 }
 
 void Battery::loop() {

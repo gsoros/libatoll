@@ -10,50 +10,48 @@ Peer::~Peer() {
 }
 
 void Peer::connect() {
-    // log_i("connecting to %s", name);
-
     // https://github.com/h2zero/NimBLE-Arduino/blob/master/examples/NimBLE_Client/NimBLE_Client.ino
     if (connecting) {
-        log_i("already connecting to %s", name);
+        log_i("%s already connecting", name);
         return;
     }
     connecting = true;
 
     if (isConnected()) {
-        log_i("already connected to %s", name);
+        log_i("%s already connected", name);
         goto end;
     }
     if (BLEDevice::getClientListSize()) {
         setClient(BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType)));
         if (hasClient()) {
             if (!connectClient(false)) {
-                // log_i("reconnect failed");
+                log_i("%s reconnect failed", name);
                 goto end;
             }
-            log_i("reconnected client");
+            log_i("%s reconnected", name);
         } else
             setClient(BLEDevice::getDisconnectedClient());
     }
     if (!hasClient()) {
         if (BLEDevice::getClientListSize() >= NIMBLE_MAX_CONNECTIONS) {
-            log_i("max clients reached - no more connections available");
+            log_e("%s max clients reached", name);
             goto end;
         }
         setClient(BLEDevice::createClient(BLEAddress(address, addressType)));
-        log_i("new client created");
+        log_i("%s new client created", name);
         if (!connectClient()) {
             // deleteClient();
-            log_i("failed to connect (1)");
+            log_i("%s failed to connect new client", name);
             goto end;
         }
     }
     if (!isConnected()) {
         if (!connectClient()) {
-            // log_i("failed to connect (2)");
+            log_i("%s failed to connect", name);
             goto end;
         }
     }
-    log_i("connected to %s %s", name, getClient()->getPeerAddress().toString().c_str());
+    log_i("%s connected", name);
     goto end;
 
 end:
@@ -148,7 +146,7 @@ uint8_t Peer::deleteChars(const char* label) {
  */
 void Peer::onConnect(BLEClient* client) {
     connected = true;
-    log_i("subscribing");
+    log_i("%s connected, subscribing...", name);
     subscribeChars();
 }
 
@@ -158,7 +156,7 @@ void Peer::onConnect(BLEClient* client) {
  */
 void Peer::onDisconnect(BLEClient* client) {
     connected = false;
-    log_i("disconnected");
+    log_i("%s disconnected", name);
 }
 
 /**
@@ -168,7 +166,14 @@ void Peer::onDisconnect(BLEClient* client) {
  * @return True to accept the parmeters.
  */
 bool Peer::onConnParamsUpdateRequest(BLEClient* client, const ble_gap_upd_params* params) {
-    log_i("TODO client: %s st: %d", client->getPeerAddress().toString().c_str(), params->supervision_timeout);
+    log_i("%s, interval: %d-%d, latency: %d, ce: %d-%d, timeout: %d",
+          name,
+          params->itvl_min,
+          params->itvl_max,
+          params->latency,
+          params->min_ce_len,
+          params->max_ce_len,
+          params->supervision_timeout);
     return true;
 }
 
@@ -177,7 +182,7 @@ bool Peer::onConnParamsUpdateRequest(BLEClient* client, const ble_gap_upd_params
  * @return The passkey to be sent to the server.
  */
 uint32_t Peer::onPassKeyRequest() {
-    log_e("TODO send saved passkey");
+    log_e("%s TODO send saved passkey", name);
     return 123;
 }
 
@@ -192,7 +197,7 @@ bool Peer::onSecurityRequest() {}
  * This can be used to check the status of the connection encryption/pairing.
  */
 void Peer::onAuthenticationComplete(ble_gap_conn_desc* desc) {
-    log_i("TODO state: %d", desc->sec_state);
+    log_i("%s TODO sext8: %d", name, desc->sec_state);
 }
 
 /**
@@ -201,12 +206,12 @@ void Peer::onAuthenticationComplete(ble_gap_conn_desc* desc) {
  * @return True to accept the pin.
  */
 bool Peer::onConfirmPIN(uint32_t pin) {
-    log_i("TODO");
+    log_i("%s TODO", name);
     return true;
 }
 
 void Peer::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) {
     char buf[length];
     strncpy(buf, (char*)data, length);
-    log_i("uuid: %s, data: '%s', len: %d", c->getUUID().toString().c_str(), buf, length);
+    log_i("%s uuid: %s, data: '%s', len: %d", name, c->getUUID().toString().c_str(), buf, length);
 }

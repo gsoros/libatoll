@@ -3,7 +3,7 @@
 using namespace Atoll;
 
 PeerCharacteristicHeartrate::PeerCharacteristicHeartrate() {
-    strncpy(label, "Heartrate", sizeof(label));
+    snprintf(label, sizeof(label), "%s", "Heartrate");
     serviceUuid = BLEUUID(HEART_RATE_SERVICE_UUID);
     charUuid = BLEUUID(HEART_RATE_MEASUREMENT_CHAR_UUID);
     // log_i("PeerCharacteristicHeartrate construct, label: %s, char: %s", label, charUuid.toString().c_str());

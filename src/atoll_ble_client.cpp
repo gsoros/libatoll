@@ -31,8 +31,8 @@ void BleClient::loop() {
     if (!enabled) return;
     if (scan->isScanning()) return;
     for (int8_t i = 0; i < peersMax; i++) {
-        // log_i("checking peer %d", i);
         if (nullptr == peers[i]) continue;
+        // log_i("checking peer %d %s", i, peers[i]->name);
         if (0 == strcmp(peers[i]->address, "")) continue;
         if (peers[i]->markedForRemoval) {
             log_i("removing peer %s", peers[i]->name);
@@ -41,7 +41,7 @@ void BleClient::loop() {
                    !peers[i]->isConnected() &&
                    !peers[i]->connecting) {
             // log_i("connecting peer %s %s(%d)",
-            //      peers[i]->name, peers[i]->address, peers[i]->addressType);
+            //       peers[i]->name, peers[i]->address, peers[i]->addressType);
             peers[i]->connect();
             delay(100);
         } else if (!peers[i]->shouldConnect &&

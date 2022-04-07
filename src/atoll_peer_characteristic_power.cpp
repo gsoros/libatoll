@@ -3,7 +3,7 @@
 using namespace Atoll;
 
 PeerCharacteristicPower::PeerCharacteristicPower() {
-    strncpy(label, "Power", sizeof(label));
+    snprintf(label, sizeof(label), "%s", "Power");
     serviceUuid = BLEUUID(CYCLING_POWER_SERVICE_UUID);
     charUuid = BLEUUID(CYCLING_POWER_MEASUREMENT_CHAR_UUID);
     // log_i("PeerCharacteristicPower construct, label: %s, char: %s", label, charUuid.toString().c_str());

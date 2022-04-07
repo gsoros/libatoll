@@ -57,7 +57,7 @@ class Battery : public Task, public Preferences {
         BleServer *bleServer = nullptr);
     bool addBleService();
     void notifyChar(uint8_t *value);
-    void report();
+    virtual bool report();
     void loop();
     void detectChargingEvent(float oldVoltage);
     uint8_t calculateLevel();

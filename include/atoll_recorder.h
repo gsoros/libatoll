@@ -51,14 +51,26 @@ namespace Atoll {
 class Recorder : public Task {
    public:
     struct DataPoint {
-        time_t time = 0;        // uts
-        double lat = 0.0;       // latitude
-        double lon = 0.0;       // longitude
-        int16_t alt = 0;        // altitude in m
-        uint16_t power = 0;     // W
-        uint8_t cadence = 0;    // rpm
-        uint8_t heartrate = 0;  // bpm
+        byte flags = 0;
+        time_t time = 0;          // UTS
+        double lat = 0.0;         // GCS latitude 0°... 90˚
+        double lon = 0.0;         // GCS longitude 0°... 180˚
+        int16_t altitude = 0;     // m
+        uint16_t power = 0;       // W
+        uint8_t cadence = 0;      // rpm
+        uint8_t heartrate = 0;    // bpm
+        int16_t temperature = 0;  // ˚C / 10, unused
     };
+
+    struct Flags {
+        const byte location = 1;
+        const byte altitude = 2;
+        const byte power = 4;
+        const byte cadence = 8;
+        const byte heartrate = 16;
+        const byte temperature = 32;  // unused
+        const byte lap = 64;          // unused
+    } const Flags;
 
     struct Stats {
         double distance = 0.0;  // distance in meters
@@ -98,23 +110,23 @@ class Recorder : public Task {
     virtual bool end();
     virtual bool stop(bool forgetLast = false);
 
-    virtual void onDistanceChanged(double value){}
-    virtual void onAltGainChanged(uint16_t value){}
+    virtual void onDistanceChanged(double value) {}
+    virtual void onAltGainChanged(uint16_t value) {}
 
     CircularBuffer<uint16_t, ATOLL_RECORDER_POWER_RINGBUF_SIZE> powerBuf;
     SemaphoreHandle_t powerMutex = xSemaphoreCreateMutex();
     virtual void onPower(uint16_t value);
-    uint16_t avgPower(bool clearBuffer = false);
+    int16_t avgPower(bool clearBuffer = false);
 
     CircularBuffer<uint8_t, ATOLL_RECORDER_CADENCE_RINGBUF_SIZE> cadenceBuf;
     SemaphoreHandle_t cadenceMutex = xSemaphoreCreateMutex();
     virtual void onCadence(uint8_t value);
-    uint8_t avgCadence(bool clearBuffer = false);
+    int16_t avgCadence(bool clearBuffer = false);
 
     CircularBuffer<uint8_t, ATOLL_RECORDER_HR_RINGBUF_SIZE> heartrateBuf;
     SemaphoreHandle_t heartrateMutex = xSemaphoreCreateMutex();
     virtual void onHeartrate(uint8_t value);
-    uint8_t avgHeartrate(bool clearBuffer = false);
+    int16_t avgHeartrate(bool clearBuffer = false);
 
     bool aquireMutex(SemaphoreHandle_t mutex, uint32_t timeout = 100);
     void releaseMutex(SemaphoreHandle_t mutex);

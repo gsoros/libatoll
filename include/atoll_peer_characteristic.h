@@ -25,6 +25,7 @@ class PeerCharacteristic {
     virtual bool subscribe(BLEClient* client);
     virtual bool unsubscribe();
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) = 0;
+    virtual bool readOnSubscribe() { return true; }
 };
 
 }  // namespace Atoll

@@ -56,10 +56,10 @@ void Recorder::addDataPoint() {
         log_i("not adding data point, waiting for system time update");
         return;
     }
-    if (!gps->gps.location.isValid()) {
-        log_i("gps location invalid");
-        return;
-    }
+    // if (!gps->gps.location.isValid()) {
+    //     log_i("gps location invalid");
+    //     return;
+    // }
     if (!gps->isMoving()) {
         return;
     }
@@ -68,47 +68,74 @@ void Recorder::addDataPoint() {
         return;
     }
 
-    DataPoint *point = &buffer[bufIndex];
-
-    point->time = time(nullptr);
-    point->lat = gps->gps.location.lat();
-    point->lon = gps->gps.location.lng();
-    point->alt = (int16_t)gps->gps.altitude.meters();
-
     static double prevLat = 0.0;
     static double prevLon = 0.0;
-    static int16_t prevAlt = 0.0;
     static bool prevPositionValid = false;
-    if (prevPositionValid) {
-        double diff = gps->gps.distanceBetween(
-            prevLat, prevLon, point->lat, point->lon);
-        stats.distance += diff;
-        // log_i("diff: %f", diff);
-        if (0.01 < diff) onDistanceChanged(stats.distance);
-        if (prevAlt < point->alt) {
-            stats.altGain += point->alt - prevAlt;
-            onAltGainChanged(stats.altGain);
-        }
-    } else
-        prevPositionValid = true;
-    prevLat = point->lat;
-    prevLon = point->lon;
-    prevAlt = point->alt;
+    static int16_t prevAlt = 0;
+    static bool prevAltValid = false;
 
-    point->power = avgPower(true);
-    point->cadence = avgCadence(true);
-    point->heartrate = avgHeartrate(true);
-    // log_i("#%2d %ld %.7f %.7f ^%d+%dm >%.1fm %4dW %3drpm %3dbpm",
-    //       bufIndex,
-    //       point->time,
-    //       point->lat,
-    //       point->lon,
-    //       point->alt,
-    //       stats.altGain,
-    //       stats.distance,
-    //       point->power,
-    //       point->cadence,
-    //       point->heartrate);
+    buffer[bufIndex] = DataPoint();  // clear
+    DataPoint *point = &buffer[bufIndex];
+    point->time = time(nullptr);
+
+    if (gps->gps.location.isValid()) {
+        point->flags |= Flags.location;
+        point->lat = gps->gps.location.lat();
+        point->lon = gps->gps.location.lng();
+        if (prevPositionValid) {
+            double diff = gps->gps.distanceBetween(
+                prevLat, prevLon, point->lat, point->lon);
+            stats.distance += diff;
+            // log_i("diff: %f", diff);
+            if (0.01 < diff) onDistanceChanged(stats.distance);
+        } else {
+            prevPositionValid = true;
+        }
+        prevLat = point->lat;
+        prevLon = point->lon;
+    }
+    if (gps->gps.altitude.isValid()) {
+        point->flags |= Flags.altitude;
+        point->altitude = (int16_t)gps->gps.altitude.meters();
+        if (prevAltValid) {
+            if (prevAlt < point->altitude) {
+                stats.altGain += point->altitude - prevAlt;
+                onAltGainChanged(stats.altGain);
+            }
+        } else {
+            prevAltValid = true;
+        }
+        prevAlt = point->altitude;
+    }
+
+    int16_t avg = avgPower(true);
+    if (0 <= avg) {
+        point->flags |= Flags.power;
+        point->power = avg;
+    }  // else log_i("avgPower returned < 0");
+    avg = avgCadence(true);
+    if (0 <= avg) {
+        point->flags |= Flags.cadence;
+        point->cadence = avg;
+    }  // else log_i("avgCadence returned < 0");
+    avg = avgHeartrate(true);
+    if (0 <= avg) {
+        point->flags |= Flags.heartrate;
+        point->heartrate = avg;
+    }  // else log_i("avgHr returned < 0");
+
+    log_i("#%2d T%ld F%d %.7f %.7f ^%d+%dm >%.1fm P%4d C%3d H%3d",
+          bufIndex,
+          point->time,
+          point->flags,
+          point->lat,
+          point->lon,
+          point->altitude,
+          stats.altGain,
+          stats.distance,
+          point->power,
+          point->cadence,
+          point->heartrate);
 
     bufIndex++;
 }
@@ -213,6 +240,8 @@ bool Recorder::loadStats(bool reportFail) {
     file.close();
     stats.distance += tmpStats.distance;
     stats.altGain += tmpStats.altGain;
+    onDistanceChanged(stats.distance);
+    onAltGainChanged(stats.altGain);
     log_i("distance: %.1f, altGain: %d", stats.distance, stats.altGain);
     return true;
 }
@@ -244,7 +273,8 @@ const char *Recorder::currentPath(bool reset) {
         return nullptr;
     }
     file.close();
-    file = fs->open(continuePath);
+    if (fs->exists(continuePath))
+        file = fs->open(continuePath);
     if (file) {
         char testPath[sizeof(path)] = "";
         file.read((uint8_t *)testPath, sizeof(testPath));
@@ -298,11 +328,12 @@ const char *Recorder::currentPath(bool reset) {
     file = fs->open(continuePath, FILE_WRITE);
     if (file) {
         if (file.write((uint8_t *)path, strlen(path)) == strlen(path))
-            log_i("wrote continue file %s", continuePath);
+            log_i("wrote '%s' to %s", path, continuePath);
         else
-            log_e("could not write continue file %s", continuePath);
+            log_e("could not write '%s' to %s", path, continuePath);
         file.close();
-    }
+    } else
+        log_e("could not open %s for writing", continuePath);
     return path;
 }
 
@@ -381,6 +412,8 @@ bool Recorder::stop(bool forgetLast) {
         resetBuffer();
         currentPath(true);       // reset
         currentStatsPath(true);  // reset
+        onDistanceChanged(0.0);
+        onAltGainChanged(0);
     }
     return true;
 }
@@ -394,22 +427,23 @@ void Recorder::onPower(uint16_t value) {
     releaseMutex(powerMutex);
 }
 
-// TODO fix CircularBuffer.avg()
-uint16_t Recorder::avgPower(bool clearBuffer) {
+// returns average of powerBuf or -1 on error or if buf is empty
+int16_t Recorder::avgPower(bool clearBuffer) {
     if (!aquireMutex(powerMutex)) {
         log_e("could not aquire powerMutex to compute avg");
-        return 0;
+        return -1;
     }
     if (powerBuf.isEmpty()) {
         releaseMutex(powerMutex);
-        return 0;
+        return -1;
     }
     uint16_t avg = 0;
     for (decltype(powerBuf)::index_t i = 0; i < powerBuf.size(); i++)
         avg += powerBuf[i] / powerBuf.size();
     if (clearBuffer) powerBuf.clear();
     releaseMutex(powerMutex);
-    return avg;
+    if (INT16_MAX < avg) return -1;
+    return (int16_t)avg;
 }
 
 void Recorder::onCadence(uint8_t value) {
@@ -421,22 +455,22 @@ void Recorder::onCadence(uint8_t value) {
     releaseMutex(cadenceMutex);
 }
 
-// TODO fix CircularBuffer.avg()
-uint8_t Recorder::avgCadence(bool clearBuffer) {
+// returns average of cadenceBuf or -1 on error or if buf is empty
+int16_t Recorder::avgCadence(bool clearBuffer) {
     if (!aquireMutex(cadenceMutex)) {
         log_e("could not aquire cadenceMutex to compute avg");
-        return 0;
+        return -1;
     }
     if (cadenceBuf.isEmpty()) {
         releaseMutex(cadenceMutex);
-        return 0;
+        return -1;
     }
     uint8_t avg = 0;
     for (decltype(cadenceBuf)::index_t i = 0; i < cadenceBuf.size(); i++)
         avg += cadenceBuf[i] / cadenceBuf.size();
     if (clearBuffer) cadenceBuf.clear();
     releaseMutex(cadenceMutex);
-    return avg;
+    return (int16_t)avg;
 }
 
 void Recorder::onHeartrate(uint8_t value) {
@@ -448,22 +482,22 @@ void Recorder::onHeartrate(uint8_t value) {
     releaseMutex(heartrateMutex);
 }
 
-// TODO fix CircularBuffer.avg()
-uint8_t Recorder::avgHeartrate(bool clearBuffer) {
+// returns average of heartrateBuf or -1 on error or if buf is empty
+int16_t Recorder::avgHeartrate(bool clearBuffer) {
     if (!aquireMutex(heartrateMutex)) {
         log_e("could not aquire heartrateMutex to compute avg");
-        return 0;
+        return -1;
     }
     if (heartrateBuf.isEmpty()) {
         releaseMutex(heartrateMutex);
-        return 0;
+        return -1;
     }
     uint8_t avg = 0;
     for (decltype(heartrateBuf)::index_t i = 0; i < heartrateBuf.size(); i++)
         avg += heartrateBuf[i] / heartrateBuf.size();
     if (clearBuffer) heartrateBuf.clear();
     releaseMutex(heartrateMutex);
-    return avg;
+    return (int16_t)avg;
 }
 
 bool Recorder::aquireMutex(SemaphoreHandle_t mutex, uint32_t timeout) {
@@ -479,7 +513,7 @@ void Recorder::releaseMutex(SemaphoreHandle_t mutex) {
     xSemaphoreGive(mutex);
 }
 
-// creates non-standard gpx that can be parsed by str*v*
+// creates non-standard gpx that can be parsed by Str*v*
 bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     if (nullptr == instance) {
         log_e("instance is null");
@@ -580,7 +614,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     char pointBuf[strlen(pointFormat)  //
                   + 10                 // lat (0...90).(7 decimals)
                   + 11                 // lon (0...180).(7 decimals)
-                  + 5                  // alt (uint16)
+                  + 5                  // altitude (uint16)
                   + sizeof(time)       //
                   + 5                  // power (uint16)
                   + 3                  // heartrate (uint8)
@@ -630,11 +664,11 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
             metaTrkAdded = true;
             // Serial.print(metaTrk);
         }
-        // TODO only add alt, power, cadence, heartrate if values are not zero
+        // TODO only add lat, lon, altitude, power, cadence, heartrate if flags present
         snprintf(pointBuf, sizeof(pointBuf), pointFormat,
                  point.lat,
                  point.lon,
-                 point.alt,
+                 point.altitude,
                  time,
                  point.power,
                  point.heartrate,
@@ -656,7 +690,6 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     }
     // Serial.print(footer);
     rec.close();
-    // gpx.flush();
     gpx.close();  // need to reopen to get size
     gpx = fs->open(gpxPath);
     if (!gpx) {

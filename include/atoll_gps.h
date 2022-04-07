@@ -18,7 +18,7 @@ class GPS : public Atoll::Task {
     // SoftwareSerial ss;
     HardwareSerial *serial;
     TinyGPSPlus gps;
-    float minMovingSpeed = 2;  // km/h
+    double minMovingSpeed = 2.0;  // km/h
 
     GPS() {}
     virtual ~GPS();
