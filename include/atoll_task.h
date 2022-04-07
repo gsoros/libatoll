@@ -6,8 +6,20 @@
 
 #include "atoll_log.h"
 
-#ifndef TASK_DEFAULT_CORE
-#define TASK_DEFAULT_CORE 1
+#ifndef ATOLL_TASK_DEFAULT_FREQ
+#define ATOLL_TASK_DEFAULT_FREQ 5
+#endif
+
+#ifndef ATOLL_TASK_DEFAULT_STACK
+#define ATOLL_TASK_DEFAULT_STACK 4096
+#endif
+
+#ifndef ATOLL_TASK_DEFAULT_PRIORITY
+#define ATOLL_TASK_DEFAULT_PRIORITY 1
+#endif
+
+#ifndef ATOLL_TASK_DEFAULT_CORE
+#define ATOLL_TASK_DEFAULT_CORE 1
 #endif
 
 namespace Atoll {
@@ -19,10 +31,10 @@ class Task {
 
     virtual const char *taskName() = 0;
 
-    virtual void taskStart(float freq = 10,
-                           uint32_t stack = 4096,
-                           uint8_t priority = 1,
-                           uint8_t core = TASK_DEFAULT_CORE) {
+    virtual void taskStart(float freq = ATOLL_TASK_DEFAULT_FREQ,
+                           uint32_t stack = ATOLL_TASK_DEFAULT_STACK,
+                           uint8_t priority = ATOLL_TASK_DEFAULT_PRIORITY,
+                           uint8_t core = ATOLL_TASK_DEFAULT_CORE) {
         if (taskRunning()) taskStop();
         taskFreq = freq;
         _taskSetDelayFromFreq();

@@ -224,7 +224,9 @@ bool Recorder::loadStats(bool reportFail) {
         if (reportFail) log_e("could not get current stats path");
         return false;
     }
-    File file = fs->open(sp);
+    File file;
+    if (fs->exists(sp))
+        file = fs->open(sp);
     if (!file) {
         if (reportFail) log_e("could not open %s for reading", sp);
         return false;
