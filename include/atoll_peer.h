@@ -9,6 +9,9 @@
 #include "atoll_peer_characteristic_battery.h"
 #include "atoll_peer_characteristic_power.h"
 #include "atoll_peer_characteristic_heartrate.h"
+#include "atoll_peer_characteristic_weightscale.h"
+#include "atoll_peer_characteristic_apitx.h"
+#include "atoll_peer_characteristic_apirx.h"
 
 #ifndef SETTINGS_STR_LENGTH
 #define SETTINGS_STR_LENGTH 32
@@ -269,7 +272,7 @@ class PowerMeter : public Peer {
         uint8_t addressType,
         const char* type,
         const char* name,
-        PeerCharacteristic* customPowerChar = nullptr,
+        PeerCharacteristicPower* customPowerChar = nullptr,
         PeerCharacteristicBattery* customBattChar = nullptr)
         : Peer(
               address,
@@ -290,10 +293,11 @@ class ESPM : public PowerMeter {
         uint8_t addressType,
         const char* type,
         const char* name,
-        PeerCharacteristic* customPowerChar = nullptr,
-        PeerCharacteristic* customApiRxChar = nullptr,
-        PeerCharacteristic* customApiTxChar = nullptr,
-        PeerCharacteristicBattery* customBattChar = nullptr)
+        PeerCharacteristicPower* customPowerChar = nullptr,
+        PeerCharacteristicBattery* customBattChar = nullptr,
+        PeerCharacteristicApiTX* customApiTxChar = nullptr,
+        PeerCharacteristicApiRX* customApiRxChar = nullptr,
+        PeerCharacteristicWeightscale* customWeightChar = nullptr)
         : PowerMeter(
               address,
               addressType,
@@ -301,12 +305,15 @@ class ESPM : public PowerMeter {
               name,
               customPowerChar,
               customBattChar) {
-        // addChar(nullptr != customApiRxChar
-        //          ? customApiRxChar
-        //          : new PeerCharacteristicApiRx());
-        // addChar(nullptr != customApiTxChar
-        //          ? customApiTxChar
-        //          : new PeerCharacteristicApiTx());
+        addChar(nullptr != customApiTxChar
+                    ? customApiTxChar
+                    : new PeerCharacteristicApiTX());
+        addChar(nullptr != customApiRxChar
+                    ? customApiRxChar
+                    : new PeerCharacteristicApiRX());
+        addChar(nullptr != customWeightChar
+                    ? customWeightChar
+                    : new PeerCharacteristicWeightscale());
     }
 };
 
@@ -317,7 +324,7 @@ class HeartrateMonitor : public Peer {
         uint8_t addressType,
         const char* type,
         const char* name,
-        PeerCharacteristic* customHrChar = nullptr,
+        PeerCharacteristicHeartrate* customHrChar = nullptr,
         PeerCharacteristicBattery* customBattChar = nullptr)
         : Peer(
               address,
