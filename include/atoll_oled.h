@@ -51,7 +51,7 @@ class Oled : public Task {
     ulong lastFieldUpdate = 0;
 
     virtual bool aquireMutex(uint32_t timeout = 100) {
-        // log_i("aquireMutex");
+        // log_i("aquireMutex %d", (int)mutex);
         if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
             return true;
         log_e("Could not aquire mutex");
@@ -59,7 +59,7 @@ class Oled : public Task {
     }
 
     virtual void releaseMutex() {
-        // log_i("releaseMutex");
+        // log_i("releaseMutex %d", (int)mutex);
         xSemaphoreGive(mutex);
     }
 };

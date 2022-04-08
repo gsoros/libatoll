@@ -64,6 +64,11 @@ class Wifi : public Preferences, public Task {
     bool connected();
     void registerCallbacks();
 
+    virtual void onApConnected(WiFiEvent_t event, WiFiEventInfo_t info);
+    virtual void onApDisconnected(WiFiEvent_t event, WiFiEventInfo_t info);
+    virtual void onStaConnected(WiFiEvent_t event, WiFiEventInfo_t info);
+    virtual void onStaDisconnected(WiFiEvent_t event, WiFiEventInfo_t info);
+
     static ApiResult *enabledProcessor(ApiReply *reply);
     static ApiResult *apProcessor(ApiReply *reply);
     static ApiResult *apSSIDProcessor(ApiReply *reply);

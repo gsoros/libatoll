@@ -95,7 +95,7 @@ class Task {
             thisPtr->loop();
             ulong loopTime = millis() - start;
             if (thisPtr->_xTaskDelay < loopTime)
-                log_w("%s loop time %dms is higher than taskDelay %dms (taskFreq %.2fHz)",
+                log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
                       thisPtr->taskName(), loopTime, thisPtr->_xTaskDelay, thisPtr->taskFreq);
         }
     }

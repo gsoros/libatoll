@@ -46,7 +46,7 @@ void Peer::connect() {
     }
     if (!isConnected()) {
         if (!connectClient()) {
-            log_i("%s failed to connect", name);
+            // log_i("%s failed to connect", name);
             goto end;
         }
     }

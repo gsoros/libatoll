@@ -143,7 +143,7 @@ void Wifi::applySettings() {
             log_w("cannot enable AP with empty SSID");
             settings.apEnabled = false;
         } else {
-            log_i("Setting up WiFi AP '%s'", settings.apSSID);
+            log_i("setting up AP '%s'", settings.apSSID);
             WiFi.softAP(settings.apSSID, settings.apPassword);
         }
     }
@@ -206,22 +206,35 @@ bool Wifi::connected() {
 };
 
 void Wifi::registerCallbacks() {
-    WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
-        log_i("WiFi AP new connection, now active: %d", WiFi.softAPgetStationNum());
-    },
+    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onApConnected(event, info); },
                  SYSTEM_EVENT_AP_STACONNECTED);
-    WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
-        log_i("WiFi AP station disconnected, now active: %d", WiFi.softAPgetStationNum());
-    },
+    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onApDisconnected(event, info); },
                  SYSTEM_EVENT_AP_STADISCONNECTED);
-    WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
-        log_i("WiFi STA connected, IP: %s", WiFi.localIP().toString().c_str());
-    },
+    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onStaConnected(event, info); },
                  SYSTEM_EVENT_STA_GOT_IP);
-    WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
-        log_i("WiFi STA disconnected");
-    },
+    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onStaDisconnected(event, info); },
                  SYSTEM_EVENT_STA_LOST_IP);
+}
+
+void Wifi::onApConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
+    log_i("AP new connection, now active: %d", WiFi.softAPgetStationNum());
+}
+void Wifi::onApDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
+    log_i("AP station disconnected, now active: %d", WiFi.softAPgetStationNum());
+}
+void Wifi::onStaConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
+    log_i("STA connected, IP: %s", WiFi.localIP().toString().c_str());
+    // WiFi.setAutoReconnect(true);
+    // WiFi.persistent(true);
+}
+void Wifi::onStaDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
+    log_i("STA disconnected");
+    if (settings.enabled && settings.staEnabled) {
+        log_i("reconnecting");
+        WiFi.disconnect();
+        WiFi.reconnect();
+        // WiFi.begin();
+    }
 }
 
 ApiResult *Wifi::enabledProcessor(ApiReply *reply) {
