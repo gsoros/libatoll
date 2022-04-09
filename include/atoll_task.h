@@ -90,13 +90,13 @@ class Task {
         Task *thisPtr = (Task *)p;
         thisPtr->_xLastWakeTime = xTaskGetTickCount();
         for (;;) {
-            vTaskDelayUntil(&(thisPtr->_xLastWakeTime), thisPtr->_xTaskDelay);
             ulong start = millis();
             thisPtr->loop();
             ulong loopTime = millis() - start;
             if (thisPtr->_xTaskDelay < loopTime)
                 log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
                       thisPtr->taskName(), loopTime, thisPtr->_xTaskDelay, thisPtr->taskFreq);
+            vTaskDelayUntil(&(thisPtr->_xLastWakeTime), thisPtr->_xTaskDelay);
         }
     }
 

@@ -51,8 +51,8 @@ class Touch : public Task, public Preferences {
         longTouch
     };
 
-    static const uint16_t touchTime = 100;        // ms, min time to register a touch
-    static const uint16_t doubleTouchTime = 300;  // ms, max time between two touches to register a double touch
+    static const uint16_t touchTime = 50;         // ms, min time to register a touch
+    static const uint16_t doubleTouchTime = 200;  // ms, max time between two touches to register a double touch
     static const uint16_t longTouchTime = 800;    // ms, min time to register a long touch
 
     Touch(int pin0 = -1,

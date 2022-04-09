@@ -37,7 +37,8 @@ class BleServer : public Task,
     const char *taskName() { return "BleServer"; }
     uint32_t taskStack = 4096;                        // task stack size in bytes
     char deviceName[SETTINGS_STR_LENGTH] = HOSTNAME;  // advertised device name
-    bool enabled = true;                              // whether bluetooth is enabled
+    bool enabled = true;                              // whether ble server is enabled
+    bool started = false;                             // whether the NimBLE server has been started
 
     BleServer();
     virtual ~BleServer();

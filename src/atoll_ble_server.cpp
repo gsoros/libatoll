@@ -60,6 +60,10 @@ bool BleServer::createDeviceInformationService() {
 
 void BleServer::loop() {
     if (!enabled) return;
+    if (!started) {
+        log_e("not started");
+        return;
+    }
     if (nullptr != advertising && !advertising->isAdvertising())
         startAdvertising();
 }
@@ -116,7 +120,6 @@ void BleServer::stop() {
         server->disconnect(_clients.shift());
     enabled = false;
     delay(100);  // give the AtollBle stack a chance to clear packets
-    // BLEDevice::deinit(true);  // TODO never returns
 }
 
 void BleServer::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
@@ -140,6 +143,7 @@ void BleServer::onDisconnect(BLEServer *pServer) {
 void BleServer::start() {
     log_i("starting ble server");
     server->start();
+    started = true;
 }
 
 void BleServer::startAdvertising() {
