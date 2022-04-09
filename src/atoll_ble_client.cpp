@@ -140,6 +140,7 @@ uint8_t BleClient::removePeer(const char* address, bool markOnly) {
     uint8_t removed = 0;
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
+        log_i("comparing '%s' to '%s'", peers[i]->address, address);
         if (0 == strcmp(peers[i]->address, address)) {
             if (markOnly) {
                 peers[i]->markedForRemoval = true;

@@ -29,7 +29,6 @@ namespace Atoll {
 
 class BleClient : public Task,
                   public Preferences,
-                  // public BLEServerCallbacks,
                   public BLEAdvertisedDeviceCallbacks {
    public:
     const char* taskName() { return "BleClient"; }

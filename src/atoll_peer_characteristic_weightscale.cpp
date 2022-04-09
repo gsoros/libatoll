@@ -15,18 +15,22 @@ double PeerCharacteristicWeightscale::decode(const uint8_t* data, const size_t l
     /// Flags: 0b0000000X;  // Measurement Units 0: SI; 1: Imp.
     /// Weight SI: DecimalExponent: -3, Multiplier: 5
     ///
+    if (nullptr == data) {
+        log_e("data is null");
+        return 0.0;
+    }
     uint8_t flags = data[0];
-    if (!(flags & 0b00000000)) {
+    if (flags & 0b00000001) {
         log_e("not SI");
-        return;
+        return 0.0;
     }
     if (length < 3) {
         log_e("wrong length: %d", length);
-        return;
+        return 0.0;
     }
-    uint16_t si = data[1] | (data[2] << 8);
-    lastValue = (double)si / 200;
-    log_i("%.2f", lastValue);
+    int16_t si005 = data[1] | (data[2] << 8);
+    lastValue = (double)si005 / 200.0;
+    // log_i("%.2f", lastValue);
     return lastValue;
 }
 

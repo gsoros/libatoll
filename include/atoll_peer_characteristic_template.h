@@ -28,7 +28,10 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
         }
         // lastValue = characteristic->readValue<T>();
         snprintf(readBuffer, sizeof(readBuffer), "%s", characteristic->readValue().c_str());
-        lastValue = decode((uint8_t*)readBuffer, strlen(readBuffer));
+        size_t len = strlen(readBuffer);
+        log_i("readBuf len=%d", len);
+        if (!len) return lastValue;
+        lastValue = decode((uint8_t*)readBuffer, len);
         log_i("0x%x", lastValue);
         return lastValue;
     }

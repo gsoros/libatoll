@@ -20,6 +20,7 @@ class Ota : public Task {
    public:
     const char *taskName() { return "Ota"; }
     Recorder *recorder = nullptr;
+    bool serving = false;
 
     void setup();
     void setup(const char *hostName, Recorder *recorder = nullptr);

@@ -9,6 +9,10 @@ void Ota::setup(const char *hostName, Recorder *recorder) {
     setup(hostName, 3232, recorder);
 }
 void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
+    if (serving) {
+        log_i("already serving");
+        return;
+    }
     log_i("hostname: %s port: %d", hostName, port);
     if (WiFi.getMode() == WIFI_MODE_NULL) {
         log_i("Wifi is disabled, not starting");
@@ -38,6 +42,7 @@ void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
             onError(error);
         });
     ArduinoOTA.begin();
+    serving = true;
     this->recorder = recorder;
 }
 
@@ -50,8 +55,13 @@ void Ota::loop() {
 }
 
 void Ota::off() {
+    if (!serving) {
+        log_i("not serving");
+        return;
+    }
     log_i("Shutting down");
     ArduinoOTA.end();
+    serving = false;
     taskStop();
 }
 
