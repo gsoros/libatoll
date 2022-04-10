@@ -305,12 +305,12 @@ class ESPM : public PowerMeter {
               name,
               customPowerChar,
               customBattChar) {
-        addChar(nullptr != customApiTxChar
-                    ? customApiTxChar
-                    : new PeerCharacteristicApiTX());
-        addChar(nullptr != customApiRxChar
-                    ? customApiRxChar
-                    : new PeerCharacteristicApiRX());
+        // addChar(nullptr != customApiTxChar
+        //             ? customApiTxChar
+        //             : new PeerCharacteristicApiTX());
+        // addChar(nullptr != customApiRxChar
+        //             ? customApiRxChar
+        //             : new PeerCharacteristicApiRX());
         addChar(nullptr != customWeightChar
                     ? customWeightChar
                     : new PeerCharacteristicWeightscale());
