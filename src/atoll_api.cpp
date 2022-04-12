@@ -323,14 +323,15 @@ ApiReply Api::process(const char *commandWithArg, bool log) {
     return reply;
 }
 
+// process all available commands except 'init' without arguments
+// and return the results in the format: commandCode:commandName=value;...
 ApiResult *Api::initProcessor(ApiReply *reply) {
-    // value format: commandCode:commandName=value;...
-    char value[valueLength] = "";
+    char value[replyValueLength] = "";
     char token[6 + ATOLL_API_COMMAND_NAME_LENGTH + ATOLL_API_VALUE_LENGTH];
     ApiResult *successResult = success();
     for (int i = 0; i < numCommands; i++) {
         if (0 == strcmp(commands[i].name, "init")) continue;
-        // calling command without arg, suppress logging
+        // call command without arg, suppress logging
         ApiReply reply = process(commands[i].name, false);
         if (reply.result == successResult)
             snprintf(token, sizeof(token), "%d:%s=%s;",
@@ -341,14 +342,14 @@ ApiResult *Api::initProcessor(ApiReply *reply) {
             snprintf(token, sizeof(token), "%d:%s;",
                      commands[i].code,
                      commands[i].name);
-        int16_t remaining = valueLength - strlen(value) - 1;
+        int16_t remaining = replyValueLength - strlen(value) - 1;
         if (remaining < strlen(token)) {
             log_e("no space left for adding %s to %s", token, value);
             return result("internalError");
         }
         strncat(value, token, remaining);
     }
-    strncpy(reply->value, value, valueLength);
+    strncpy(reply->value, value, replyValueLength);
     return successResult;
 }
 
@@ -356,11 +357,11 @@ ApiResult *Api::hostnameProcessor(ApiReply *reply) {
     // set hostname
     // ...
     // get hostname
-    strncpy(reply->value, "libAtollApiHost", valueLength);
+    strncpy(reply->value, "libAtollApiHost", replyValueLength);
     return success();
 }
 
 ApiResult *Api::buildProcessor(ApiReply *reply) {
-    snprintf(reply->value, valueLength, "%s %s", __DATE__, __TIME__);
+    snprintf(reply->value, replyValueLength, "%s %s", __DATE__, __TIME__);
     return success();
 }

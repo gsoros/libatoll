@@ -99,7 +99,11 @@ class Api : public Preferences {
     static bool secureBle;    // whether to use LESC for BLE API service
     static uint32_t passkey;  // passkey for BLE API service, max 6 digits
 
-    static void setup(Api *instance, ::Preferences *p, const char *preferencesNS, BleServer *bleServer = nullptr, const char *serviceUuid = nullptr);
+    static void setup(Api *instance,
+                      ::Preferences *p,
+                      const char *preferencesNS,
+                      BleServer *bleServer = nullptr,
+                      const char *serviceUuid = nullptr);
     static bool addBleService(BleServer *bleServer, const char *serviceUuid);
     static bool addCommand(ApiCommand command);
     static bool addResult(ApiResult result);
@@ -117,7 +121,7 @@ class Api : public Preferences {
     static uint8_t nextAvailableResultCode();
 
     static const uint16_t replyLength = ATOLL_API_REPLY_LENGTH;
-    static const uint16_t valueLength = ATOLL_API_VALUE_LENGTH;
+    static const uint16_t replyValueLength = ATOLL_API_VALUE_LENGTH;
 
     static void loadSettings();
     static void saveSettings();

@@ -394,12 +394,21 @@ bool Recorder::stop(bool forgetLast) {
         log_e("could not save buffer");
     if (!saveStats())
         log_e("could not save stats");
-    char recPath[strlen(currentPath()) + 1] = "";
+    const char *cp = currentPath();
+    uint8_t cpLen = 0;
+    char recPath[nullptr == cp ? 1 : (strlen(cp) + 1)] = "";
     char gpxPath[sizeof(recPath) + 5] = "";
-    if (forgetLast) {
-        strncpy(recPath, currentPath(), sizeof(recPath));
-        snprintf(gpxPath, sizeof(gpxPath), "%s.gpx", recPath);
-        log_i("rec: %s gpx: %s", recPath, gpxPath);
+    if (nullptr == cp) {
+        if (forgetLast) {
+            log_i("currentPath() is null, not creating gpx");
+        }
+    } else {
+        if (forgetLast) {
+            cpLen = strlen(cp);
+            strncpy(recPath, cp, sizeof(recPath));
+            snprintf(gpxPath, sizeof(gpxPath), "%s.gpx", recPath);
+            log_i("rec: %s gpx: %s", recPath, gpxPath);
+        }
     }
     isRecording = false;
     resetBuffer();
@@ -409,13 +418,14 @@ bool Recorder::stop(bool forgetLast) {
         log_i("recording end");
         fs->remove(continuePath);
         stats = Stats();
-        rec2gpx(recPath, gpxPath);
+        if (cpLen)
+            rec2gpx(recPath, gpxPath);
         // some datapoints may have been created since we started writing the gpx file
         resetBuffer();
         currentPath(true);       // reset
         currentStatsPath(true);  // reset
-        onDistanceChanged(0.0);
-        onAltGainChanged(0);
+        onDistanceChanged(stats.distance);
+        onAltGainChanged(stats.altGain);
     }
     return true;
 }

@@ -125,6 +125,7 @@ float Battery::voltageAvg() {
 }
 
 uint8_t Battery::calculateLevel() {
+    // assume linear relationship between voltage and charge level
     // level = map(voltageAvg() * 1000,
     //             ATOLL_BATTERY_EMPTY * 1000,
     //             ATOLL_BATTERY_FULL * 1000,
@@ -133,6 +134,7 @@ uint8_t Battery::calculateLevel() {
     //         1000;
     // log_i("old method: %d", level);
 
+    // polynomial approximation of the typical lipo discharge curve
     // based on https://github.com/G6EJD/LiPo_Battery_Capacity_Estimator
     double v = (double)voltageAvg();
     level = (uint8_t)(2808.3808 * pow(v, 4) -
@@ -154,7 +156,7 @@ float Battery::measureVoltage(bool useCorrection) {
         delay(1);
     }
     uint32_t readMax = 4095 * samples;  // 2^12 - 1 (12bit adc)
-    if (sum == readMax) log_e("[Battery] Overflow");
+    if (sum == readMax) log_e("overflow");
     pinVoltage =
         map(
             sum,
@@ -173,7 +175,7 @@ float Battery::measureVoltage(bool useCorrection) {
 void Battery::loadSettings() {
     if (!preferencesStartLoad()) return;
     if (!preferences->getBool("calibrated", false)) {
-        log_e("[Battery] Not calibrated");
+        log_e("not calibrated");
         preferencesEnd();
         return;
     }
@@ -196,7 +198,7 @@ void Battery::saveSettings() {
 }
 
 void Battery::printSettings() {
-    log_i("[Battery] Correction factor: %f", corrF);
+    log_i("correction factor: %f", corrF);
 }
 
 ApiResult *Battery::batteryProcessor(ApiReply *reply) {

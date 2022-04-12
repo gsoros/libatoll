@@ -33,8 +33,8 @@ class Ota : public Task {
     void onProgress(uint progress, uint total);
     void onError(ota_error_t error);
 
-   private:
-    uint16_t savedTaskFreq = 10;
+   protected:
+    uint16_t savedTaskFreq = 1;
 };
 
 }  // namespace Atoll
