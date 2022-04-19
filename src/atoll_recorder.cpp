@@ -592,19 +592,45 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     <type>1</type>
     <trkseg>)====";
 
-    // TODO break up tags
+    // const char *pointFormat = R"====(
+    //   <trkpt lat="%.7f" lon="%.7f">
+    //     <time>%s</time>
+    //     <ele>%d</ele>
+    //     <extensions>
+    //       <power>%d</power>
+    //       <gpxtpx:TrackPointExtension>
+    //         <gpxtpx:hr>%d</gpxtpx:hr>
+    //         <gpxtpx:cad>%d</gpxtpx:cad>
+    //       </gpxtpx:TrackPointExtension>
+    //     </extensions>
+    //   </trkpt>)====";
+
     const char *pointFormat = R"====(
-      <trkpt lat="%.7f" lon="%.7f">
-        <ele>%d</ele>
-        <time>%s</time>
-        <extensions>
-          <power>%d</power>
-          <gpxtpx:TrackPointExtension>
-          <gpxtpx:hr>%d</gpxtpx:hr>
-          <gpxtpx:cad>%d</gpxtpx:cad>
-          </gpxtpx:TrackPointExtension>
-        </extensions>
+      <trkpt%s>
+        <time>%s</time>%s%s
       </trkpt>)====";
+
+    const char *locationFormat = R"====( lat="%.7f" lon="%.7f")====";
+
+    const char *altFormat = R"====(
+        <ele>%d</ele>)====";
+
+    const char *extFormat = R"====(
+        <extensions>%s%s
+        </extensions>)====";
+
+    const char *powerFormat = R"====(
+          <power>%d</power>)====";
+
+    const char *tpxFormat = R"====(
+          <gpxtpx:TrackPointExtension>%s%s
+          </gpxtpx:TrackPointExtension>)====";
+
+    const char *hrFormat = R"====(
+            <gpxtpx:hr>%d</gpxtpx:hr>)====";
+
+    const char *cadFormat = R"====(
+            <gpxtpx:cad>%d</gpxtpx:cad>)====";
 
     const char *footer = R"====(
     </trkseg>
@@ -621,17 +647,46 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     // Serial.print(header);
     DataPoint point;
 
-    char time[21] = "";  // ISO 8601 (2022-03-25T12:58:13Z)
+    char timeBuf[21] = "";  // ISO 8601 (2022-03-25T12:58:13Z)
     struct tm tms;
-    char pointBuf[strlen(pointFormat)  //
-                  + 10                 // lat (0...90).(7 decimals)
-                  + 11                 // lon (0...180).(7 decimals)
-                  + 5                  // altitude (uint16)
-                  + sizeof(time)       //
-                  + 5                  // power (uint16)
-                  + 3                  // heartrate (uint8)
-                  + 3                  // cadence (uint8)
-    ];
+    char locationBuf[           //
+        strlen(locationFormat)  //
+        + 10                    // lat (0...90).(7 decimals)
+        + 11                    // lon (0...180).(7 decimals)
+    ] = "";
+    char altBuf[           //
+        strlen(altFormat)  //
+        + 5                // uint16 altitude
+    ] = "";
+    char powerBuf[           //
+        strlen(powerFormat)  //
+        + 5                  // uint16 power
+    ] = "";
+    char hrBuf[           //
+        strlen(hrFormat)  //
+        + 3               // uint8 heartrate
+    ] = "";
+    char cadBuf[           //
+        strlen(cadFormat)  //
+        + 3                // uint8 cadence
+    ] = "";
+    char tpxBuf[           //
+        strlen(tpxFormat)  //
+        + sizeof(hrBuf)    //
+        + sizeof(cadBuf)   //
+    ] = "";
+    char extBuf[            //
+        strlen(extFormat)   //
+        + sizeof(powerBuf)  //
+        + sizeof(tpxBuf)    //
+    ] = "";
+    char pointBuf[             //
+        strlen(pointFormat)    //
+        + sizeof(locationBuf)  //
+        + sizeof(timeBuf)      //
+        + sizeof(altBuf)       //
+        + sizeof(extBuf)       //
+    ] = "";
     uint16_t pointBufLen = 0;
     bool metaTrkAdded = false;
     uint32_t points = 0;
@@ -656,7 +711,7 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
         // tm_wday	int	    days since Sunday	        0-6
         // tm_yday	int 	days since January 1	    0-365
         // tm_isdst	int 	Daylight Saving Time flag
-        snprintf(time, sizeof(time), "%04d-%02d-%02dT%02d:%02d:%02dZ",
+        snprintf(timeBuf, sizeof(timeBuf), "%04d-%02d-%02dT%02d:%02d:%02dZ",
                  tms.tm_year + 1900,
                  tms.tm_mon + 1,
                  tms.tm_mday,
@@ -664,8 +719,8 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
                  tms.tm_min,
                  tms.tm_sec);
         if (!metaTrkAdded) {
-            char metaTrk[strlen(metaTrkFormat) + sizeof(time)];
-            snprintf(metaTrk, sizeof(metaTrk), metaTrkFormat, time);
+            char metaTrk[strlen(metaTrkFormat) + sizeof(timeBuf)];
+            snprintf(metaTrk, sizeof(metaTrk), metaTrkFormat, timeBuf);
             if (gpx.write((uint8_t *)&metaTrk, strlen(metaTrk)) != strlen(metaTrk)) {
                 log_e("could not write meta section to %s", gpxPath);
                 rec.close();
@@ -676,15 +731,46 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
             metaTrkAdded = true;
             // Serial.print(metaTrk);
         }
-        // TODO only add lat, lon, altitude, power, cadence, heartrate if flags present
+
+        if (point.flags & Flags.location)
+            snprintf(locationBuf, sizeof(locationBuf), locationFormat, point.lat, point.lon);
+        else
+            strncpy(locationBuf, "", sizeof(locationBuf));
+
+        if (point.flags & Flags.altitude)
+            snprintf(altBuf, sizeof(altBuf), altFormat, point.altitude);
+        else
+            strncpy(altBuf, "", sizeof(altBuf));
+
+        if (point.flags & Flags.power)
+            snprintf(powerBuf, sizeof(powerBuf), powerFormat, point.power);
+        else
+            strncpy(powerBuf, "", sizeof(powerBuf));
+
+        if (point.flags & Flags.heartrate)
+            snprintf(hrBuf, sizeof(hrBuf), hrFormat, point.heartrate);
+        else
+            strncpy(hrBuf, "", sizeof(hrBuf));
+
+        if (point.flags & Flags.cadence)
+            snprintf(cadBuf, sizeof(cadBuf), cadFormat, point.cadence);
+        else
+            strncpy(cadBuf, "", sizeof(cadBuf));
+
+        if (0 < strlen(powerBuf) || 0 < strlen(hrBuf) || 0 < strlen(cadBuf)) {
+            if (0 < strlen(hrBuf) || 0 < strlen(cadBuf)) {
+                snprintf(tpxBuf, sizeof(tpxBuf), tpxFormat, hrBuf, cadBuf);
+            } else
+                strncpy(tpxBuf, "", sizeof(tpxBuf));
+            snprintf(extBuf, sizeof(extBuf), extFormat, powerBuf, tpxBuf);
+        } else
+            strncpy(extBuf, "", sizeof(extBuf));
+
         snprintf(pointBuf, sizeof(pointBuf), pointFormat,
-                 point.lat,
-                 point.lon,
-                 point.altitude,
-                 time,
-                 point.power,
-                 point.heartrate,
-                 point.cadence);
+                 locationBuf,
+                 timeBuf,
+                 altBuf,
+                 extBuf);
         pointBufLen = strlen(pointBuf);
         if (gpx.write((uint8_t *)&pointBuf, pointBufLen) != pointBufLen) {
             log_e("could not write point #%d to %s", points, gpxPath);

@@ -9,6 +9,7 @@ void GPS::loop() {
     uint32_t failedChecksum = gps.failedChecksum();
     while (0 < serial->available())
         gps.encode(serial->read());
+
     if (gps.failedChecksum() != failedChecksum)
         log_i("checksums failed: %d", gps.failedChecksum());
 
