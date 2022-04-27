@@ -65,8 +65,8 @@ void BleClient::stop() {
     delay(100);  // give the ble stack a chance to clear packets
 }
 
-void BleClient::startScan(uint32_t duration) {
-    if (scan->isScanning()) return;
+uint32_t BleClient::startScan(uint32_t duration) {
+    if (scan->isScanning()) return 0;
 
     // scan->setDuplicateFilter(false);
     scan->clearDuplicateCache();
@@ -79,7 +79,13 @@ void BleClient::startScan(uint32_t duration) {
     scan->setWindow(37);        // How long to scan during the interval; in milliseconds.
     scan->setMaxResults(0);     // do not store the scan results, use callback only.
 
-    scan->start(duration, BleClient::onScanComplete, false);
+    if (callScanStart(duration))
+        return duration;
+    return 0;
+}
+
+bool BleClient::callScanStart(uint32_t duration) {
+    return scan->start(duration, onScanComplete, false);
 }
 
 // get index of existing peer address

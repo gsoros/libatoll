@@ -3,14 +3,14 @@
 using namespace Atoll;
 
 ApiCommand Api::commands[ATOLL_API_MAX_COMMANDS];
-uint8_t Api::numCommands;
+uint8_t Api::numCommands = 0;
 ApiResult Api::results[ATOLL_API_MAX_RESULTS];
-uint8_t Api::numResults;
+uint8_t Api::numResults = 0;
 
 Api *Api::instance = nullptr;
 BleServer *Api::bleServer = nullptr;
-bool Api::secureBle = false;     // whether to use LESC for BLE API service
-uint32_t Api::passkey = 696669;  // passkey for BLE API service, max 6 digits
+bool Api::secureBle = false;                // whether to use LESC for BLE API service
+uint32_t Api::passkey = ATOLL_API_PASSKEY;  // passkey for BLE API service, max 6 digits
 
 void Api::setup(
     Api *instance,
@@ -24,9 +24,6 @@ void Api::setup(
     if (nullptr != instance)
         instance->preferencesSetup(p, preferencesNS);
 
-    numCommands = 0;
-    numResults = 0;
-
     addResult(ApiResult("success", 1));
     addResult(ApiResult("error"));
     addResult(ApiResult("commandMissing"));
@@ -36,7 +33,7 @@ void Api::setup(
     addResult(ApiResult("argTooLong"));
     addResult(ApiResult("internalError"));
 
-    addCommand(ApiCommand("init", Atoll::Api::initProcessor));
+    addCommand(ApiCommand("init", Atoll::Api::initProcessor, 1));
     addCommand(ApiCommand("hostname", Atoll::Api::hostnameProcessor));
     addCommand(ApiCommand("build", Atoll::Api::buildProcessor));
 
@@ -310,10 +307,18 @@ ApiReply Api::process(const char *commandWithArg, bool log) {
     }
     log_i("commandStr=%s arg=%s", commandStr, reply.arg);
 
-    ApiCommand *c = command(commandStr);
+    ApiCommand *c = command(commandStr, false);  // try parsing command as string, don't log error
     if (nullptr == c) {
-        reply.result = result("unknownCommand");
-        return reply;
+        int code = atoi(commandStr);
+        if (code < 1 || UINT8_MAX < code) {  // first command index assumed to be 1
+            reply.result = result("unknownCommand");
+            return reply;
+        }
+        c = command((uint8_t)code);  // parse command as int
+        if (nullptr == c) {
+            reply.result = result("unknownCommand");
+            return reply;
+        }
     }
     reply.commandCode = c->code;
 

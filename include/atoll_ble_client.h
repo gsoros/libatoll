@@ -47,7 +47,8 @@ class BleClient : public Task,
     virtual void loop();
     virtual void stop();
 
-    virtual void startScan(uint32_t duration);
+    virtual uint32_t startScan(uint32_t duration);
+    virtual bool callScanStart(uint32_t duration);
 
     virtual int8_t peerIndex(const char* address);
     virtual bool peerExists(const char* address);
