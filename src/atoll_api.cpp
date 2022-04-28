@@ -276,7 +276,7 @@ ApiResult *Api::error() {
 // Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
 ApiReply Api::process(const char *commandWithArg, bool log) {
-    log_i("Processing command %s%s", commandWithArg, log ? "" : " (logging suppressed)");
+    // log_i("Processing command %s%s", commandWithArg, log ? "" : " (logging suppressed)");
     Atoll::ApiReply reply;
     reply.log = log;
     char commandStr[ATOLL_API_COMMAND_NAME_LENGTH] = "";
@@ -297,7 +297,7 @@ ApiReply Api::process(const char *commandWithArg, bool log) {
 
     if (eqSign) {
         int argLength = commandWithArgLength - commandEnd - 1;
-        log_i("argLength=%d", argLength);
+        // log_i("argLength=%d", argLength);
         if (ATOLL_API_ARG_LENGTH < argLength) {
             log_e("arg too long: %s", commandWithArg);
             reply.result = result("argTooLong");
@@ -305,7 +305,7 @@ ApiReply Api::process(const char *commandWithArg, bool log) {
         }
         strncpy(reply.arg, eqSign + 1, sizeof(reply.arg));
     }
-    log_i("commandStr=%s arg=%s", commandStr, reply.arg);
+    // log_i("commandStr=%s arg=%s", commandStr, reply.arg);
 
     ApiCommand *c = command(commandStr, false);  // try parsing command as string, don't log error
     if (nullptr == c) {

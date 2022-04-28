@@ -55,6 +55,9 @@ class Touch : public Task, public Preferences {
     static const uint16_t doubleTouchTime = 200;  // ms, max time between two touches to register a double touch
     static const uint16_t longTouchTime = 800;    // ms, min time to register a long touch
 
+    bool enabled = true;  // enable touch events
+    ulong enableAfter = 0;
+
     Touch(int pin0 = -1,
           int pin1 = -1,
           int pin2 = -1,
@@ -181,9 +184,14 @@ class Touch : public Task, public Preferences {
     static const char *preferencesNS;
 
     virtual void loop() {
-        // log_i("%d", read(0));
-        // return;
         ulong t = millis();
+        if (!enabled) {
+            if (enableAfter <= t) {
+                enabled = true;
+                log_i("touch enabled");
+            } else
+                return;
+        }
         for (uint8_t i = 0; i < numPads; i++) {
             Pad *p = &pads[i];
             if (!p->last) continue;         // not touched yet
