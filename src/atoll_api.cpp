@@ -6,6 +6,7 @@ ApiCommand Api::commands[ATOLL_API_MAX_COMMANDS];
 uint8_t Api::numCommands = 0;
 ApiResult Api::results[ATOLL_API_MAX_RESULTS];
 uint8_t Api::numResults = 0;
+CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> Api::_commandBuf;
 
 Api *Api::instance = nullptr;
 BleServer *Api::bleServer = nullptr;
@@ -227,6 +228,41 @@ void Api::saveSettings() {
 
 void Api::printSettings() {
     log_i("SecureBle: %s Passkey: %d", secureBle ? "Yes" : "No", passkey);
+}
+
+size_t Api::write(const uint8_t *buffer, size_t size) {
+    size_t i = 0;
+    while (i < size) {
+        const char c = buffer[i];
+        // log_i("%d", c);
+        i++;
+        switch (c) {
+            case 10: {  // LF
+                char buf[ATOLL_API_COMMAND_BUF_LENGTH + 1] = "";
+                size_t bufLen = 0;
+                while (!_commandBuf.isEmpty() && bufLen < sizeof(buf)) {
+                    const char c = _commandBuf.shift();
+                    strncat(buf, &c, 1);
+                    bufLen++;
+                }
+                if (!strlen(buf)) continue;
+                // log_i("processing '%s'", buf);
+                ApiReply reply = process(buf);
+                Serial.printf("%s: %s%s%s\n", buf, reply.result->name,
+                              strlen(reply.value) ? ", " : "", reply.value);
+                continue;
+            }
+            case 4:   // EOT
+            case 13:  // CR
+            case 23:  // ^W
+                continue;
+            case 24:  // ^X
+                _commandBuf.clear();
+                continue;
+        }
+        _commandBuf.push(c);
+    }
+    return i;
 }
 
 ApiCommand *Api::command(uint8_t code, bool logOnError) {

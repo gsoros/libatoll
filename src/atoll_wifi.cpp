@@ -169,7 +169,7 @@ void Wifi::applySettings() {
 #ifdef FEATURE_SERIAL
         if (nullptr != wifiSerial) {
             log_i("stopping wifiSerial");
-            wifiSerial->taskStop();
+            wifiSerial->off();
         }
 #endif
     } else {
@@ -178,14 +178,14 @@ void Wifi::applySettings() {
             ota->off();
             ota->taskStop();
             ota->setup(hostName, recorder);
-            ota->taskStart(1);
+            ota->taskStart(ATOLL_OTA_TASK_FREQ);
         }
 #ifdef FEATURE_SERIAL
         if (nullptr != wifiSerial) {
             log_i("restarting wifiSerial");
-            wifiSerial->taskStop();
+            wifiSerial->off();
             wifiSerial->setup();
-            wifiSerial->taskStart(1);
+            wifiSerial->taskStart();
         }
 #endif
     }
@@ -206,34 +206,54 @@ bool Wifi::connected() {
 };
 
 void Wifi::registerCallbacks() {
+    WiFi.onEvent(
+        [this](arduino_event_id_t event, arduino_event_info_t info) {
+            onEvent(event, info);
+        },
+        ARDUINO_EVENT_MAX);
+
+    /*
+    WiFi.onEvent(onApConnected, WIFI_EVENT_AP_STACONNECTED);
+    WiFi.onEvent(onApDisconnected, WIFI_EVENT_AP_STADISCONNECTED);
+    WiFi.onEvent(onStaConnected, WIFI_EVENT_STA_CONNECTED);
+    WiFi.onEvent(onStaDisconnected, WIFI_EVENT_STA_DISCONNECTED);
+    */
+    /*
     WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onApConnected(event, info); },
-                 SYSTEM_EVENT_AP_STACONNECTED);
+                 WIFI_EVENT_AP_STACONNECTED);
     WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onApDisconnected(event, info); },
-                 SYSTEM_EVENT_AP_STADISCONNECTED);
+                 WIFI_EVENT_AP_STADISCONNECTED);
     WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onStaConnected(event, info); },
-                 SYSTEM_EVENT_STA_GOT_IP);
+                 WIFI_EVENT_STA_CONNECTED);
     WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onStaDisconnected(event, info); },
-                 SYSTEM_EVENT_STA_LOST_IP);
+                 WIFI_EVENT_STA_DISCONNECTED);
+    */
 }
 
-void Wifi::onApConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-    log_i("AP new connection, now active: %d", WiFi.softAPgetStationNum());
-}
-void Wifi::onApDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-    log_i("AP station disconnected, now active: %d", WiFi.softAPgetStationNum());
-}
-void Wifi::onStaConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-    log_i("STA connected, IP: %s", WiFi.localIP().toString().c_str());
-    // WiFi.setAutoReconnect(true);
-    // WiFi.persistent(true);
-}
-void Wifi::onStaDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-    log_i("STA disconnected");
-    if (settings.enabled && settings.staEnabled) {
-        log_i("reconnecting");
-        WiFi.disconnect();
-        WiFi.reconnect();
-        // WiFi.begin();
+void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
+    switch (event) {
+        case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+            log_i("AP new connection, now active: %d", WiFi.softAPgetStationNum());
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+            log_i("AP station disconnected, now active: %d", WiFi.softAPgetStationNum());
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+            log_i("STA connected, IP: %s", WiFi.localIP().toString().c_str());
+            // WiFi.setAutoReconnect(true);
+            // WiFi.persistent(true);
+            break;
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            log_i("STA disconnected");
+            if (settings.enabled && settings.staEnabled) {
+                log_i("reconnecting");
+                // WiFi.disconnect();
+                WiFi.reconnect();
+                // WiFi.begin();
+            }
+            break;
+        default:
+            log_i("event: %d, info: %d", event, info);
     }
 }
 

@@ -2,12 +2,17 @@
 #define __atoll_api_h
 
 #include <Arduino.h>
+#include <CircularBuffer.h>
+
 #include "atoll_preferences.h"
 #include "atoll_ble_server.h"
 #include "atoll_api_rx_callbacks.h"
 
 #ifndef ATOLL_API_COMMAND_STR_LENGTH
 #define ATOLL_API_COMMAND_STR_LENGTH 512
+#endif
+#ifndef ATOLL_API_COMMAND_BUF_LENGTH
+#define ATOLL_API_COMMAND_BUF_LENGTH 64
 #endif
 #ifndef ATOLL_API_COMMAND_NAME_LENGTH
 #define ATOLL_API_COMMAND_NAME_LENGTH 16
@@ -89,8 +94,8 @@ class ApiCommand {
             return nullptr;
         }
         reply->result = processor(reply);
-        log_i("command(%d:%s)=arg(%s) ===> result(%d:%s) value(%s)",
-              code, name, reply->arg, reply->result->code, reply->result->name, reply->value);
+        // log_i("command(%d:%s)=arg(%s) ===> result(%d:%s) value(%s)",
+        //       code, name, reply->arg, reply->result->code, reply->result->name, reply->value);
         return reply->result;
     };
 };
@@ -130,7 +135,11 @@ class Api : public Preferences {
     static void saveSettings();
     static void printSettings();
 
+    static size_t write(const uint8_t *buffer, size_t size);
+
    protected:
+    static CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> _commandBuf;
+
     static ApiCommand commands[ATOLL_API_MAX_COMMANDS];
     static uint8_t numCommands;
     static ApiResult results[ATOLL_API_MAX_RESULTS];

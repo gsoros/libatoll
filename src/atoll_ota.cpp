@@ -78,7 +78,7 @@ void Ota::onStart() {
     // setCpuFrequencyMhz(240);
 
     log_i("setting task freq to %d Hz", ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING);
-    savedTaskFreq = taskFreq;
+    savedTaskFreq = _taskFreq;
     taskSetFreq(ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING);
 
     // log_i("Disabling sleep");

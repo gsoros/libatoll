@@ -26,8 +26,9 @@ namespace Atoll {
 class WifiSerial : public Task, public Stream {
    public:
     const char *taskName() { return "WifiSerial"; }
-    void setup();
-    void setup(uint16_t port, uint8_t maxClients);
+    void setup(const char *hostName = nullptr,
+               uint16_t port = 0,
+               uint8_t maxClients = 0);
     void loop();
     void off();
     void disconnect();
@@ -42,10 +43,13 @@ class WifiSerial : public Task, public Stream {
    private:
     WiFiServer _server;
     WiFiClient _client;
-    CircularBuffer<char, WIFISERIAL_RINGBUF_RX_SIZE> _rx_buf;
-    CircularBuffer<char, WIFISERIAL_RINGBUF_TX_SIZE> _tx_buf;  // TODO mutex
+    CircularBuffer<char, WIFISERIAL_RINGBUF_RX_SIZE> _rxBuf;
+    CircularBuffer<char, WIFISERIAL_RINGBUF_TX_SIZE> _txBuf;  // TODO mutex
     bool _connected = false;
     bool _disconnect = false;
+    const char *_hostName = "libAtoll_unamed";
+    uint16_t _port = WIFISERIAL_PORT;
+    uint8_t _maxClients = WIFISERIAL_MAXCLIENTS;
 };
 
 }  // namespace Atoll

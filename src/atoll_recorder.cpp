@@ -38,7 +38,7 @@ void Recorder::loop() {
         if (bufIndex < bufSize) return;
         if (!saveBuffer()) {
             log_e("could not save buffer");
-            return;
+            // return;
         }
         resetBuffer();
         if (!saveStats())

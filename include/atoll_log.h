@@ -27,12 +27,14 @@
 namespace Atoll {
 
 inline void log(const char *format, ...) {
+#ifdef FEATURE_SERIAL
     char buf[ATOLL_LOG_BUFFER_SIZE];
     va_list arg;
     va_start(arg, format);
     vsnprintf(buf, sizeof(buf), format, arg);
     va_end(arg);
     Serial.print(buf);
+#endif
 }
 
 }  // namespace Atoll

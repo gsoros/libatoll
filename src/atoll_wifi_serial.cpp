@@ -2,18 +2,23 @@
 
 using namespace Atoll;
 
-void WifiSerial::setup() { setup(WIFISERIAL_PORT, WIFISERIAL_MAXCLIENTS); }
-void WifiSerial::setup(uint16_t port, uint8_t maxClients) {
-    _server = WiFiServer(port, maxClients);
+void WifiSerial::setup(
+    const char *hostName,
+    uint16_t port,
+    uint8_t maxClients) {
+    if (nullptr != hostName) _hostName = hostName;
+    if (0 != port) _port = port;
+    if (0 != maxClients) _maxClients = maxClients;
+    _server = WiFiServer(_port, _maxClients);
     if (WiFi.getMode() == WIFI_MODE_NULL) {
         log_i("Wifi is disabled, not starting");
         return;
     }
     log_i("starting on %s:%d, max %d client%s",
           WiFi.localIP().toString().c_str(),
-          port,
-          maxClients,
-          1 < maxClients ? "s" : "");
+          _port,
+          _maxClients,
+          1 < _maxClients ? "s" : "");
     _server.begin();
 }
 
@@ -28,20 +33,26 @@ void WifiSerial::loop() {
         _client = _server.available();
         if (!_client) return;
         _connected = true;
-        log_i("Client connected");
         // board.led.blink(5);
-        //_client.printf("Welcome to %s.\n", board.hostName);
+        _client.printf("%s %s %s\n", _hostName, __DATE__, __TIME__);
         // board.status.printHeader();
     } else if (!_client.connected()) {
         disconnect();
         return;
     }
-    while (0 < _client.available()) {
-        _rx_buf.push(_client.read());
+    while (0 < _client.available()) _rxBuf.push(_client.read());
+    while (0 < _txBuf.size()) _client.write(_txBuf.shift());
+    /*
+    static char buf[WIFISERIAL_RINGBUF_TX_SIZE];
+    strncpy(buf, "", sizeof(buf));
+    while (0 < _txBuf.size() && strlen(buf) < sizeof(buf) - 1) {
+        const char c = _txBuf.shift();
+        strcat(buf, &c);
     }
-    while (0 < _tx_buf.size()) {
-        _client.write(_tx_buf.shift());
-    }
+    if (0 < strlen(buf))
+        _client.write((const uint8_t *)buf, strlen(buf));
+    */
+
     if (_disconnect) {
         flush();
         _disconnect = false;
@@ -53,6 +64,7 @@ void WifiSerial::off() {
     log_i("Shutting down");
     disconnect();
     taskStop();
+    _server.end();
 }
 
 void WifiSerial::disconnect() {
@@ -75,24 +87,31 @@ size_t WifiSerial::write(const uint8_t *buf, size_t size) {
     // TODO mutex
     size_t written = size;
     while (size) {
-        _tx_buf.push(*buf++);
+        _txBuf.push(*buf++);
         size--;
     }
     return written;
 }
 
 int WifiSerial::available() {
-    return _rx_buf.size();
+    return _rxBuf.size();
 }
 
 int WifiSerial::read() {
     if (available()) {
-        char c = _rx_buf.shift();
+        char c = _rxBuf.shift();
         switch (c) {
             case 4:
                 print("Ctrl-D received, bye.\n");
                 _disconnect = true;
                 // return -1;
+                break;
+                // case 10:
+                //     print("[LF]");
+                //     break;
+                // case 13:
+                //     print("[CR]");
+                //     break;
         }
         return c;
     }
@@ -100,7 +119,7 @@ int WifiSerial::read() {
 }
 
 int WifiSerial::peek() {
-    return available() ? _rx_buf.first() : 0;
+    return available() ? _rxBuf.first() : 0;
 }
 
 void WifiSerial::flush() {

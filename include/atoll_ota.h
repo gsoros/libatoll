@@ -10,6 +10,10 @@
 #include "atoll_recorder.h"
 #include "atoll_log.h"
 
+#ifndef ATOLL_OTA_TASK_FREQ
+#define ATOLL_OTA_TASK_FREQ 1
+#endif
+
 #ifndef ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING
 #define ATOLL_OTA_TASK_FREQ_WHEN_UPLOADING 5
 #endif
@@ -34,7 +38,7 @@ class Ota : public Task {
     void onError(ota_error_t error);
 
    protected:
-    uint16_t savedTaskFreq = 1;
+    uint16_t savedTaskFreq = ATOLL_OTA_TASK_FREQ;
 };
 
 }  // namespace Atoll

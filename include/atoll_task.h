@@ -7,7 +7,7 @@
 #include "atoll_log.h"
 
 #ifndef ATOLL_TASK_DEFAULT_FREQ
-#define ATOLL_TASK_DEFAULT_FREQ 5
+#define ATOLL_TASK_DEFAULT_FREQ 1.0
 #endif
 
 #ifndef ATOLL_TASK_DEFAULT_STACK
@@ -27,27 +27,29 @@ namespace Atoll {
 class Task {
    public:
     TaskHandle_t taskHandle = NULL;
-    float taskFreq = 10;  // desired task frequency in Hz
 
     virtual const char *taskName() = 0;
 
-    virtual void taskStart(float freq = ATOLL_TASK_DEFAULT_FREQ,
-                           uint32_t stack = ATOLL_TASK_DEFAULT_STACK,
-                           uint8_t priority = ATOLL_TASK_DEFAULT_PRIORITY,
-                           uint8_t core = ATOLL_TASK_DEFAULT_CORE) {
+    virtual void taskStart(float freq = -1,
+                           uint32_t stack = 0,
+                           int8_t priority = -1,
+                           int8_t core = -1) {
+        if (0 < freq) _taskFreq = freq;
+        if (stack != 0) _taskStack = stack;
+        if (0 <= priority) _taskPriority = (uint8_t)priority;
+        if (0 <= core) _taskCore = (uint8_t)core;
         if (taskRunning()) taskStop();
-        taskFreq = freq;
         _taskSetDelayFromFreq();
         log_i("Starting task '%s' at %.2fHz (delay: %dms), stack %d",
-              taskName(), freq, _xTaskDelay, stack);
+              taskName(), _taskFreq, _xTaskDelay, _taskStack);
         BaseType_t err = xTaskCreatePinnedToCore(
             _taskLoop,
             taskName(),
-            stack,
+            _taskStack,
             this,
-            priority,
+            _taskPriority,
             &taskHandle,
-            core);
+            _taskCore);
         if (pdPASS != err)
             log_e("Failed to start task '%s', error %d", taskName(), err);
         // else
@@ -67,8 +69,9 @@ class Task {
     }
 
     virtual void taskSetFreq(const float freq) {
+        if (freq <= 0) return;
         log_i("%s new freq: %.2f", taskName(), freq);
-        taskFreq = freq;
+        _taskFreq = freq;
         _taskSetDelayFromFreq();
     }
 
@@ -82,7 +85,11 @@ class Task {
     Task(){};
     virtual ~Task() {}
 
-   private:
+   protected:
+    float _taskFreq = ATOLL_TASK_DEFAULT_FREQ;
+    uint32_t _taskStack = ATOLL_TASK_DEFAULT_STACK;
+    uint8_t _taskPriority = ATOLL_TASK_DEFAULT_PRIORITY;
+    uint8_t _taskCore = ATOLL_TASK_DEFAULT_CORE;
     TickType_t _xLastWakeTime;
     TickType_t _xTaskDelay;
 
@@ -95,13 +102,13 @@ class Task {
             ulong loopTime = millis() - start;
             if (thisPtr->_xTaskDelay < loopTime)
                 log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
-                      thisPtr->taskName(), loopTime, thisPtr->_xTaskDelay, thisPtr->taskFreq);
+                      thisPtr->taskName(), loopTime, thisPtr->_xTaskDelay, thisPtr->_taskFreq);
             vTaskDelayUntil(&(thisPtr->_xLastWakeTime), thisPtr->_xTaskDelay);
         }
     }
 
     void _taskSetDelayFromFreq() {
-        _xTaskDelay = pdMS_TO_TICKS(1000 / taskFreq);
+        _xTaskDelay = pdMS_TO_TICKS(1000 / _taskFreq);
     }
 };
 

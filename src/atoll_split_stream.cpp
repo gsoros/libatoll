@@ -38,6 +38,7 @@ size_t SplitStream::write(uint8_t c) {
 }
 
 size_t SplitStream::write(const uint8_t *buffer, size_t size) {
+    // log_i("atoll::ss:write");
     size_t len0 = 0, len1 = 0;
     if (s0_enabled) len0 = s0->write(buffer, size);
     if (s1_enabled) len1 = s1->write(buffer, size);
