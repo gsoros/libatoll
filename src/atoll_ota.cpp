@@ -1,3 +1,8 @@
+
+//#include <ESPmDNS.h>
+#include <WiFi.h>
+//#include <WiFiUdp.h>
+
 #include "atoll_ota.h"
 
 using namespace Atoll;
@@ -21,7 +26,7 @@ void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
     ArduinoOTA.setHostname(hostName);  // Hostname defaults to esp3232-[MAC]
     ArduinoOTA.setPort(port);          // Port defaults to 3232
     ArduinoOTA.setTimeout(5000);       // for choppy WiFi
-    ArduinoOTA.setMdnsEnabled(true);
+    ArduinoOTA.setMdnsEnabled(false);
 
     // ArduinoOTA.setPassword("admin");// No authentication by default
     // Password can be set with it's md5 value as well
@@ -95,31 +100,32 @@ void Ota::onEnd() {
     // board.sleepEnabled = true;
 
     taskSetFreq(savedTaskFreq);
-
-    log_i("End");
+    log_i("end");
+    if (100 == lastPercent) {
+        log_i("rebooting");
+        ESP.restart();
+    }
 }
 
 void Ota::onProgress(uint progress, uint total) {
-    static uint8_t lastPercent = 0;
     uint8_t percent = (uint8_t)((float)progress / (float)total * 100.0);
-    if (percent > lastPercent) {
+    if (percent != lastPercent) {
         log_i("%d%%", percent);
         lastPercent = percent;
     }
 }
 
 void Ota::onError(ota_error_t error) {
-    log_i("Error %u", error);
     if (error == OTA_AUTH_ERROR)
-        log_i("^^^ = Auth Failed");
+        log_e("Auth");
     else if (error == OTA_BEGIN_ERROR)
-        log_i("^^^ = Begin Failed");
+        log_e("Begin");
     else if (error == OTA_CONNECT_ERROR)
-        log_i("^^^ = Connect Failed");
+        log_e("Connect");
     else if (error == OTA_RECEIVE_ERROR)
-        log_i("^^^ = Receive Failed");
+        log_e("Receive");
     else if (error == OTA_END_ERROR)
-        log_i("^^^ = End Failed");
-    // log_i("Enabling sleep");
-    //  board.sleepEnabled = true;
+        log_e("End");
+    else
+        log_e("%d", error);
 }

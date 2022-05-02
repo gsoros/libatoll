@@ -103,6 +103,7 @@ class Recorder : public Task {
     virtual bool loadStats(bool reportFail = true);
     virtual const char *currentPath(bool reset = false);
     virtual const char *currentStatsPath(bool reset = false);
+    virtual int appendStatsExt(char *path, size_t size);
     virtual void resetBuffer(bool clearPoints = false);
     virtual bool resume();
     virtual bool start();

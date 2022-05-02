@@ -107,7 +107,7 @@ bool Peer::addChar(PeerCharacteristic* c) {
         log_e("cannot add char '%s'", c->label);
         return false;
     }
-    log_i("adding char label: '%s', uuid: '%s'", c->label, c->charUuid.toString().c_str());
+    // log_i("adding char label: '%s', uuid: '%s'", c->label, c->charUuid.toString().c_str());
     chars[index] = c;
     return true;
 }

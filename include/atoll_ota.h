@@ -2,9 +2,6 @@
 #define __atoll_ota_h
 
 #include <ArduinoOTA.h>
-#include <ESPmDNS.h>
-#include <WiFi.h>
-#include <WiFiUdp.h>
 
 #include "atoll_task.h"
 #include "atoll_recorder.h"
@@ -39,6 +36,7 @@ class Ota : public Task {
 
    protected:
     uint16_t savedTaskFreq = ATOLL_OTA_TASK_FREQ;
+    uint8_t lastPercent = 0;
 };
 
 }  // namespace Atoll

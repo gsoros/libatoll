@@ -122,7 +122,7 @@ bool Api::addCommand(ApiCommand newCommand) {
     if (nullptr != existing) {
         for (uint8_t i = 0; i < numCommands; i++)
             if (0 == strcmp(commands[i].name, existing->name)) {
-                log_i("Warning: replacing command %d:%s", existing->code, existing->name);
+                // log_i("Replacing command %d:%s", existing->code, existing->name);
                 newCommand.code = existing->code;
                 commands[i] = newCommand;
                 return true;

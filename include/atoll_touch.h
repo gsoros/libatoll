@@ -125,7 +125,7 @@ class Touch : public Task, public Preferences {
             char key[8];
             snprintf(key, sizeof key, "thres%d", i);
             uint8_t threshold = preferences->getUChar(key, pads[i].threshold);
-            log_i("pad %d threshold %d", i, threshold);
+            // log_i("pad %d threshold %d", i, threshold);
             pads[i].threshold = threshold;
         }
         preferencesEnd();

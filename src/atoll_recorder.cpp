@@ -213,7 +213,7 @@ bool Recorder::saveStats() {
         file.close();
         return false;
     }
-    // log_i("wrote %d bytes to %s", wrote, sp);
+    log_i("wrote %d bytes to %s", wrote, sp);
     file.close();
     return true;
 }
@@ -355,6 +355,17 @@ const char *Recorder::currentStatsPath(bool reset) {
     }
     snprintf(path, sizeof(path), "%s%s", fp, statsExt);
     return path;
+}
+
+// append stats extension to path
+int Recorder::appendStatsExt(char *path, size_t size) {
+    log_i("path: %s, size: %d", path, size);
+    if (nullptr == path || !size) return 0;
+    char sp[size] = "";
+    int ret = snprintf(sp, size, "%s%s", path, statsExt);
+    snprintf(path, size, "%s", sp);
+    log_i("path: %s, ret: %d", path, ret);
+    return ret;
 }
 
 void Recorder::resetBuffer(bool clearPoints) {

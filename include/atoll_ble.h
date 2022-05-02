@@ -12,7 +12,7 @@ class Ble {
    public:
     static void init(const char *deviceName) {
         if (initDone) {
-            log_i("init already done");
+            // log_i("init already done");
             return;
         }
 
