@@ -38,7 +38,10 @@ class Task {
         if (stack != 0) _taskStack = stack;
         if (0 <= priority) _taskPriority = (uint8_t)priority;
         if (0 <= core) _taskCore = (uint8_t)core;
-        if (taskRunning()) taskStop();
+        if (taskRunning()) {
+            log_w("%s is running", taskName());
+            taskStop();
+        }
         _taskSetDelayFromFreq();
         log_i("Starting task '%s' at %.2fHz (delay: %dms), stack %d",
               taskName(), _taskFreq, _xTaskDelay, _taskStack);
@@ -61,11 +64,18 @@ class Task {
     }
 
     virtual void taskStop() {
-        if (NULL != taskHandle) {
-            log_i("Stopping %s", taskName());
-            vTaskDelete(taskHandle);
+        if (!taskRunning()) {
+            log_i("%s is not running", taskName());
+            return;
         }
+        log_i("Stopping %s", taskName());
+        if (NULL == taskHandle) {
+            log_w("%s taskHandle is null", taskName());
+            return;
+        }
+        TaskHandle_t t = taskHandle;
         taskHandle = NULL;
+        vTaskDelete(t);
     }
 
     virtual void taskSetFreq(const float freq) {
@@ -90,8 +100,8 @@ class Task {
     uint32_t _taskStack = ATOLL_TASK_DEFAULT_STACK;
     uint8_t _taskPriority = ATOLL_TASK_DEFAULT_PRIORITY;
     uint8_t _taskCore = ATOLL_TASK_DEFAULT_CORE;
-    TickType_t _xLastWakeTime;
-    TickType_t _xTaskDelay;
+    TickType_t _xLastWakeTime = 0;
+    TickType_t _xTaskDelay = 0;
 
     static void _taskLoop(void *p) {
         Task *thisPtr = (Task *)p;

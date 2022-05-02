@@ -17,7 +17,7 @@ uint8_t PeerCharacteristicBattery::decode(const uint8_t* data, const size_t leng
     /// 0 represents fully discharged.
     ///
     uint8_t level = data[0];
-    log_i("decoded %d%", level);
+    // log_i("decoded %d%", level);
     if (100 < level) log_e("level too high: %d", level);
     return level;
 }

@@ -125,7 +125,7 @@ void Wifi::applySettings() {
 #ifdef FEATURE_SERIAL
     Serial.flush();
 #endif
-    delay(1000);
+    // delay(1000);
     wifi_mode_t oldMode = WiFi.getMode();
     wifi_mode_t wifiMode;
     if (settings.enabled && (settings.apEnabled || settings.staEnabled)) {
@@ -157,6 +157,7 @@ void Wifi::applySettings() {
         }
     }
 
+    /*
     if (oldMode == wifiMode) {
         log_i("mode unchanged, not manipulating ota and wifiserial");
         return;
@@ -189,6 +190,7 @@ void Wifi::applySettings() {
         }
 #endif
     }
+    */
 };
 
 void Wifi::setEnabled(bool state, bool save) {
@@ -201,8 +203,8 @@ bool Wifi::isEnabled() {
     return settings.enabled;
 };
 
-bool Wifi::connected() {
-    return WiFi.isConnected() || WiFi.softAPgetStationNum() > 0;
+bool Wifi::isConnected() {
+    return WiFi.isConnected() || WiFi.softAPgetStationNum();
 };
 
 void Wifi::registerCallbacks() {
@@ -211,158 +213,188 @@ void Wifi::registerCallbacks() {
             onEvent(event, info);
         },
         ARDUINO_EVENT_MAX);
-
-    /*
-    WiFi.onEvent(onApConnected, WIFI_EVENT_AP_STACONNECTED);
-    WiFi.onEvent(onApDisconnected, WIFI_EVENT_AP_STADISCONNECTED);
-    WiFi.onEvent(onStaConnected, WIFI_EVENT_STA_CONNECTED);
-    WiFi.onEvent(onStaDisconnected, WIFI_EVENT_STA_DISCONNECTED);
-    */
-    /*
-    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onApConnected(event, info); },
-                 WIFI_EVENT_AP_STACONNECTED);
-    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onApDisconnected(event, info); },
-                 WIFI_EVENT_AP_STADISCONNECTED);
-    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onStaConnected(event, info); },
-                 WIFI_EVENT_STA_CONNECTED);
-    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) { onStaDisconnected(event, info); },
-                 WIFI_EVENT_STA_DISCONNECTED);
-    */
 }
 
 void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
     switch (event) {
         case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
-            log_i("AP new connection, now active: %d", WiFi.softAPgetStationNum());
+            log_i("[AP] station connected, now active: %d", WiFi.softAPgetStationNum());
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
+            log_i("[AP] station got IP");
             break;
         case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-            log_i("AP station disconnected, now active: %d", WiFi.softAPgetStationNum());
+            log_i("[AP] station disconnected, now active: %d", WiFi.softAPgetStationNum());
+            break;
+        case ARDUINO_EVENT_WIFI_STA_START:
+            log_i("[STA] starting");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+            log_i("[STA] connected");
             break;
         case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-            log_i("STA connected, IP: %s", WiFi.localIP().toString().c_str());
+            log_i("[STA] got IP: %s", WiFi.localIP().toString().c_str());
             // WiFi.setAutoReconnect(true);
             // WiFi.persistent(true);
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-            log_i("STA disconnected");
+            log_i("[STA] disconnected");
             if (settings.enabled && settings.staEnabled) {
-                log_i("reconnecting");
+                log_i("[STA] reconnecting");
                 // WiFi.disconnect();
                 WiFi.reconnect();
                 // WiFi.begin();
             }
             break;
+        case ARDUINO_EVENT_WIFI_STA_STOP:
+            log_i("[STA] stopped");
+            break;
         default:
             log_i("event: %d, info: %d", event, info);
     }
+
+    static bool prevConnected = false;
+    bool connected = isConnected();
+
+    if (prevConnected != connected) {
+        if (connected) {
+            if (nullptr != ota) {
+                log_i("restarting Ota");
+                ota->off();
+                ota->taskStop();
+                ota->setup(hostName, recorder);
+                ota->taskStart(ATOLL_OTA_TASK_FREQ);
+            }
+#ifdef FEATURE_SERIAL
+            if (nullptr != wifiSerial) {
+                log_i("restarting wifiSerial");
+                wifiSerial->off();
+                wifiSerial->setup();
+                wifiSerial->taskStart();
+            }
+#endif
+        } else {
+            if (nullptr != ota) {
+                log_i("stopping Ota");
+                ota->taskStop();
+            }
+#ifdef FEATURE_SERIAL
+            if (nullptr != wifiSerial) {
+                log_i("stopping wifiSerial");
+                wifiSerial->off();
+            }
+#endif
+        }
+    }
+    prevConnected = connected;
 }
 
-ApiResult *Wifi::enabledProcessor(ApiReply *reply) {
+ApiResult *Wifi::enabledProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set wifi
     bool newValue = true;  // enable wifi by default
-    if (0 < strlen(reply->arg)) {
-        if (0 == strcmp("false", reply->arg) || 0 == strcmp("0", reply->arg))
+    if (0 < strlen(msg->arg)) {
+        if (0 == strcmp("false", msg->arg) || 0 == strcmp("0", msg->arg))
             newValue = false;
         instance->setEnabled(newValue);
     }
     // get wifi
-    strncpy(reply->value, instance->isEnabled() ? "1" : "0", sizeof(reply->value));
+    strncpy(msg->reply, instance->isEnabled() ? "1" : "0", sizeof(msg->reply));
     return Api::success();
 }
 
-ApiResult *Wifi::apProcessor(ApiReply *reply) {
+ApiResult *Wifi::apProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set
     bool newValue = true;  // enable by default
-    if (0 < strlen(reply->arg)) {
-        if (0 == strcmp("false", reply->arg) ||
-            0 == strcmp("0", reply->arg))
+    if (0 < strlen(msg->arg)) {
+        if (0 == strcmp("false", msg->arg) ||
+            0 == strcmp("0", msg->arg))
             newValue = false;
         instance->settings.apEnabled = newValue;
         instance->saveSettings();
         instance->applySettings();
     }
     // get
-    strncpy(reply->value, instance->settings.apEnabled ? "1" : "0",
-            sizeof(reply->value));
+    strncpy(msg->reply, instance->settings.apEnabled ? "1" : "0",
+            sizeof(msg->reply));
     return Api::success();
 }
 
-ApiResult *Wifi::apSSIDProcessor(ApiReply *reply) {
+ApiResult *Wifi::apSSIDProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set
-    if (0 < strlen(reply->arg)) {
-        strncpy(instance->settings.apSSID, reply->arg,
+    if (0 < strlen(msg->arg)) {
+        strncpy(instance->settings.apSSID, msg->arg,
                 sizeof(instance->settings.apSSID));
         instance->saveSettings();
         instance->applySettings();
     }
     // get
-    strncpy(reply->value, instance->settings.apSSID,
-            sizeof(reply->value));
+    strncpy(msg->reply, instance->settings.apSSID,
+            sizeof(msg->reply));
     return Api::success();
 }
 
-ApiResult *Wifi::apPasswordProcessor(ApiReply *reply) {
+ApiResult *Wifi::apPasswordProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set
-    if (0 < strlen(reply->arg)) {
-        strncpy(instance->settings.apPassword, reply->arg,
+    if (0 < strlen(msg->arg)) {
+        strncpy(instance->settings.apPassword, msg->arg,
                 sizeof(instance->settings.apPassword));
         instance->saveSettings();
         instance->applySettings();
     }
     // get
-    strncpy(reply->value, instance->settings.apPassword,
-            sizeof(reply->value));
+    strncpy(msg->reply, instance->settings.apPassword,
+            sizeof(msg->reply));
     return Api::success();
 }
 
-ApiResult *Wifi::staProcessor(ApiReply *reply) {
+ApiResult *Wifi::staProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set
     bool newValue = true;  // enable by default
-    if (0 < strlen(reply->arg)) {
-        if (0 == strcmp("false", reply->arg) ||
-            0 == strcmp("0", reply->arg))
+    if (0 < strlen(msg->arg)) {
+        if (0 == strcmp("false", msg->arg) ||
+            0 == strcmp("0", msg->arg))
             newValue = false;
         instance->settings.staEnabled = newValue;
         instance->saveSettings();
         instance->applySettings();
     }
     // get
-    strncpy(reply->value, instance->settings.staEnabled ? "1" : "0",
-            sizeof(reply->value));
+    strncpy(msg->reply, instance->settings.staEnabled ? "1" : "0",
+            sizeof(msg->reply));
     return Api::success();
 }
 
-ApiResult *Wifi::staSSIDProcessor(ApiReply *reply) {
+ApiResult *Wifi::staSSIDProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set
-    if (0 < strlen(reply->arg)) {
-        strncpy(instance->settings.staSSID, reply->arg,
+    if (0 < strlen(msg->arg)) {
+        strncpy(instance->settings.staSSID, msg->arg,
                 sizeof(instance->settings.staSSID));
         instance->saveSettings();
         instance->applySettings();
     }
     // get
-    strncpy(reply->value, instance->settings.staSSID,
-            sizeof(reply->value));
+    strncpy(msg->reply, instance->settings.staSSID,
+            sizeof(msg->reply));
     return Api::success();
 }
 
-ApiResult *Wifi::staPasswordProcessor(ApiReply *reply) {
+ApiResult *Wifi::staPasswordProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set
-    if (0 < strlen(reply->arg)) {
-        strncpy(instance->settings.staPassword, reply->arg,
+    if (0 < strlen(msg->arg)) {
+        strncpy(instance->settings.staPassword, msg->arg,
                 sizeof(instance->settings.staPassword));
         instance->saveSettings();
         instance->applySettings();
     }
     // get
-    strncpy(reply->value, instance->settings.staPassword,
-            sizeof(reply->value));
+    strncpy(msg->reply, instance->settings.staPassword,
+            sizeof(msg->reply));
     return Api::success();
 }

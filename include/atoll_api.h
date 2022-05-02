@@ -17,17 +17,14 @@
 #ifndef ATOLL_API_COMMAND_NAME_LENGTH
 #define ATOLL_API_COMMAND_NAME_LENGTH 16
 #endif
-#ifndef ATOLL_API_ARG_LENGTH
-#define ATOLL_API_ARG_LENGTH 239
-#endif
 #ifndef ATOLL_API_RESULT_NAME_LENGTH
 #define ATOLL_API_RESULT_NAME_LENGTH 16
 #endif
-#ifndef ATOLL_API_REPLY_LENGTH
-#define ATOLL_API_REPLY_LENGTH 512
+#ifndef ATOLL_API_MSG_ARG_LENGTH
+#define ATOLL_API_MSG_ARG_LENGTH 239
 #endif
-#ifndef ATOLL_API_VALUE_LENGTH
-#define ATOLL_API_VALUE_LENGTH 512
+#ifndef ATOLL_API_MSG_REPLY_LENGTH
+#define ATOLL_API_MSG_REPLY_LENGTH 512
 #endif
 #ifndef ATOLL_API_MAX_COMMANDS
 #define ATOLL_API_MAX_COMMANDS 32
@@ -62,16 +59,23 @@ class ApiResult {
     }
 };
 
-class ApiReply {
+class ApiMessage {
    public:
     uint8_t commandCode;
-    char arg[ATOLL_API_ARG_LENGTH] = "";
+    char arg[ATOLL_API_MSG_ARG_LENGTH] = "";
     ApiResult *result;
-    char value[ATOLL_API_VALUE_LENGTH] = "";
-    bool log = true;  // set false to suppress logging when processing commands
+    char reply[ATOLL_API_MSG_REPLY_LENGTH] = "";
+    bool log = true;  // set false to suppress logging when processing messages
+
+    size_t appendToValue(const char *str, bool onlyIfNotEmpty = false) {
+        size_t sVal = strlen(reply);
+        if (onlyIfNotEmpty && !sVal) return 0;
+        strncat(reply, str, ATOLL_API_MSG_REPLY_LENGTH - sVal - strlen(str) - 1);
+        return strlen(reply) - sVal;
+    }
 };
 
-typedef ApiResult *(*ApiProcessor)(ApiReply *reply);
+typedef ApiResult *(*ApiProcessor)(ApiMessage *msg);
 
 class ApiCommand {
    public:
@@ -88,15 +92,15 @@ class ApiCommand {
         this->processor = processor;
     }
 
-    ApiResult *call(ApiReply *reply) {
+    ApiResult *call(ApiMessage *msg) {
         if (nullptr == processor) {
             log_e("Command %d:%s has no processor", code, name);
             return nullptr;
         }
-        reply->result = processor(reply);
+        msg->result = processor(msg);
         // log_i("command(%d:%s)=arg(%s) ===> result(%d:%s) value(%s)",
-        //       code, name, reply->arg, reply->result->code, reply->result->name, reply->value);
-        return reply->result;
+        //       code, name, msg->arg, msg->result->code, msg->result->name, msg->value);
+        return msg->result;
     };
 };
 
@@ -115,7 +119,7 @@ class Api : public Preferences {
     static bool addBleService(BleServer *bleServer, const char *serviceUuid);
     static bool addCommand(ApiCommand command);
     static bool addResult(ApiResult result);
-    static ApiReply process(const char *commandWithArg, bool log = true);
+    static ApiMessage process(const char *commandWithArg, bool log = true);
 
     static ApiResult *result(uint8_t code, bool logOnError = true);
     static ApiResult *result(const char *name, bool logOnError = true);
@@ -128,12 +132,13 @@ class Api : public Preferences {
     static uint8_t nextAvailableCommandCode();
     static uint8_t nextAvailableResultCode();
 
-    static const uint16_t replyLength = ATOLL_API_REPLY_LENGTH;
-    static const uint16_t replyValueLength = ATOLL_API_VALUE_LENGTH;
+    static const uint16_t msgReplyLength = ATOLL_API_MSG_REPLY_LENGTH;
 
     static void loadSettings();
     static void saveSettings();
     static void printSettings();
+
+    static bool isAlNumStr(const char *str);
 
     static size_t write(const uint8_t *buffer, size_t size);
 
@@ -145,9 +150,8 @@ class Api : public Preferences {
     static ApiResult results[ATOLL_API_MAX_RESULTS];
     static uint8_t numResults;
 
-    static ApiResult *initProcessor(ApiReply *reply);
-    static ApiResult *hostnameProcessor(ApiReply *reply);
-    static ApiResult *buildProcessor(ApiReply *reply);
+    static ApiResult *initProcessor(ApiMessage *msg);
+    static ApiResult *systemProcessor(ApiMessage *msg);
 
    private:
 };

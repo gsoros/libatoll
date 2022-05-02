@@ -800,9 +800,23 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     return true;
 }
 
-ApiResult *Recorder::recProcessor(ApiReply *reply) {
+ApiResult *Recorder::recProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
-    if (0 <= strlen(reply->arg)) {
+    bool succ = true;
+    if (0 < strlen(msg->arg)) {
+        if (0 == strcmp("start", msg->arg))
+            succ = instance->start();
+        else if (0 == strcmp("pause", msg->arg))
+            succ = instance->pause();
+        else if (0 == strcmp("end", msg->arg))
+            succ = instance->end();
+        else {
+            snprintf(msg->reply, sizeof(msg->reply),
+                     "start|pause|end");
+            return Api::result("argInvalid");
+        }
     }
-    return Api::success();
+    snprintf(msg->reply, sizeof(msg->reply),
+             "%d", instance->isRecording);
+    return succ ? Api::success() : Api::error();
 }

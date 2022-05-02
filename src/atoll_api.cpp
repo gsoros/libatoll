@@ -35,8 +35,7 @@ void Api::setup(
     addResult(ApiResult("internalError"));
 
     addCommand(ApiCommand("init", Atoll::Api::initProcessor, 1));
-    addCommand(ApiCommand("hostname", Atoll::Api::hostnameProcessor));
-    addCommand(ApiCommand("build", Atoll::Api::buildProcessor));
+    addCommand(ApiCommand("system", Atoll::Api::systemProcessor));
 
     if (nullptr != bleServer && nullptr != serviceUuid)
         addBleService(bleServer, serviceUuid);
@@ -131,7 +130,7 @@ bool Api::addCommand(ApiCommand newCommand) {
         log_e("Error adding %d:%s", newCommand.code, newCommand.name);
         return false;
     }
-    log_i("Adding command %d:%s", newCommand.code, newCommand.name);
+    // log_i("Adding command %d:%s", newCommand.code, newCommand.name);
     commands[numCommands] = newCommand;
     numCommands++;
     return true;
@@ -186,7 +185,7 @@ bool Api::addResult(ApiResult newResult) {
         log_e("Error adding %d:%s", newResult.code, newResult.name);
         return false;
     }
-    log_i("Adding result %d:%s", newResult.code, newResult.name);
+    // log_i("Adding result %d:%s", newResult.code, newResult.name);
     results[numResults] = newResult;
     numResults++;
     return true;
@@ -230,6 +229,17 @@ void Api::printSettings() {
     log_i("SecureBle: %s Passkey: %d", secureBle ? "Yes" : "No", passkey);
 }
 
+bool Api::isAlNumStr(const char *str) {
+    size_t len = strlen(str);
+    size_t cnt = (size_t)0;
+    while (*str != '\0' && cnt < len) {
+        if (!isalnum(*str)) return false;
+        str++;
+        cnt++;
+    }
+    return true;
+}
+
 size_t Api::write(const uint8_t *buffer, size_t size) {
     size_t i = 0;
     while (i < size) {
@@ -247,9 +257,9 @@ size_t Api::write(const uint8_t *buffer, size_t size) {
                 }
                 if (!strlen(buf)) continue;
                 // log_i("processing '%s'", buf);
-                ApiReply reply = process(buf);
-                Serial.printf("%s: %s%s%s\n", buf, reply.result->name,
-                              strlen(reply.value) ? ", " : "", reply.value);
+                ApiMessage msg = process(buf);
+                Serial.printf("%s: %s%s%s\n", buf, msg.result->name,
+                              strlen(msg.reply) ? ", " : "", msg.reply);
                 continue;
             }
             case 4:   // EOT
@@ -311,98 +321,99 @@ ApiResult *Api::error() {
 
 // Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
-ApiReply Api::process(const char *commandWithArg, bool log) {
+ApiMessage Api::process(const char *commandWithArg, bool log) {
     // log_i("Processing command %s%s", commandWithArg, log ? "" : " (logging suppressed)");
-    Atoll::ApiReply reply;
-    reply.log = log;
+    Atoll::ApiMessage msg;
+    msg.log = log;
     char commandStr[ATOLL_API_COMMAND_NAME_LENGTH] = "";
     int commandWithArgLength = strlen(commandWithArg);
     char *eqSign = strstr(commandWithArg, "=");
     int commandEnd = eqSign ? eqSign - commandWithArg : commandWithArgLength;
     if (commandEnd < 1) {
         log_e("missing command: %s", commandWithArg);
-        reply.result = result("commandMissing");
-        return reply;
+        msg.result = result("commandMissing");
+        return msg;
     }
     if (sizeof(commandStr) < commandEnd) {
         log_e("command too long: %s", commandWithArg);
-        reply.result = result("commandTooLong");
-        return reply;
+        msg.result = result("commandTooLong");
+        return msg;
     }
     strncpy(commandStr, commandWithArg, commandEnd);
 
     if (eqSign) {
         int argLength = commandWithArgLength - commandEnd - 1;
         // log_i("argLength=%d", argLength);
-        if (ATOLL_API_ARG_LENGTH < argLength) {
+        if (ATOLL_API_MSG_ARG_LENGTH < argLength) {
             log_e("arg too long: %s", commandWithArg);
-            reply.result = result("argTooLong");
-            return reply;
+            msg.result = result("argTooLong");
+            return msg;
         }
-        strncpy(reply.arg, eqSign + 1, sizeof(reply.arg));
+        strncpy(msg.arg, eqSign + 1, sizeof(msg.arg));
     }
-    // log_i("commandStr=%s arg=%s", commandStr, reply.arg);
+    // log_i("commandStr=%s arg=%s", commandStr, msg.arg);
 
     ApiCommand *c = command(commandStr, false);  // try parsing command as string, don't log error
     if (nullptr == c) {
         int code = atoi(commandStr);
         if (code < 1 || UINT8_MAX < code) {  // first command index assumed to be 1
-            reply.result = result("unknownCommand");
-            return reply;
+            msg.result = result("unknownCommand");
+            return msg;
         }
         c = command((uint8_t)code);  // parse command as int
         if (nullptr == c) {
-            reply.result = result("unknownCommand");
-            return reply;
+            msg.result = result("unknownCommand");
+            return msg;
         }
     }
-    reply.commandCode = c->code;
+    msg.commandCode = c->code;
 
-    // call the command's processor, it will set reply.result, reply text and reply.value
-    c->call(&reply);
+    // call the command's processor, it will set msg.result msg.reply
+    c->call(&msg);
 
-    return reply;
+    return msg;
 }
 
 // process all available commands except 'init' without arguments
 // and return the results in the format: commandCode:commandName=value;...
-ApiResult *Api::initProcessor(ApiReply *reply) {
-    char value[replyValueLength] = "";
-    char token[6 + ATOLL_API_COMMAND_NAME_LENGTH + ATOLL_API_VALUE_LENGTH];
+ApiResult *Api::initProcessor(ApiMessage *msg) {
+    char reply[msgReplyLength] = "";
+    char token[6 + ATOLL_API_COMMAND_NAME_LENGTH + ATOLL_API_MSG_REPLY_LENGTH];
     ApiResult *successResult = success();
     for (int i = 0; i < numCommands; i++) {
         if (0 == strcmp(commands[i].name, "init")) continue;
         // call command without arg, suppress logging
-        ApiReply reply = process(commands[i].name, false);
-        if (reply.result == successResult)
+        ApiMessage msg = process(commands[i].name, false);
+        if (msg.result == successResult)
             snprintf(token, sizeof(token), "%d:%s=%s;",
                      commands[i].code,
                      commands[i].name,
-                     reply.value);
+                     msg.reply);
         else
             snprintf(token, sizeof(token), "%d:%s;",
                      commands[i].code,
                      commands[i].name);
-        int16_t remaining = replyValueLength - strlen(value) - 1;
+        int16_t remaining = msgReplyLength - strlen(reply) - 1;
         if (remaining < strlen(token)) {
-            log_e("no space left for adding %s to %s", token, value);
+            log_e("no space left for adding %s to %s", token, reply);
             return result("internalError");
         }
-        strncat(value, token, remaining);
+        strncat(reply, token, remaining);
     }
-    strncpy(reply->value, value, replyValueLength);
+    strncpy(msg->reply, reply, msgReplyLength);
     return successResult;
 }
 
-ApiResult *Api::hostnameProcessor(ApiReply *reply) {
-    // set hostname
-    // ...
-    // get hostname
-    strncpy(reply->value, "libAtollApiHost", replyValueLength);
-    return success();
-}
-
-ApiResult *Api::buildProcessor(ApiReply *reply) {
-    snprintf(reply->value, replyValueLength, "%s %s", __DATE__, __TIME__);
-    return success();
+ApiResult *Api::systemProcessor(ApiMessage *msg) {
+    if (0 == strcmp("build", msg->arg)) {
+        snprintf(msg->reply, msgReplyLength, "%s %s", __DATE__, __TIME__);
+        return success();
+    } else if (0 == strcmp("reboot", msg->arg)) {
+        log_i("rebooting");
+        delay(500);
+        ESP.restart();
+    }
+    msg->appendToValue("|", true);
+    msg->appendToValue("build|reboot");
+    return result("argInvalid");
 }

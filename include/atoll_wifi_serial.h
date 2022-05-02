@@ -28,7 +28,9 @@ class WifiSerial : public Task, public Stream {
     const char *taskName() { return "WifiSerial"; }
     void setup(const char *hostName = nullptr,
                uint16_t port = 0,
-               uint8_t maxClients = 0);
+               uint8_t maxClients = 0,
+               float taskFreq = 0.0,
+               uint32_t taskStack = 0);
     void loop();
     void off();
     void disconnect();

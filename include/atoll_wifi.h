@@ -61,18 +61,18 @@ class Wifi : public Preferences, public Task {
     virtual void applySettings();
     void setEnabled(bool state, bool save = true);
     bool isEnabled();
-    bool connected();
+    bool isConnected();
     virtual void registerCallbacks();
 
     virtual void onEvent(arduino_event_id_t event, arduino_event_info_t info);
 
-    static ApiResult *enabledProcessor(ApiReply *reply);
-    static ApiResult *apProcessor(ApiReply *reply);
-    static ApiResult *apSSIDProcessor(ApiReply *reply);
-    static ApiResult *apPasswordProcessor(ApiReply *reply);
-    static ApiResult *staProcessor(ApiReply *reply);
-    static ApiResult *staSSIDProcessor(ApiReply *reply);
-    static ApiResult *staPasswordProcessor(ApiReply *reply);
+    static ApiResult *enabledProcessor(ApiMessage *reply);
+    static ApiResult *apProcessor(ApiMessage *reply);
+    static ApiResult *apSSIDProcessor(ApiMessage *reply);
+    static ApiResult *apPasswordProcessor(ApiMessage *reply);
+    static ApiResult *staProcessor(ApiMessage *reply);
+    static ApiResult *staSSIDProcessor(ApiMessage *reply);
+    static ApiResult *staPasswordProcessor(ApiMessage *reply);
 };
 
 }  // namespace Atoll

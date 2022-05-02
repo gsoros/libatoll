@@ -201,11 +201,11 @@ void Battery::printSettings() {
     log_i("correction factor: %f", corrF);
 }
 
-ApiResult *Battery::batteryProcessor(ApiReply *reply) {
+ApiResult *Battery::batteryProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set battery correction factor by supplying the measured voltage
-    if (0 < strlen(reply->arg)) {
-        float voltage = atof(reply->arg);
+    if (0 < strlen(msg->arg)) {
+        float voltage = atof(msg->arg);
         if (ATOLL_BATTERY_EMPTY * 0.8F < voltage && voltage < ATOLL_BATTERY_FULL * 1.2F) {
             instance->calibrateTo(voltage);
             instance->saveSettings();
@@ -213,6 +213,6 @@ ApiResult *Battery::batteryProcessor(ApiReply *reply) {
         }
     }
     // get current voltage
-    snprintf(reply->value, sizeof(reply->value), "%f", instance->voltage);
+    snprintf(msg->reply, sizeof(msg->reply), "%f", instance->voltage);
     return Api::success();
 }

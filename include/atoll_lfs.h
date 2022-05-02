@@ -1,3 +1,5 @@
+/*
+
 #ifndef __atoll_lfs_h
 #define __atoll_lfs_h
 
@@ -30,12 +32,10 @@ class Lfs : public Fs {
     fs::FS *pFs() {
         return &LITTLEFS;
     }
-
-    fs::FS &refFs() {
-        return LITTLEFS;
-    }
 };
 
 }  // namespace Atoll
 
 #endif
+
+*/

@@ -5,10 +5,14 @@ using namespace Atoll;
 void WifiSerial::setup(
     const char *hostName,
     uint16_t port,
-    uint8_t maxClients) {
+    uint8_t maxClients,
+    float taskFreq,
+    uint32_t taskStack) {
     if (nullptr != hostName) _hostName = hostName;
-    if (0 != port) _port = port;
-    if (0 != maxClients) _maxClients = maxClients;
+    if (0 < port) _port = port;
+    if (0 < maxClients) _maxClients = maxClients;
+    if (0.0 < taskFreq) taskSetFreq(taskFreq);
+    if (0 < taskStack) _taskStack = taskStack;
     _server = WiFiServer(_port, _maxClients);
     if (WiFi.getMode() == WIFI_MODE_NULL) {
         log_i("Wifi is disabled, not starting");
@@ -27,7 +31,7 @@ void WifiSerial::loop() {
         log_i("Wifi is disabled, task should be stopped");
         return;
     }
-    if (!WiFi.isConnected() && WiFi.softAPgetStationNum() < 1) return;
+    if (!WiFi.isConnected() && !WiFi.softAPgetStationNum()) return;
     if (!_connected) {
         if (!_server.hasClient()) return;
         _client = _server.available();

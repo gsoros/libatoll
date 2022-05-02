@@ -68,7 +68,7 @@ class Battery : public Task, public Preferences {
     void saveSettings();
     void printSettings();
 
-    static ApiResult *batteryProcessor(ApiReply *reply);
+    static ApiResult *batteryProcessor(ApiMessage *reply);
 
    private:
     CircularBuffer<float, ATOLL_BATTERY_RINGBUF_SIZE> _voltageBuf;

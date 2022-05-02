@@ -133,7 +133,7 @@ class Recorder : public Task {
 
     virtual bool rec2gpx(const char *in, const char *out);
 
-    static ApiResult *recProcessor(ApiReply *reply);
+    static ApiResult *recProcessor(ApiMessage *reply);
 };
 
 }  // namespace Atoll
