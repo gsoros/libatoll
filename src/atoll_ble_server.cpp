@@ -68,6 +68,20 @@ void BleServer::loop() {
         startAdvertising();
 }
 
+void BleServer::setSecurity(bool state, const uint32_t passkey) {
+    log_i("%s", state ? "true" : "false");
+    if (state) {
+        NimBLEDevice::setSecurityAuth(true, true, true);
+        if (passkey) {
+            log_i("passkey: %d", passkey);
+            NimBLEDevice::setSecurityPasskey(passkey);
+        }
+        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
+        return;
+    }
+    NimBLEDevice::setSecurityAuth(false, false, false);
+}
+
 BLEService *BleServer::createService(const BLEUUID &uuid) {
     return server->createService(uuid);
 }
@@ -90,6 +104,24 @@ BLECharacteristic *BleServer::getChar(const BLEUUID &serviceUuid, const BLEUUID 
     BLEService *s = getService(serviceUuid);
     if (nullptr == s) return nullptr;
     return s->getCharacteristic(charUuid);
+}
+
+void BleServer::start() {
+    log_i("starting ble server");
+    server->start();
+    started = true;
+}
+
+void BleServer::startAdvertising() {
+    if (!enabled) {
+        log_i("Not enabled, not starting advertising");
+        return;
+    }
+    delay(300);
+    if (!advertising->isAdvertising()) {
+        server->startAdvertising();
+        // log_i("Start advertising");
+    }
 }
 
 void BleServer::notify(
@@ -119,14 +151,14 @@ void BleServer::stop() {
     while (!_clients.isEmpty())
         server->disconnect(_clients.shift());
     enabled = false;
-    delay(100);  // give the AtollBle stack a chance to clear packets
+    delay(100);  // give the stack a chance to clear packets
 }
 
 void BleServer::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
-    log_i("client connected, ID: %d Address: %s\n",
+    log_i("client %d connected, %s",
           desc->conn_handle,
           BLEAddress(desc->peer_ota_addr).toString().c_str());
-    // NimBLEDevice::startSecurity(desc->conn_handle);
+    // BLEDevice::startSecurity(desc->conn_handle);
     //  save client handle so we can gracefully disconnect them
     bool savedClientHandle = false;
     for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++)
@@ -137,23 +169,23 @@ void BleServer::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
 }
 
 void BleServer::onDisconnect(BLEServer *pServer) {
-    log_i("Server onDisconnect");
+    log_i("");
 }
 
-void BleServer::start() {
-    log_i("starting ble server");
-    server->start();
-    started = true;
+void BleServer::onMTUChange(uint16_t mtu, ble_gap_conn_desc *desc) {
+    log_i("%d", mtu);
 }
 
-void BleServer::startAdvertising() {
-    if (!enabled) {
-        log_i("Not enabled, not starting advertising");
-        return;
-    }
-    delay(300);
-    if (!advertising->isAdvertising()) {
-        server->startAdvertising();
-        // log_i("Start advertising");
-    }
+uint32_t BleServer::onPassKeyRequest() {
+    log_e("not implemented");
+    return 1234;
+}
+
+void BleServer::onAuthenticationComplete(ble_gap_conn_desc *desc) {
+    log_e("not implemented");
+}
+
+bool BleServer::onConfirmPIN(uint32_t pin) {
+    log_i("%d", pin);
+    return true;
 }

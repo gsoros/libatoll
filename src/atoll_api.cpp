@@ -37,6 +37,9 @@ void Api::setup(
     addCommand(ApiCommand("init", Atoll::Api::initProcessor, 1));
     addCommand(ApiCommand("system", Atoll::Api::systemProcessor));
 
+    loadSettings();
+    printSettings();
+
     if (nullptr != bleServer && nullptr != serviceUuid)
         addBleService(bleServer, serviceUuid);
 }
@@ -47,12 +50,8 @@ bool Api::addBleService(BleServer *bleServer, const char *serviceUuid) {
         log_e("bleServer is null");
         return false;
     }
-    if (secureBle) {
-        log_i("setting up secure BLE API");
-        NimBLEDevice::setSecurityAuth(true, true, true);
-        NimBLEDevice::setSecurityPasskey(passkey);
-        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
-    }
+    if (secureBle)
+        bleServer->setSecurity(true, passkey);
 
     BLEService *s = bleServer->createService(BLEUUID(serviceUuid));
     if (nullptr == s) {
@@ -94,30 +93,30 @@ bool Api::addBleService(BleServer *bleServer, const char *serviceUuid) {
     }
     d->setValue((uint8_t *)str, strlen(str));
     if (!s->start()) {
-        log_e("could notstart service");
+        log_e("could not start service");
         return false;
     }
     bleServer->advertiseService(BLEUUID(serviceUuid), 1);
     return true;
 }
 
-// call with newCommand.code = 0 to assign the next available code
+// call with newCommand.code = 0 to assign the next available slot
 bool Api::addCommand(ApiCommand newCommand) {
-    if (ATOLL_API_MAX_COMMANDS <= numCommands) {
-        log_e("no slot left for '%s'", newCommand.name);
-        return false;
-    }
     if (strlen(newCommand.name) < 1) {
-        log_e("cannot add command without name");
+        log_e("no name");
         return false;
     }
     ApiCommand *existing = command(newCommand.code, false);
     if (nullptr != existing) {
-        log_e("Code %d already exists: %s", existing->code, existing->name);
+        log_e("code %d already exists: %s", existing->code, existing->name);
         return false;
     }
     if (0 == newCommand.code)
         newCommand.code = nextAvailableCommandCode();
+    if (0 == newCommand.code) {
+        log_e("no slot for '%s'", newCommand.name);
+        return false;
+    }
     existing = command(newCommand.name, false);
     if (nullptr != existing) {
         for (uint8_t i = 0; i < numCommands; i++)
@@ -127,7 +126,7 @@ bool Api::addCommand(ApiCommand newCommand) {
                 commands[i] = newCommand;
                 return true;
             }
-        log_e("Error adding %d:%s", newCommand.code, newCommand.name);
+        log_e("error adding %d:%s", newCommand.code, newCommand.name);
         return false;
     }
     // log_i("Adding command %d:%s", newCommand.code, newCommand.name);
@@ -136,10 +135,10 @@ bool Api::addCommand(ApiCommand newCommand) {
     return true;
 }
 
-// returns 0 if there are no available codes
+// returns 0 if there are no available slots
 uint8_t Api::nextAvailableCommandCode() {
     if (ATOLL_API_MAX_COMMANDS <= numCommands) {
-        log_e("no more command codes left");
+        log_e("no slots");
         return 0;
     }
     uint8_t candidate;
@@ -152,37 +151,37 @@ uint8_t Api::nextAvailableCommandCode() {
     candidate = 1;
     if (nullptr == command(candidate, false))
         return candidate;
-    log_e("could not find an available code");
+    log_e("no slot");
     return 0;
 }
 
-// call with newResult.code = 0 to assign the next available code
+// call with newResult.code = 0 to assign the next available slot
 bool Api::addResult(ApiResult newResult) {
-    if (ATOLL_API_MAX_RESULTS <= numResults) {
-        log_e("no slot left for '%s'", newResult.name);
-        return false;
-    }
     if (strlen(newResult.name) < 1) {
-        log_e("cannot add result without a name");
+        log_e("no name");
         return false;
     }
     ApiResult *existing = result(newResult.code, false);
     if (nullptr != existing) {
-        log_e("Code %d already exists: %s", existing->code, existing->name);
+        log_e("code %d already exists: %s", existing->code, existing->name);
         return false;
     }
     if (0 == newResult.code)
         newResult.code = nextAvailableResultCode();
+    if (0 == newResult.code) {
+        log_e("no slot for '%s'", newResult.name);
+        return false;
+    }
     existing = result(newResult.name, false);
     if (nullptr != existing) {
         for (uint8_t i = 0; i < numResults; i++)
             if (0 == strcmp(results[i].name, existing->name)) {
-                log_i("Warning: replacing result %d:%s", existing->code, existing->name);
+                log_w("replacing result %d:%s", existing->code, existing->name);
                 newResult.code = existing->code;
                 results[i] = newResult;
                 return true;
             }
-        log_e("Error adding %d:%s", newResult.code, newResult.name);
+        log_e("error adding %d:%s", newResult.code, newResult.name);
         return false;
     }
     // log_i("Adding result %d:%s", newResult.code, newResult.name);
@@ -191,10 +190,10 @@ bool Api::addResult(ApiResult newResult) {
     return true;
 }
 
-// returns 0 if there are no available codes
+// returns 0 if there are no available slots
 uint8_t Api::nextAvailableResultCode() {
     if (ATOLL_API_MAX_RESULTS <= numResults) {
-        log_e("no more command codes left");
+        log_e("no slots");
         return 0;
     }
     uint8_t candidate;
@@ -207,11 +206,15 @@ uint8_t Api::nextAvailableResultCode() {
     candidate = 1;
     if (nullptr == result(candidate, false))
         return candidate;
-    log_e("could not find an available code");
+    log_e("no slot");
     return 0;
 }
 
 void Api::loadSettings() {
+    if (nullptr == instance) {
+        log_e("instance null");
+        return;
+    }
     if (!instance->preferencesStartLoad()) return;
     secureBle = instance->preferences->getBool("secureBle", secureBle);
     passkey = (uint32_t)instance->preferences->getInt("passkey", passkey);
@@ -219,6 +222,10 @@ void Api::loadSettings() {
 }
 
 void Api::saveSettings() {
+    if (nullptr == instance) {
+        log_e("instance is null");
+        return;
+    }
     if (!instance->preferencesStartSave()) return;
     instance->preferences->putBool("secureBle", secureBle);
     instance->preferences->putInt("passkey", (int32_t)passkey);
@@ -413,7 +420,51 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
         delay(500);
         ESP.restart();
     }
+    {
+        const char *str = "secureApi";
+        uint8_t sStr = strlen(str);
+        if (sStr == strspn(msg->arg, str)) {
+            char *arg = msg->arg;
+            size_t sArg = strlen(arg);
+            if (sStr < sArg) {
+                // set secureApi
+                if (':' != arg[sStr]) return result("argInvalid");
+                arg += sStr + 1;
+                sArg = strlen(arg);
+                if (sArg != 1) return result("argInvalid");
+                int i = atoi(arg);
+                if (i < 0 || 1 < i) return result("argInvalid");
+                secureBle = (bool)i;
+                saveSettings();
+            }
+            // get secureApi
+            snprintf(msg->reply, msgReplyLength, "%d", secureBle);
+            return success();
+        }
+    }
+    {
+        const char *str = "passkey";
+        uint8_t sStr = strlen(str);
+        if (sStr == strspn(msg->arg, str)) {
+            char *arg = msg->arg;
+            size_t sArg = strlen(arg);
+            if (sStr < sArg) {
+                // set passkey
+                if (':' != arg[sStr]) return result("argInvalid");
+                arg += sStr + 1;
+                sArg = strlen(arg);
+                if (6 < sArg) return result("argInvalid");
+                int i = atoi(arg);
+                if (i < 1 || 999999 < i) return result("argInvalid");
+                passkey = (uint32_t)i;
+                saveSettings();
+            }
+            // get passkey
+            snprintf(msg->reply, msgReplyLength, "%d", passkey);
+            return success();
+        }
+    }
     msg->appendToValue("|", true);
-    msg->appendToValue("build|reboot");
+    msg->appendToValue("build|reboot|secureApi[:0|1]|passkey[:1..999999]");
     return result("argInvalid");
 }

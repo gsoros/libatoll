@@ -44,41 +44,45 @@ class BleServer : public Task,
     virtual ~BleServer();
 
     virtual void setup(const char *deviceName);
-    bool createDeviceInformationService();
+    virtual bool createDeviceInformationService();
     virtual void loop();
 
+    virtual void setSecurity(bool state, const uint32_t passkey = 0);
     virtual BLEService *createService(const BLEUUID &uuid);
     virtual void advertiseService(const BLEUUID &uuid, uint8_t advType = 0);
     virtual BLEService *getService(const BLEUUID &uuid);
     virtual BLECharacteristic *getChar(const BLEUUID &serviceUuid, const BLEUUID &charUuid);
 
-    void startServices();
-    void notify(const BLEUUID &serviceUuid,
-                const BLEUUID &charUuid,
-                uint8_t *data,
-                size_t size);
-    void stop();
+    virtual void start();
+    virtual void startAdvertising();
 
-    void onConnect(BLEServer *pServer, ble_gap_conn_desc *desc);
-    void onDisconnect(BLEServer *pServer);
+    virtual void notify(const BLEUUID &serviceUuid,
+                        const BLEUUID &charUuid,
+                        uint8_t *data,
+                        size_t size);
 
-    void startAdvertising();
+    virtual void stop();
 
-    void start();
+    virtual void onConnect(BLEServer *pServer, ble_gap_conn_desc *desc);
+    virtual void onDisconnect(BLEServer *pServer);
+    virtual void onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc);
+    virtual uint32_t onPassKeyRequest();
+    virtual void onAuthenticationComplete(ble_gap_conn_desc *desc);
+    virtual bool onConfirmPIN(uint32_t pin);
 
-    void onRead(BLECharacteristic *c) {
+    virtual void onRead(BLECharacteristic *c) {
         log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
     }
 
-    void onWrite(BLECharacteristic *c) {
+    virtual void onWrite(BLECharacteristic *c) {
         log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
     }
 
-    void onNotify(BLECharacteristic *c) {
+    virtual void onNotify(BLECharacteristic *c) {
         log_i("%d", c->getValue<int>());
     }
 
-    void onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {
+    virtual void onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {
         log_i("client ID: %d Address: %s ...",
               desc->conn_handle,
               BLEAddress(desc->peer_ota_addr).toString().c_str());

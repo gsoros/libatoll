@@ -6,7 +6,7 @@
 #include "atoll_serial.h"
 
 #ifndef ATOLL_LOG_BUFFER_SIZE
-#define ATOLL_LOG_BUFFER_SIZE 256
+#define ATOLL_LOG_BUFFER_SIZE 512
 #endif
 
 #ifdef log_i
