@@ -6,12 +6,12 @@ using namespace Atoll;
 GPS::~GPS() { delete serial; }
 
 void GPS::loop() {
-    uint32_t failedChecksum = gps.failedChecksum();
+    uint32_t failedChecksum = device.failedChecksum();
     while (0 < serial->available())
-        gps.encode(serial->read());
+        device.encode(serial->read());
 
-    if (gps.failedChecksum() != failedChecksum)
-        log_i("checksums failed: %d", gps.failedChecksum());
+    if (device.failedChecksum() != failedChecksum)
+        log_i("checksums failed: %d", device.failedChecksum());
 
     // if (gps.speed.kmph() < 0.01) return;
     // static unsigned long lastStatus = millis();
@@ -42,25 +42,25 @@ void GPS::loop() {
 }
 
 bool GPS::syncSystemTime() {
-    if (!gps.time.isValid() || !gps.date.isValid() || gps.date.year() < 2022)
+    if (!device.time.isValid() || !device.date.isValid() || device.date.year() < 2022)
         return false;
 
     log_i("syncing system time to gps time %04d-%02d-%02d %02d:%02d:%02d",
-          gps.date.year(),
-          gps.date.month(),
-          gps.date.day(),
-          gps.time.hour(),
-          gps.time.minute(),
-          gps.time.second());
+          device.date.year(),
+          device.date.month(),
+          device.date.day(),
+          device.time.hour(),
+          device.time.minute(),
+          device.time.second());
 
     setSytemTimeFromUtc(
-        gps.date.year(),
-        gps.date.month(),
-        gps.date.day(),
-        gps.time.hour(),
-        gps.time.minute(),
-        gps.time.second(),
-        gps.time.centisecond());
+        device.date.year(),
+        device.date.month(),
+        device.date.day(),
+        device.time.hour(),
+        device.time.minute(),
+        device.time.second(),
+        device.time.centisecond());
 
     return true;
 }

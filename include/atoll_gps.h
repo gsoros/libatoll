@@ -7,7 +7,6 @@
 
 #include "atoll_task.h"
 #include "atoll_touch.h"
-#include "atoll_oled.h"
 #include "atoll_log.h"
 
 namespace Atoll {
@@ -17,7 +16,7 @@ class GPS : public Atoll::Task {
     const char *taskName() { return "GPS"; }
     // SoftwareSerial ss;
     HardwareSerial *serial;
-    TinyGPSPlus gps;
+    TinyGPSPlus device;
     double minMovingSpeed = 2.0;  // km/h
 
     GPS() {}
@@ -34,15 +33,15 @@ class GPS : public Atoll::Task {
     }
 
     uint32_t satellites() {
-        return gps.satellites.value();
+        return device.satellites.value();
     }
 
     bool locationIsValid() {
-        return gps.location.isValid();
+        return device.location.isValid();
     }
 
     bool isMoving() {
-        return gps.speed.isValid() && minMovingSpeed <= gps.speed.kmph();
+        return device.speed.isValid() && minMovingSpeed <= device.speed.kmph();
     }
 
     void loop();

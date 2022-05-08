@@ -1,5 +1,6 @@
 #include "atoll_recorder.h"
 #include "atoll_serial.h"
+#include "atoll_time.h"
 
 using namespace Atoll;
 
@@ -78,12 +79,12 @@ void Recorder::addDataPoint() {
     DataPoint *point = &buffer[bufIndex];
     point->time = time(nullptr);
 
-    if (gps->gps.location.isValid()) {
+    if (gps->device.location.isValid()) {
         point->flags |= Flags.location;
-        point->lat = gps->gps.location.lat();
-        point->lon = gps->gps.location.lng();
+        point->lat = gps->device.location.lat();
+        point->lon = gps->device.location.lng();
         if (prevPositionValid) {
-            double diff = gps->gps.distanceBetween(
+            double diff = gps->device.distanceBetween(
                 prevLat, prevLon, point->lat, point->lon);
             stats.distance += diff;
             // log_i("diff: %f", diff);
@@ -94,9 +95,9 @@ void Recorder::addDataPoint() {
         prevLat = point->lat;
         prevLon = point->lon;
     }
-    if (gps->gps.altitude.isValid()) {
+    if (gps->device.altitude.isValid()) {
         point->flags |= Flags.altitude;
-        point->altitude = (int16_t)gps->gps.altitude.meters();
+        point->altitude = (int16_t)gps->device.altitude.meters();
         if (prevAltValid) {
             if (prevAlt < point->altitude) {
                 stats.altGain += point->altitude - prevAlt;
