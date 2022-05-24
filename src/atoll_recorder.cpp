@@ -7,7 +7,7 @@ using namespace Atoll;
 Recorder *Recorder::instance = nullptr;
 
 void Recorder::setup(GPS *gps,
-                     Fs *fs,
+                     Fs *device,
                      Api *api,
                      Recorder *instance) {
     if (nullptr == gps) {
@@ -15,15 +15,16 @@ void Recorder::setup(GPS *gps,
         return;
     }
     this->gps = gps;
-    if (nullptr == fs) {
-        log_e("no fs");
+    if (nullptr == device) {
+        log_e("no device");
         return;
     }
-    if (!fs->mounted) {
-        log_e("fs not mounted");
+    this->device = device;
+    if (!device->mounted) {
+        log_e("device fs not mounted");
         return;
     }
-    this->fs = fs->pFs();
+    this->fs = device->pFs();
     if (nullptr == instance) return;
     this->instance = instance;
     this->api = api;
@@ -164,9 +165,14 @@ bool Recorder::saveBuffer() {
         log_e("could not get current file path");
         return false;
     }
+    if (!device->aquireMutex()) {
+        log_e("could not aquire mutex");
+        return false;
+    }
     File file = fs->open(path, FILE_APPEND);
     if (!file) {
         log_e("could not open %s for appending", path);
+        device->releaseMutex();
         return false;
     }
     size_t wrote = file.write((uint8_t *)buffer, toWrite);
@@ -174,15 +180,18 @@ bool Recorder::saveBuffer() {
         if (0 == wrote) {
             log_e("cannot write to %s", path);
             file.close();
+            device->releaseMutex();
             return false;
         }
         log_e("buffer is %d bytes but wrote only %d bytes to %s",
               toWrite, wrote, path);
         file.close();
+        device->releaseMutex();
         return false;
     }
     log_i("wrote %d bytes to %s (was %d bytes)", wrote, path, file.size());
     file.close();
+    device->releaseMutex();
     bufIndex = 0;
     return true;
 }
@@ -197,9 +206,14 @@ bool Recorder::saveStats() {
         log_e("could not get current stats path");
         return false;
     }
+    if (!device->aquireMutex()) {
+        log_e("could not aquire mutex");
+        return false;
+    }
     File file = fs->open(sp, FILE_WRITE);
     if (!file) {
         log_e("could not open %s for writing", sp);
+        device->releaseMutex();
         return false;
     }
     size_t wrote = file.write((uint8_t *)&stats, sizeof(stats));
@@ -207,15 +221,18 @@ bool Recorder::saveStats() {
         if (0 == wrote) {
             log_e("cannot write to %s", sp);
             file.close();
+            device->releaseMutex();
             return false;
         }
         log_e("stats is %d bytes but wrote only %d bytes to %s",
               sizeof(stats), wrote, sp);
         file.close();
+        device->releaseMutex();
         return false;
     }
     log_i("wrote %d bytes to %s", wrote, sp);
     file.close();
+    device->releaseMutex();
     return true;
 }
 
@@ -226,10 +243,15 @@ bool Recorder::loadStats(bool reportFail) {
         return false;
     }
     File file;
+    if (!device->aquireMutex()) {
+        if (reportFail) log_e("could not aquire mutex");
+        return false;
+    }
     if (fs->exists(sp))
         file = fs->open(sp);
     if (!file) {
         if (reportFail) log_e("could not open %s for reading", sp);
+        device->releaseMutex();
         return false;
     }
     Stats tmpStats;
@@ -237,10 +259,12 @@ bool Recorder::loadStats(bool reportFail) {
     if (read < sizeof(tmpStats)) {
         if (reportFail) log_e("cannot read from %s", sp);
         file.close();
+        device->releaseMutex();
         return false;
     }
     log_i("read %d bytes from %s", read, sp);
     file.close();
+    device->releaseMutex();
     stats.distance += tmpStats.distance;
     stats.altGain += tmpStats.altGain;
     onDistanceChanged(stats.distance);
@@ -263,16 +287,22 @@ const char *Recorder::currentPath(bool reset) {
         log_e("no fs");
         return nullptr;
     }
+    if (!device->aquireMutex()) {
+        log_e("could not aquire mutex");
+        return nullptr;
+    }
     File file = fs->open(basePath);
     if (!file) {
         if (!fs->mkdir(basePath)) {
             log_e("could not create %s", basePath);
+            device->releaseMutex();
             return nullptr;
         }
         file = fs->open(basePath);
     }
     if (!file) {
         log_e("could not open %s", basePath);
+        device->releaseMutex();
         return nullptr;
     }
     file.close();
@@ -291,6 +321,7 @@ const char *Recorder::currentPath(bool reset) {
                         strncpy(path, testPath, sizeof(path));
                         log_i("continuing recording of %s", path);
                         // loadStats(); already called by start()
+                        device->releaseMutex();
                         return path;
                     } else
                         log_e("%s size %d is not multiple of %d (corrupt file?)",
@@ -303,7 +334,8 @@ const char *Recorder::currentPath(bool reset) {
     time_t t = buffer[0].time;
     if (0 == t) {
         if (!systemTimeLastSet()) {
-            log_e("system time has not been set");
+            log_i("system time has not been set");
+            device->releaseMutex();
             return nullptr;
         }
         t = now();
@@ -337,6 +369,7 @@ const char *Recorder::currentPath(bool reset) {
         file.close();
     } else
         log_e("could not open %s for writing", continuePath);
+    device->releaseMutex();
     return path;
 }
 
@@ -428,7 +461,14 @@ bool Recorder::stop(bool forgetLast) {
     currentStatsPath(true);  // reset
     if (forgetLast) {
         log_i("recording end");
-        fs->remove(continuePath);
+        if (nullptr == fs)
+            log_e("no fs");
+        else if (!device->aquireMutex())
+            log_e("could not aquire mutex");
+        else {
+            fs->remove(continuePath);
+            device->releaseMutex();
+        }
         stats = Stats();
         if (cpLen)
             rec2gpx(recPath, gpxPath);
@@ -548,16 +588,20 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
         log_e("fs is null");
         return false;
     }
+    if (!device->aquireMutex()) {
+        log_e("could not aquire mutex");
+        return false;
+    }
     if (!fs->exists(recPath)) {
         log_e("%s does not exist", recPath);
+        device->releaseMutex();
         return false;
     }
 
     char gpxPath[strlen(gpxPathIn) + 1] = "";
     strncat(gpxPath, gpxPathIn, sizeof(gpxPath));
     if (fs->exists(gpxPath)) {
-        log_e("%s already exists", gpxPath);
-        // return false;
+        log_i("%s already exists", gpxPath);
         bool found = false;
         char tmpPath[strlen(recPath) + 1] = "";
         char testPath[sizeof(tmpPath) + 5] = "";
@@ -575,18 +619,21 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
         }
         if (!found) {
             log_e("could not create unused gpx file name");
+            device->releaseMutex();
             return false;
         }
     }
     File rec = fs->open(recPath);
     if (!rec) {
         log_e("could not open %s", recPath);
+        device->releaseMutex();
         return false;
     }
     File gpx = fs->open(gpxPath, FILE_WRITE);
     if (!gpx) {
         log_e("could not open %s", gpxPath);
         rec.close();
+        device->releaseMutex();
         return false;
     }
     log_i("rec: %s gpx: %s", recPath, gpxPath);
@@ -654,8 +701,11 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
         rec.close();
         gpx.close();
         fs->remove(gpxPath);
+        device->releaseMutex();
         return false;
     }
+
+    device->releaseMutex();
     // Serial.print(header);
     DataPoint point;
 
@@ -704,8 +754,13 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     uint32_t points = 0;
     time_t prevTime = 0;
     while (rec.read((uint8_t *)&point, sizeof(point)) == sizeof(point)) {
+        if (!device->aquireMutex()) {
+            log_e("could not aquire mutex");
+            continue;
+        }
         if (0 == point.time) {
             log_e("point %d time is zero", points);
+            device->releaseMutex();
             continue;
         }
         if (point.time < prevTime)
@@ -786,16 +841,23 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
         pointBufLen = strlen(pointBuf);
         if (gpx.write((uint8_t *)&pointBuf, pointBufLen) != pointBufLen) {
             log_e("could not write point #%d to %s", points, gpxPath);
+            device->releaseMutex();
             continue;
         }
         // Serial.print(pointBuf);
         points++;
+        device->releaseMutex();
+    }
+    if (!device->aquireMutex()) {
+        log_e("could not aquire mutex");
+        return false;
     }
     if (gpx.write((uint8_t *)footer, strlen(footer)) != strlen(footer)) {
         log_e("could not write footer to %s", gpxPath);
         rec.close();
         gpx.close();
         fs->remove(gpxPath);
+        device->releaseMutex();
         return false;
     }
     // Serial.print(footer);
@@ -805,10 +867,12 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     if (!gpx) {
         log_e("could not open %s", gpxPath);
         gpx.close();
+        device->releaseMutex();
         return false;
     }
     log_i("%s created, size: %d bytes", gpxPath, gpx.size());
     gpx.close();
+    device->releaseMutex();
     return true;
 }
 

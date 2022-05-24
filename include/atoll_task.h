@@ -45,6 +45,7 @@ class Task {
         _taskSetDelayFromFreq();
         log_i("Starting task '%s' at %.2fHz (delay: %dms), stack %d",
               taskName(), _taskFreq, _xTaskDelay, _taskStack);
+        log_i("free heap before: %d", xPortGetFreeHeapSize());
         BaseType_t err = xTaskCreatePinnedToCore(
             _taskLoop,
             taskName(),
@@ -53,6 +54,7 @@ class Task {
             _taskPriority,
             &taskHandle,
             _taskCore);
+        log_i("free heap  after: %d", xPortGetFreeHeapSize());
         if (pdPASS != err)
             log_e("Failed to start task '%s', error %d", taskName(), err);
         // else

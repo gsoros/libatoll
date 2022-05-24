@@ -31,34 +31,32 @@ namespace Atoll {
 
 class SdCard : public Fs {
    public:
-    SPIClass spi = SPIClass();  // = SPIClass(VSPI);
-    uint8_t sckPin;
-    uint8_t misoPin;
-    uint8_t mosiPin;
     uint8_t csPin;
     fs::SDFS *card = &SD;  // = &AtollSD;
 
-    SdCard(uint8_t sck, uint8_t miso, uint8_t mosi, uint8_t cs) {
-        sckPin = sck;
-        misoPin = miso;
-        mosiPin = mosi;
+    SdCard(uint8_t cs, SemaphoreHandle_t *mutex = nullptr) {
         csPin = cs;
+        if (nullptr != mutex)
+            this->mutex = mutex;
     }
+
     virtual ~SdCard() {}
 
     void setup() {
-        pinMode(misoPin, INPUT_PULLUP);
-        // digitalWrite(csPin, HIGH);
-        spi.begin(sckPin, misoPin, mosiPin, csPin);
-        // digitalWrite(csPin, LOW);
-        if (!card->begin(csPin, spi, 4000000U, "/sd", (uint8_t)5U, true)) {
+        if (!aquireMutex()) {
+            log_e("failed to aquire mutex");
+            return;
+        }
+        if (!card->begin(csPin, SPI, 4000000U, "/sd", (uint8_t)5U, true)) {
             log_e("mount failed");
+            releaseMutex();
             return;
         }
 
         uint8_t cardType = card->cardType();
         if (cardType == CARD_NONE) {
             log_e("no card");
+            releaseMutex();
             return;
         }
         mounted = true;
@@ -82,6 +80,8 @@ class SdCard : public Fs {
               card->totalBytes(),
               card->usedBytes(),
               card->totalBytes() - SD.usedBytes());
+
+        releaseMutex();
     }
 
     fs::FS *pFs() {
@@ -89,7 +89,9 @@ class SdCard : public Fs {
     }
 
     void unmount() {
+        if (!aquireMutex()) return;
         card->end();
+        releaseMutex();
     }
 
     int format() {

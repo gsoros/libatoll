@@ -85,6 +85,7 @@ class Recorder : public Task {
     Stats stats;                                              // current recording stats
     bool isRecording = false;                                 //
     GPS *gps = nullptr;                                       //
+    Atoll::Fs *device = nullptr; //
     FS *fs = nullptr;                                         //
     Api *api = nullptr;                                       //
     static Recorder *instance;                                // instance pointer for static access

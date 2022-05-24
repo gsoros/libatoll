@@ -26,7 +26,10 @@ class Mdns {
             log_e("no port");
             return;
         }
-        MDNS.begin(hostname);
+        if (!MDNS.begin(hostname)) {
+            log_e("mdns start failed");
+            return;
+        }
         MDNS.enableArduino(port);
         log_i("mDNS responder listening on %s.local:%d", hostname, port);
     }

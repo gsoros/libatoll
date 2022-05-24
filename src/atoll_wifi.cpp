@@ -26,7 +26,6 @@ void Wifi::setup(
 
     loadDefaultSettings();
     loadSettings();
-    applySettings();
     registerCallbacks();
 
     if (nullptr == instance) return;
@@ -44,7 +43,11 @@ void Wifi::loop() {
     taskStop();
 };
 
-void Wifi::off() {
+void Wifi::start() {
+    applySettings();
+};
+
+void Wifi::stop() {
     log_i("shutting down");
     settings.enabled = false;
     applySettings();
@@ -121,7 +124,10 @@ void Wifi::printSTASettings() {
 };
 
 void Wifi::applySettings() {
-    log_i("Applying settings, connections will be reset");
+    log_i("applying settings, wifi: %sabled ap: %sabled sta: %sabled",
+          settings.enabled ? "en" : "dis",
+          settings.apEnabled ? "en" : "dis",
+          settings.staEnabled ? "en" : "dis");
 #ifdef FEATURE_SERIAL
     Serial.flush();
 #endif

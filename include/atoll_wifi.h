@@ -51,7 +51,8 @@ class Wifi : public Preferences, public Task {
         WifiSerial *wifiSerial = nullptr);
 
     void loop();
-    void off();
+    void start();
+    void stop();
     void loadSettings();
     void loadDefaultSettings();
     void saveSettings();
