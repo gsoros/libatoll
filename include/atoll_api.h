@@ -67,7 +67,7 @@ class ApiMessage {
     char reply[ATOLL_API_MSG_REPLY_LENGTH] = "";
     bool log = true;  // set false to suppress logging when processing messages
 
-    size_t appendToValue(const char *str, bool onlyIfNotEmpty = false) {
+    size_t valueAppend(const char *str, bool onlyIfNotEmpty = false) {
         size_t sVal = strlen(reply);
         if (onlyIfNotEmpty && !sVal) return 0;
         strncat(reply, str, ATOLL_API_MSG_REPLY_LENGTH - sVal - strlen(str) - 1);

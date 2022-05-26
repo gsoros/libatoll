@@ -29,6 +29,17 @@ void BleClient::setup(
 
 void BleClient::loop() {
     if (!enabled) return;
+    if (shouldStop) {
+        if (scan->isScanning()) scan->stop();
+        disconnectPeers();
+        delay(100);
+        deleteClients();
+        delay(100);
+        enabled = false;
+        shouldStop = false;
+        taskStop();
+        return;
+    }
     if (scan->isScanning()) return;
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
@@ -52,17 +63,24 @@ void BleClient::loop() {
     }
 }
 
-// delete clients and stop scanning
 void BleClient::stop() {
+    shouldStop = true;
+}
+
+void BleClient::disconnectPeers() {
     for (uint8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
-        if (peers[i]->hasClient()) {
-            peers[i]->deleteClient();
-        }
+        if (peers[i]->isConnected())
+            peers[i]->disconnect();
     }
-    if (scan->isScanning()) scan->stop();
-    enabled = false;
-    delay(100);  // give the ble stack a chance to clear packets
+}
+
+void BleClient::deleteClients() {
+    for (uint8_t i = 0; i < peersMax; i++) {
+        if (nullptr == peers[i]) continue;
+        if (peers[i]->hasClient())
+            peers[i]->deleteClient();
+    }
 }
 
 uint32_t BleClient::startScan(uint32_t duration) {

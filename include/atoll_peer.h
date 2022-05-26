@@ -217,12 +217,12 @@ class Peer : public BLEClientCallbacks {
     virtual void connect();
 
     virtual void disconnect() {
-        shouldConnect = false;
         if (!hasClient()) {
             log_e("hasClient() is false");
             return;
         }
         unsubscribeChars();
+        shouldConnect = false;
         if (isConnected())
             client->disconnect();
         while (isConnected()) {

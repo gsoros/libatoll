@@ -26,13 +26,14 @@ class Ota : public Task {
     void setup();
     void setup(const char *hostName, Recorder *recorder = nullptr);
     void setup(const char *hostName, uint16_t port, Recorder *recorder = nullptr);
+    void start();
     void loop();
     void off();
 
-    void onStart();
-    void onEnd();
-    void onProgress(uint progress, uint total);
-    void onError(ota_error_t error);
+    virtual void onStart();
+    virtual void onEnd();
+    virtual void onProgress(uint progress, uint total);
+    virtual void onError(ota_error_t error);
 
    protected:
     uint16_t savedTaskFreq = ATOLL_OTA_TASK_FREQ;

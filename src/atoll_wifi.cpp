@@ -264,31 +264,31 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
 
     if (prevConnected != connected) {
         if (connected) {
-            if (nullptr != ota) {
-                log_i("restarting Ota");
-                ota->off();
-                ota->taskStop();
-                ota->setup(hostName, recorder);
-                ota->taskStart(ATOLL_OTA_TASK_FREQ);
-            }
+            // if (nullptr != ota) {
+            //     log_i("restarting Ota");
+            //     ota->off();
+            //     ota->taskStop();
+            //     ota->setup(hostName, recorder);
+            //     ota->taskStart(ATOLL_OTA_TASK_FREQ);
+            // }
 #ifdef FEATURE_SERIAL
-            if (nullptr != wifiSerial) {
-                log_i("restarting wifiSerial");
-                wifiSerial->off();
-                wifiSerial->setup();
-                wifiSerial->taskStart();
-            }
+            // if (nullptr != wifiSerial) {
+            //     log_i("restarting wifiSerial");
+            //     wifiSerial->off();
+            //     wifiSerial->setup();
+            //     wifiSerial->taskStart();
+            // }
 #endif
         } else {
-            if (nullptr != ota) {
-                log_i("stopping Ota");
-                ota->taskStop();
-            }
+            // if (nullptr != ota) {
+            //     log_i("stopping Ota");
+            //     ota->taskStop();
+            // }
 #ifdef FEATURE_SERIAL
-            if (nullptr != wifiSerial) {
-                log_i("stopping wifiSerial");
-                wifiSerial->off();
-            }
+            // if (nullptr != wifiSerial) {
+            //     log_i("stopping wifiSerial");
+            //     wifiSerial->off();
+            // }
 #endif
         }
     }

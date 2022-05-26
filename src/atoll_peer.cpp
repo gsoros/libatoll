@@ -69,7 +69,7 @@ void Peer::subscribeChars() {
 void Peer::unsubscribeChars() {
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
-            log_i("unsubscribing %s", chars[i]->label);
+            log_i("%s unsubscribing %s", name, chars[i]->label);
             chars[i]->unsubscribe();
         }
 }

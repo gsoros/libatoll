@@ -44,7 +44,12 @@ bool PeerCharacteristic::subscribe(BLEClient* client) {
 }
 
 bool PeerCharacteristic::unsubscribe() {
+    log_i("unsub: %schar", characteristic ? "" : "no ");
     if (!characteristic) return false;
+    // characteristic->unsubscribe(false);
+    // log_i("unsub: done");
+    // return true;
     bool res = characteristic->unsubscribe();
+    log_i("unsub: %s", res ? "succ" : "fail");
     return res;
 }

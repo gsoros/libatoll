@@ -47,6 +47,9 @@ class BleClient : public Task,
     virtual void loop();
     virtual void stop();
 
+    virtual void disconnectPeers();
+    virtual void deleteClients();
+
     virtual uint32_t startScan(uint32_t duration);
     virtual bool callScanStart(uint32_t duration);
 
@@ -63,6 +66,8 @@ class BleClient : public Task,
     virtual void printSettings();
 
    protected:
+    bool shouldStop = false;
+
     // advertised device callback
     virtual void onResult(BLEAdvertisedDevice* advertisedDevice);
 

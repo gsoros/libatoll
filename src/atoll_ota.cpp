@@ -17,11 +17,7 @@ void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
         log_i("already serving");
         return;
     }
-    log_i("hostname: %s port: %d", hostName, port);
-    if (WiFi.getMode() == WIFI_MODE_NULL) {
-        log_i("Wifi is disabled, not starting");
-        return;
-    }
+    log_i("%s:%d", hostName, port);
     ArduinoOTA.setHostname(hostName);  // Hostname defaults to esp3232-[MAC]
     ArduinoOTA.setPort(port);          // Port defaults to 3232
     ArduinoOTA.setTimeout(5000);       // for choppy WiFi
@@ -45,9 +41,17 @@ void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
         .onError([this](ota_error_t error) {
             onError(error);
         });
-    ArduinoOTA.begin();
+    // start();
     serving = true;
     this->recorder = recorder;
+}
+
+void Ota::start() {
+    if (WiFi.getMode() == WIFI_MODE_NULL) {
+        log_i("Wifi is disabled, not starting");
+        return;
+    }
+    ArduinoOTA.begin();
 }
 
 void Ota::loop() {

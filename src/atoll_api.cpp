@@ -464,7 +464,7 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
             return success();
         }
     }
-    msg->appendToValue("|", true);
-    msg->appendToValue("build|reboot|secureApi[:0|1]|passkey[:1..999999]");
+    msg->valueAppend("|", true);
+    msg->valueAppend("build|reboot|secureApi[:0|1]|passkey[:1..999999]");
     return result("argInvalid");
 }
