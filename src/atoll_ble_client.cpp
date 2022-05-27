@@ -76,10 +76,16 @@ void BleClient::disconnectPeers() {
 }
 
 void BleClient::deleteClients() {
+    std::__cxx11::list<BLEClient*>* clients = BLEDevice::getClientList();
+    for (auto it = clients->cbegin(); it != clients->cend(); ++it)
+        if (!BLEDevice::deleteClient((*it)))
+            log_i("failed to delete client");
+
     for (uint8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
         if (peers[i]->hasClient())
-            peers[i]->deleteClient();
+            peers[i]->unsetClient();
+        // peers[i]->deleteClient();
     }
 }
 

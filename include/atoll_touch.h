@@ -256,7 +256,7 @@ class Touch : public Task, public Preferences {
 
     virtual void attachInterrupt(uint8_t index, void (*ISR)()) {
         if (pads[index].pin < 0) return;
-        // log_i("%d %d", index, pads[index].pin);
+        log_i("%d %d %d", index, pads[index].pin, pads[index].threshold);
         touchAttachInterrupt(pads[index].pin, ISR, pads[index].threshold);
     }
 };

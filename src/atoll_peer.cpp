@@ -4,9 +4,10 @@
 using namespace Atoll;
 
 Peer::~Peer() {
-    log_i("calling deleteClient() for %s", name);
     disconnect();
-    deleteClient();
+    // log_i("calling deleteClient() for %s", name);
+    // deleteClient();
+    unsetClient();
 }
 
 void Peer::connect() {

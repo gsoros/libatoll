@@ -192,19 +192,23 @@ class Peer : public BLEClientCallbacks {
         client = nullptr;
     }
 
-    virtual bool deleteClient() {
-        if (!hasClient()) return true;
-        disconnect();
-        // TODO BLEDevice::deleteClient crashes
-        log_i("calling BLEDevice::deleteClient()");
-        if (!BLEDevice::deleteClient(client)) {
-            log_i("could not delete client for %s", name);
-            return false;
-        }
-        log_i("client deleted for %s", name);
-        unsetClient();
-        return true;
-    }
+    // virtual bool deleteClient() {
+    //     disconnect();
+    //     if (!hasClient()) return true;
+    //     while (client->isConnected()) {
+    //         log_i("waiting for disconnect");
+    //         delay(500);
+    //     }
+    //     log_i("calling BLEDevice::deleteClient(%d)", (int)client);
+    //     // TODO BLEDevice::deleteClient sometimes crashes with multi_heap_free multi_heap_poisoning.c:253 (head != NULL)
+    //     if (!BLEDevice::deleteClient(client)) {
+    //         log_i("could not delete client for %s", name);
+    //         return false;
+    //     }
+    //     log_i("client deleted for %s", name);
+    //     unsetClient();
+    //     return true;
+    // }
 
     virtual bool hasClient() {
         return client != nullptr;
@@ -227,9 +231,8 @@ class Peer : public BLEClientCallbacks {
             client->disconnect();
         while (isConnected()) {
             log_i("waiting for disconnect...");
-            delay(1000);
+            delay(500);
         }
-        // deleteClient();
     }
 
     virtual void subscribeChars();
