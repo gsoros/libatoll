@@ -413,7 +413,8 @@ ApiResult *Api::initProcessor(ApiMessage *msg) {
 
 ApiResult *Api::systemProcessor(ApiMessage *msg) {
     if (0 == strcmp("build", msg->arg)) {
-        snprintf(msg->reply, msgReplyLength, "%s %s", __DATE__, __TIME__);
+        snprintf(msg->reply, msgReplyLength, "%s%s %s %s",
+                 VERSION, BUILDTAG, __DATE__, __TIME__);
         return success();
     } else if (0 == strcmp("reboot", msg->arg)) {
         log_i("rebooting");

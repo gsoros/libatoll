@@ -8,6 +8,13 @@
 #include "atoll_ble_server.h"
 #include "atoll_api_rx_callbacks.h"
 
+#ifndef VERSION
+#define VERSION "0.1"
+#endif
+#ifndef BUILDTAG
+#define BUILDTAG "dev"
+#endif
+
 #ifndef ATOLL_API_COMMAND_STR_LENGTH
 #define ATOLL_API_COMMAND_STR_LENGTH 512
 #endif
