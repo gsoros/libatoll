@@ -32,7 +32,8 @@ class WifiSerial : public Task, public Stream {
                float taskFreq = 0.0,
                uint32_t taskStack = 0);
     void loop();
-    void off();
+    void start();
+    void stop();
     void disconnect();
     size_t write(uint8_t c);
     size_t write(const uint8_t *buf, size_t size);

@@ -14,16 +14,11 @@ void WifiSerial::setup(
     if (0.0 < taskFreq) taskSetFreq(taskFreq);
     if (0 < taskStack) _taskStack = taskStack;
     _server = WiFiServer(_port, _maxClients);
-    if (WiFi.getMode() == WIFI_MODE_NULL) {
-        log_i("Wifi is disabled, not starting");
-        return;
-    }
-    log_i("starting on %s:%d, max %d client%s",
+    log_i("setup: %s:%d, max %d client%s",
           WiFi.localIP().toString().c_str(),
           _port,
           _maxClients,
           1 < _maxClients ? "s" : "");
-    _server.begin();
 }
 
 void WifiSerial::loop() {
@@ -64,7 +59,11 @@ void WifiSerial::loop() {
     }
 }
 
-void WifiSerial::off() {
+void WifiSerial::start() {
+    _server.begin();
+}
+
+void WifiSerial::stop() {
     log_i("Shutting down");
     disconnect();
     taskStop();

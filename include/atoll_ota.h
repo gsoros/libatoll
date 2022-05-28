@@ -28,7 +28,7 @@ class Ota : public Task {
     void setup(const char *hostName, uint16_t port, Recorder *recorder = nullptr);
     void start();
     void loop();
-    void off();
+    void stop();
 
     virtual void onStart();
     virtual void onEnd();

@@ -62,7 +62,7 @@ void Ota::loop() {
     ArduinoOTA.handle();
 }
 
-void Ota::off() {
+void Ota::stop() {
     if (!serving) {
         log_i("not serving");
         return;

@@ -17,7 +17,7 @@ class Mdns {
         this->port = port;
     }
 
-    void begin() {
+    void start() {
         if (nullptr == hostname) {
             log_e("no hostname");
             return;
@@ -27,14 +27,14 @@ class Mdns {
             return;
         }
         if (!MDNS.begin(hostname)) {
-            log_e("mdns start failed");
+            log_e("mdns begin failed");
             return;
         }
         MDNS.enableArduino(port);
         log_i("mDNS responder listening on %s.local:%d", hostname, port);
     }
 
-    void end() {
+    void stop() {
         MDNS.end();
         log_i("mDNS stopped");
     }
