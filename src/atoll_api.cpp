@@ -326,6 +326,10 @@ ApiResult *Api::error() {
     return result("error");
 }
 
+ApiResult *Api::internalError() {
+    return result("internalError");
+}
+
 // Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
 ApiMessage Api::process(const char *commandWithArg, bool log) {
@@ -403,7 +407,7 @@ ApiResult *Api::initProcessor(ApiMessage *msg) {
         int16_t remaining = msgReplyLength - strlen(reply) - 1;
         if (remaining < strlen(token)) {
             log_e("no space left for adding %s to %s", token, reply);
-            return result("internalError");
+            return internalError();
         }
         strncat(reply, token, remaining);
     }
@@ -465,7 +469,7 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
             return success();
         }
     }
-    msg->valueAppend("|", true);
-    msg->valueAppend("build|reboot|secureApi[:0|1]|passkey[:1..999999]");
+    msg->replyAppend("|", true);
+    msg->replyAppend("build|reboot|secureApi[:0|1]|passkey[:1..999999]");
     return result("argInvalid");
 }

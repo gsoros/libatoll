@@ -880,7 +880,112 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     bool succ = true;
     if (0 < strlen(msg->arg)) {
-        if (0 == strcmp("start", msg->arg))
+        if (0 == strncmp("files", msg->arg, 5)) {
+            if (!instance->device) {
+                log_e("device error");
+                return Api::internalError();
+            }
+            if (!instance->device->aquireMutex()) {
+                log_e("mutex error");
+                return Api::internalError();
+            }
+            if (!instance->fs) {
+                instance->device->releaseMutex();
+                log_e("fs error");
+                return Api::internalError();
+            }
+            File dir = instance->fs->open(instance->basePath);
+            if (!dir) {
+                instance->device->releaseMutex();
+                log_e("could not open %s", instance->basePath);
+                return Api::internalError();
+            }
+            if (!dir.isDirectory()) {
+                instance->device->releaseMutex();
+                log_e("%s not dir", instance->basePath);
+                return Api::internalError();
+            }
+            File f;
+            while (f = dir.openNextFile()) {
+                if (strlen(f.name()) < 4) {
+                    f.close();
+                    continue;
+                }
+                // log_i("checking %s ext: %s", f.name(), f.name() + strlen(f.name()) - 4);
+                if (0 != strcmp(f.name() + strlen(f.name()) - 4, ".gpx")) {
+                    f.close();
+                    continue;
+                }
+                // log_i("adding %s len: %d", f.name(), strlen(msg->reply));
+                if (sizeof(msg->reply) < strlen(msg->reply) + strlen(f.name()) + 15) {
+                    log_e("no more space in reply");
+                    f.close();
+                    break;
+                }
+                msg->replyAppend(", ", true);
+                msg->replyAppend(f.name());
+                f.close();
+            }
+            instance->device->releaseMutex();
+            return Api::success();
+        } else if (0 == strncmp("info:", msg->arg, 5)) {
+            if (strlen(msg->arg) < 7) {
+                log_e("filename too short");
+                return Api::result("argInvalid");
+            }
+            if (!instance->device) {
+                log_e("device error");
+                return Api::internalError();
+            }
+            if (!instance->device->aquireMutex()) {
+                log_e("mutex error");
+                return Api::internalError();
+            }
+            if (!instance->fs) {
+                instance->device->releaseMutex();
+                log_e("fs error");
+                return Api::internalError();
+            }
+            char *name = msg->arg + 5;
+            log_i("name: %s", name);
+            char path[ATOLL_RECORDER_PATH_LENGTH] = "";
+            snprintf(path, sizeof(path), "%s/%s", instance->basePath, name);
+            log_i("path: %s", path);
+            File f = instance->fs->open(path);
+            if (!f) {
+                instance->device->releaseMutex();
+                log_e("could not open %s", path);
+                return Api::internalError();
+            }
+            snprintf(msg->reply, sizeof(msg->reply), "%s size: %d", f.name(), f.size());
+            f.close();
+            char extLess[strlen(name)] = "";
+            for (uint8_t i = 0; i < strlen(name); i++) {
+                if (name[i] == '.') break;
+                extLess[i] = name[i];
+            }
+            strncat(extLess, "\0", 1);
+            log_i("extLess: %s", extLess);
+            snprintf(path, sizeof(path), "%s/%s%s", instance->basePath, extLess, instance->statsExt);
+            log_i("path: %s", path);
+            f = instance->fs->open(path);
+            if (f) {
+                Stats tmpStats;
+                size_t read = f.read((uint8_t *)&tmpStats, sizeof(tmpStats));
+                f.close();
+                if (read < sizeof(tmpStats))
+                    log_e("cannot read from %s", path);
+                else {
+                    log_i("read %d bytes from %s", read, path);
+                    char str[64];
+                    snprintf(str, sizeof(str), ", distance: %f, elevation: %u",
+                             tmpStats.distance, tmpStats.altGain);
+                    msg->replyAppend(str);
+                }
+            }
+            instance->device->releaseMutex();
+            return Api::success();
+        } else if (0 == strcmp("start", msg->arg))
             succ = instance->start();
         else if (0 == strcmp("pause", msg->arg))
             succ = instance->pause();
@@ -888,7 +993,7 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             succ = instance->end();
         else {
             snprintf(msg->reply, sizeof(msg->reply),
-                     "start|pause|end");
+                     "start|pause|end|files|info:filename.gpx");
             return Api::result("argInvalid");
         }
     }
