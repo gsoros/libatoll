@@ -330,6 +330,10 @@ ApiResult *Api::internalError() {
     return result("internalError");
 }
 
+ApiResult *Api::argInvalid() {
+    return result("argInvalid");
+}
+
 // Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
 ApiMessage Api::process(const char *commandWithArg, bool log) {

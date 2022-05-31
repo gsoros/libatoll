@@ -905,7 +905,9 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                 log_e("%s not dir", instance->basePath);
                 return Api::internalError();
             }
+            snprintf(msg->reply, sizeof(msg->reply), "files:");
             File f;
+            size_t added = 0;
             while (f = dir.openNextFile()) {
                 if (strlen(f.name()) < 4) {
                     f.close();
@@ -922,17 +924,18 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                     f.close();
                     break;
                 }
-                msg->replyAppend(", ", true);
+                if (added) msg->replyAppend(";");
                 msg->replyAppend(f.name());
                 f.close();
+                added++;
             }
             instance->device->releaseMutex();
             return Api::success();
-        } else if (0 == strncmp("info:", msg->arg, 5)) {
-            if (strlen(msg->arg) < 7) {
-                log_e("filename too short");
-                return Api::result("argInvalid");
-            }
+        } else if (msg->argStartsWith("info:")) {
+            char name[16] = "";
+            if (!msg->argGetParam("info:", name, sizeof(name)) || strlen(name) < 2)
+                return Api::argInvalid();
+            log_i("name: %s", name);
             if (!instance->device) {
                 log_e("device error");
                 return Api::internalError();
@@ -946,8 +949,6 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                 log_e("fs error");
                 return Api::internalError();
             }
-            char *name = msg->arg + 5;
-            log_i("name: %s", name);
             char path[ATOLL_RECORDER_PATH_LENGTH] = "";
             snprintf(path, sizeof(path), "%s/%s", instance->basePath, name);
             log_i("path: %s", path);
@@ -957,7 +958,7 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                 log_e("could not open %s", path);
                 return Api::internalError();
             }
-            snprintf(msg->reply, sizeof(msg->reply), "%s size: %d", f.name(), f.size());
+            snprintf(msg->reply, sizeof(msg->reply), "info:%s;size:%d", f.name(), f.size());
             f.close();
             char extLess[strlen(name)] = "";
             for (uint8_t i = 0; i < strlen(name); i++) {
@@ -978,22 +979,80 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                 else {
                     log_i("read %d bytes from %s", read, path);
                     char str[64];
-                    snprintf(str, sizeof(str), ", distance: %f, elevation: %u",
+                    snprintf(str, sizeof(str), ";distance:%.0f;altGain:%u",
                              tmpStats.distance, tmpStats.altGain);
                     msg->replyAppend(str);
                 }
             }
             instance->device->releaseMutex();
             return Api::success();
-        } else if (0 == strcmp("start", msg->arg))
-            succ = instance->start();
-        else if (0 == strcmp("pause", msg->arg))
-            succ = instance->pause();
-        else if (0 == strcmp("end", msg->arg))
-            succ = instance->end();
-        else {
+        } else if (msg->argStartsWith("get:")) {
+            char name[16] = "";
+            if (!msg->argGetParam("get:", name, sizeof(name)) || strlen(name) < 2)
+                return Api::argInvalid();
+            log_i("name: %s", name);
+            if (!instance->device) {
+                log_e("device error");
+                return Api::internalError();
+            }
+            if (!instance->device->aquireMutex()) {
+                log_e("mutex error");
+                return Api::internalError();
+            }
+            if (!instance->fs) {
+                instance->device->releaseMutex();
+                log_e("fs error");
+                return Api::internalError();
+            }
+            char path[ATOLL_RECORDER_PATH_LENGTH] = "";
+            snprintf(path, sizeof(path), "%s/%s", instance->basePath, name);
+            log_i("path: %s", path);
+            File f = instance->fs->open(path);
+            if (!f) {
+                instance->device->releaseMutex();
+                log_e("could not open %s", path);
+                return Api::internalError();
+            }
+            char offsetStr[sizeof(int) * 8 + 1];
+            if (!msg->argGetParam("offset:", offsetStr, sizeof(offsetStr))) {
+                f.close();
+                instance->device->releaseMutex();
+                return Api::argInvalid();
+            }
+            int offset = atoi(offsetStr);
+            log_i("get: %s offset: %d", name, offset);
+            char offsetCmp[sizeof(offsetStr)];
+            snprintf(offsetCmp, sizeof(offsetCmp), "%d", offset);
+            if (offset < 0 || f.size() <= offset || 0 != strcmp(offsetStr, offsetCmp)) {
+                f.close();
+                instance->device->releaseMutex();
+                log_e("invalid offset %s", offsetStr);
+                return Api::argInvalid();
+            }
+            if (!f.seek((uint32_t)offset)) {
+                f.close();
+                instance->device->releaseMutex();
+                log_e("could not seek to %d", offset);
+                return Api::internalError();
+            }
+            char buf[sizeof(msg->reply) - strlen(name) - strlen(offsetStr) - 9];
+            size_t read = f.readBytes(buf, sizeof(buf) - 1);
+            f.close();
+            instance->device->releaseMutex();
+            buf[read] = '\0';
+            log_i("bufLen: %d", strlen(buf));
             snprintf(msg->reply, sizeof(msg->reply),
-                     "start|pause|end|files|info:filename.gpx");
+                     "get:%s:%s;%s", name, offsetStr, buf);
+            return Api::success();
+        } else if (0 == strcmp("start", msg->arg)) {
+            succ = instance->start();
+        } else if (0 == strcmp("pause", msg->arg)) {
+            succ = instance->pause();
+        } else if (0 == strcmp("end", msg->arg)) {
+            succ = instance->end();
+        } else {
+            snprintf(msg->reply, sizeof(msg->reply),
+                     "start|pause|end|files|info:filename.gpx|get:filename.gpx;offset:1234");
             return Api::result("argInvalid");
         }
     }

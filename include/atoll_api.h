@@ -74,6 +74,40 @@ class ApiMessage {
     char reply[ATOLL_API_MSG_REPLY_LENGTH] = "";
     bool log = true;  // set false to suppress logging when processing messages
 
+    bool argIs(const char *str) {
+        return argStartsWith(str) && strlen(arg) == strlen(str);
+    }
+
+    bool argStartsWith(const char *str) {
+        int res = strncmp(arg, str, strlen(str));
+        log_i("arg: %s, str: %s, res: %d", arg, str, res);
+        return res == 0;
+    }
+
+    bool argHasParam(const char *str) {
+        char *match;
+        match = strstr(arg, str);
+        log_i("arg: %s, str: %s, res: %s", arg, str, match ? "true" : "false");
+        return match ? true : false;
+    }
+
+    size_t argGetParam(const char *str, char *buf, size_t size, char delim = ';') {
+        char *cp;
+        cp = strstr(arg, str);
+        if (!cp) return 0;
+        size_t copied = 0;
+        cp += strlen(str);
+        while (copied < size) {
+            if (*cp == '\0' || *cp == delim)
+                break;
+            buf[copied] = *cp;
+            copied++;
+            cp++;
+        }
+        buf[copied] = '\0';
+        return copied;
+    }
+
     size_t replyAppend(const char *str, bool onlyIfNotEmpty = false) {
         size_t sVal = strlen(reply);
         if (onlyIfNotEmpty && !sVal) return 0;
@@ -133,6 +167,7 @@ class Api : public Preferences {
     static ApiResult *success();
     static ApiResult *error();
     static ApiResult *internalError();
+    static ApiResult *argInvalid();
 
     static ApiCommand *command(uint8_t code, bool logOnError = true);
     static ApiCommand *command(const char *name, bool logOnError = true);
