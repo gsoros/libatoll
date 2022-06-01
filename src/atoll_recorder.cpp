@@ -1023,6 +1023,7 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             log_i("get: %s offset: %d", name, offset);
             char offsetCmp[sizeof(offsetStr)];
             snprintf(offsetCmp, sizeof(offsetCmp), "%d", offset);
+            if (0 < offset) offset -= 1;
             if (offset < 0 || f.size() <= offset || 0 != strcmp(offsetStr, offsetCmp)) {
                 f.close();
                 instance->device->releaseMutex();
