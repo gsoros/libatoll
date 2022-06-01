@@ -26,7 +26,7 @@ void ApiRxCallbacks::onWrite(BLECharacteristic *c) {
         snprintf(croppedReply, sizeof(croppedReply), "%s;%d=%s",
                  resultStr, msg.commandCode, msg.arg);
     }
-    log_i("apiRxChar reply(%d): %s", strlen(croppedReply), croppedReply);
+    // log_i("apiRxChar reply(%d): %s", strlen(croppedReply), croppedReply);
     if (nullptr != Api::bleServer)
         Api::bleServer->notify(
             BLEUUID(API_SERVICE_UUID),

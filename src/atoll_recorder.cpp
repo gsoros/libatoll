@@ -990,7 +990,7 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             char name[16] = "";
             if (!msg->argGetParam("get:", name, sizeof(name)) || strlen(name) < 2)
                 return Api::argInvalid();
-            log_i("name: %s", name);
+            // log_i("name: %s", name);
             if (!instance->device) {
                 log_e("device error");
                 return Api::internalError();
@@ -1006,7 +1006,7 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             }
             char path[ATOLL_RECORDER_PATH_LENGTH] = "";
             snprintf(path, sizeof(path), "%s/%s", instance->basePath, name);
-            log_i("path: %s", path);
+            // log_i("path: %s", path);
             File f = instance->fs->open(path);
             if (!f) {
                 instance->device->releaseMutex();
@@ -1020,7 +1020,7 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                 return Api::argInvalid();
             }
             int offset = atoi(offsetStr);
-            log_i("get: %s offset: %d", name, offset);
+            // log_i("get: %s offset: %d", name, offset);
             char offsetCmp[sizeof(offsetStr)];
             snprintf(offsetCmp, sizeof(offsetCmp), "%d", offset);
             if (0 < offset) offset -= 1;
@@ -1041,9 +1041,9 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             f.close();
             instance->device->releaseMutex();
             buf[read] = '\0';
-            log_i("bufLen: %d", strlen(buf));
             snprintf(msg->reply, sizeof(msg->reply),
                      "get:%s:%s;%s", name, offsetStr, buf);
+            log_i("get %s:%d sent %d bytes", name, offset, strlen(buf));
             return Api::success();
         } else if (0 == strcmp("start", msg->arg)) {
             succ = instance->start();

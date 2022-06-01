@@ -80,7 +80,7 @@ class ApiMessage {
 
     bool argStartsWith(const char *str) {
         int res = strncmp(arg, str, strlen(str));
-        log_i("arg: %s, str: %s, res: %d", arg, str, res);
+        // log_i("arg: %s, str: %s, res: %d", arg, str, res);
         return res == 0;
     }
 
