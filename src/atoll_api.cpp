@@ -420,11 +420,26 @@ ApiResult *Api::initProcessor(ApiMessage *msg) {
 }
 
 ApiResult *Api::systemProcessor(ApiMessage *msg) {
-    if (0 == strcmp("build", msg->arg)) {
+    if (msg->argIs("build")) {
         snprintf(msg->reply, msgReplyLength, "%s%s %s %s",
                  VERSION, BUILDTAG, __DATE__, __TIME__);
         return success();
-    } else if (0 == strcmp("reboot", msg->arg)) {
+    } else if (msg->argIs("reboot")) {
+        if (bleServer) {
+            BLECharacteristic *c = bleServer->getChar(
+                BLEUUID(API_SERVICE_UUID),
+                BLEUUID(API_TX_CHAR_UUID));
+            if (c) {
+                ApiCommand *command = Api::command("system");
+                ApiResult *result = Api::result("success");
+                if (command && result) {
+                    char msg[32];
+                    snprintf(msg, sizeof(msg), "%d;%d=reboot", result->code, command->code);
+                    c->setValue((uint8_t *)msg, strlen(msg));
+                    c->notify();
+                }
+            }
+        }
         log_i("rebooting");
         delay(500);
         ESP.restart();

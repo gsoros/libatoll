@@ -878,9 +878,15 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
 
 ApiResult *Recorder::recProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
-    bool succ = true;
+    Atoll::ApiResult *result = Api::success();
     if (0 < strlen(msg->arg)) {
-        if (0 == strncmp("files", msg->arg, 5)) {
+        if (msg->argIs("start")) {
+            if (!instance->start()) result = Api::error();
+        } else if (msg->argIs("pause")) {
+            if (!instance->pause()) result = Api::error();
+        } else if (msg->argIs("end")) {
+            if (!instance->end()) result = Api::error();
+        } else if (msg->argIs("files")) {
             if (!instance->device) {
                 log_e("device error");
                 return Api::internalError();
@@ -1045,19 +1051,47 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                      "get:%s:%s;%s", name, offsetStr, buf);
             log_i("get %s:%d sent %d bytes", name, offset, strlen(buf));
             return Api::success();
-        } else if (0 == strcmp("start", msg->arg)) {
-            succ = instance->start();
-        } else if (0 == strcmp("pause", msg->arg)) {
-            succ = instance->pause();
-        } else if (0 == strcmp("end", msg->arg)) {
-            succ = instance->end();
+        } else if (msg->argStartsWith("delete:")) {
+            char name[16] = "";
+            if (!msg->argGetParam("delete:", name, sizeof(name)) || strlen(name) < 2)
+                return Api::argInvalid();
+            // log_i("name: %s", name);
+            if (!instance->device) {
+                log_e("device error");
+                return Api::internalError();
+            }
+            if (!instance->device->aquireMutex()) {
+                log_e("mutex error");
+                return Api::internalError();
+            }
+            if (!instance->fs) {
+                instance->device->releaseMutex();
+                log_e("fs error");
+                return Api::internalError();
+            }
+            char path[ATOLL_RECORDER_PATH_LENGTH] = "";
+            snprintf(path, sizeof(path),
+                     "%s/%s", instance->basePath, name);
+            // log_i("path: %s", path);
+            if (!instance->fs->exists(path)) {
+                instance->device->releaseMutex();
+                log_e("%s not found", path);
+                return Api::argInvalid();
+            }
+            bool success = instance->fs->remove(path);
+            instance->device->releaseMutex();
+            snprintf(msg->reply, sizeof(msg->reply),
+                     success ? "deleted: %s" : "failed to delete: %s", name);
+            log_i("deleted %s", name);
+            return Api::success();
         } else {
             snprintf(msg->reply, sizeof(msg->reply),
-                     "start|pause|end|files|info:filename.gpx|get:filename.gpx;offset:1234");
+                     "start|pause|end|files|info:filename.gpx|"
+                     "get:filename.gpx;offset:1234|delete:filename.gpx");
             return Api::result("argInvalid");
         }
     }
     snprintf(msg->reply, sizeof(msg->reply),
              "%d", instance->isRecording);
-    return succ ? Api::success() : Api::error();
+    return result;
 }
