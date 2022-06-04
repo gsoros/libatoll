@@ -94,7 +94,10 @@ class ApiMessage {
     size_t argGetParam(const char *str, char *buf, size_t size, char delim = ';') {
         char *cp;
         cp = strstr(arg, str);
-        if (!cp) return 0;
+        if (!cp) {
+            log_i("no match for '%s' in '%s'", str, arg);
+            return 0;
+        }
         size_t copied = 0;
         cp += strlen(str);
         while (copied < size) {
@@ -105,6 +108,7 @@ class ApiMessage {
             cp++;
         }
         buf[copied] = '\0';
+        log_i("found '%s' for '%s' in '%s'", buf, str, arg);
         return copied;
     }
 

@@ -188,6 +188,7 @@ class Touch : public Task, public Preferences {
         if (!enabled) {
             if (enableAfter <= t) {
                 enabled = true;
+                attachInterrupts();  // interrupt is disabled by read()
                 log_i("touch enabled");
             } else
                 return;

@@ -40,7 +40,7 @@ class Wifi : public Preferences, public Task {
     static Recorder *recorder;
     static WifiSerial *wifiSerial;
 
-    void setup(
+    virtual void setup(
         const char *hostName,
         ::Preferences *p,
         const char *preferencesNS,
@@ -50,19 +50,19 @@ class Wifi : public Preferences, public Task {
         Recorder *recorder = nullptr,
         WifiSerial *wifiSerial = nullptr);
 
-    void loop();
-    void start();
-    void stop();
-    void loadSettings();
-    void loadDefaultSettings();
-    void saveSettings();
-    void printSettings();
-    void printAPSettings();
-    void printSTASettings();
+    virtual void loop();
+    virtual void start();
+    virtual void stop();
+    virtual void loadSettings();
+    virtual void loadDefaultSettings();
+    virtual void saveSettings();
+    virtual void printSettings();
+    virtual void printAPSettings();
+    virtual void printSTASettings();
     virtual void applySettings();
-    void setEnabled(bool state, bool save = true);
-    bool isEnabled();
-    bool isConnected();
+    virtual void setEnabled(bool state, bool save = true);
+    virtual bool isEnabled();
+    virtual bool isConnected();
     virtual void registerCallbacks();
 
     virtual void onEvent(arduino_event_id_t event, arduino_event_info_t info);
