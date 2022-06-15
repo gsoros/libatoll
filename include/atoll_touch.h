@@ -179,6 +179,8 @@ class Touch : public Task, public Preferences {
         return touchRead(pads[index].pin);
     }
 
+    virtual void onEnabledChanged() {}
+
    protected:
     static ::Preferences *preferences;
     static const char *preferencesNS;
@@ -186,9 +188,11 @@ class Touch : public Task, public Preferences {
     virtual void loop() {
         ulong t = millis();
         if (!enabled) {
-            if (enableAfter <= t) {
+            if (enableAfter <= t && enableAfter != 0) {
                 enabled = true;
+                enableAfter = 0;
                 attachInterrupts();  // interrupt is disabled by read()
+                onEnabledChanged();
                 log_i("touch enabled");
             } else
                 return;
