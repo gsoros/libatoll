@@ -5,8 +5,6 @@ using namespace Atoll;
 
 Wifi *Wifi::instance;
 Ota *Wifi::ota;
-Recorder *Wifi::recorder;
-WifiSerial *Wifi::wifiSerial;
 
 void Wifi::setup(
     const char *hostName,
@@ -14,15 +12,11 @@ void Wifi::setup(
     const char *preferencesNS,
     Wifi *instance,
     Api *api,
-    Ota *ota,
-    Recorder *recorder,
-    WifiSerial *wifiSerial) {
+    Ota *ota) {
     strncpy(this->hostName, hostName, sizeof(this->hostName));
     preferencesSetup(p, preferencesNS);
     this->instance = instance;
     this->ota = ota;
-    this->recorder = recorder;
-    this->wifiSerial = wifiSerial;
 
     loadDefaultSettings();
     loadSettings();
@@ -162,41 +156,6 @@ void Wifi::applySettings() {
             WiFi.begin(settings.staSSID, settings.staPassword);
         }
     }
-
-    /*
-    if (oldMode == wifiMode) {
-        log_i("mode unchanged, not manipulating ota and wifiserial");
-        return;
-    }
-    if (wifiMode == WIFI_MODE_NULL) {
-        if (nullptr != ota) {
-            log_i("stopping Ota");
-            ota->taskStop();
-        }
-#ifdef FEATURE_SERIAL
-        if (nullptr != wifiSerial) {
-            log_i("stopping wifiSerial");
-            wifiSerial->off();
-        }
-#endif
-    } else {
-        if (nullptr != ota) {
-            log_i("restarting Ota");
-            ota->off();
-            ota->taskStop();
-            ota->setup(hostName, recorder);
-            ota->taskStart(ATOLL_OTA_TASK_FREQ);
-        }
-#ifdef FEATURE_SERIAL
-        if (nullptr != wifiSerial) {
-            log_i("restarting wifiSerial");
-            wifiSerial->off();
-            wifiSerial->setup();
-            wifiSerial->taskStart();
-        }
-#endif
-    }
-    */
 };
 
 void Wifi::setEnabled(bool state, bool save) {
@@ -264,31 +223,10 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
 
     if (prevConnected != connected) {
         if (connected) {
-            // if (nullptr != ota) {
-            //     log_i("restarting Ota");
-            //     ota->off();
-            //     ota->taskStop();
-            //     ota->setup(hostName, recorder);
-            //     ota->taskStart(ATOLL_OTA_TASK_FREQ);
-            // }
 #ifdef FEATURE_SERIAL
-            // if (nullptr != wifiSerial) {
-            //     log_i("restarting wifiSerial");
-            //     wifiSerial->off();
-            //     wifiSerial->setup();
-            //     wifiSerial->taskStart();
-            // }
 #endif
         } else {
-            // if (nullptr != ota) {
-            //     log_i("stopping Ota");
-            //     ota->taskStop();
-            // }
 #ifdef FEATURE_SERIAL
-            // if (nullptr != wifiSerial) {
-            //     log_i("stopping wifiSerial");
-            //     wifiSerial->off();
-            // }
 #endif
         }
     }

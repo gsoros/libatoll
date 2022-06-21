@@ -9,10 +9,7 @@ using namespace Atoll;
 void Ota::setup() {
     setup("libAtollOta_unnamed");
 }
-void Ota::setup(const char *hostName, Recorder *recorder) {
-    setup(hostName, 3232, recorder);
-}
-void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
+void Ota::setup(const char *hostName, uint16_t port) {
     if (serving) {
         log_i("already serving");
         return;
@@ -43,7 +40,6 @@ void Ota::setup(const char *hostName, uint16_t port, Recorder *recorder) {
         });
     // start();
     serving = true;
-    this->recorder = recorder;
 }
 
 void Ota::start() {
@@ -91,11 +87,6 @@ void Ota::onStart() {
 
     // log_i("Disabling sleep");
     //  board.sleepEnabled = false;
-
-    if (nullptr != recorder) {
-        log_i("pausing recorder");
-        recorder->pause();
-    }
 }
 
 void Ota::onEnd() {

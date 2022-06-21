@@ -4,7 +4,6 @@
 #include <ArduinoOTA.h>
 
 #include "atoll_task.h"
-#include "atoll_recorder.h"
 #include "atoll_log.h"
 
 #ifndef ATOLL_OTA_TASK_FREQ
@@ -20,12 +19,10 @@ namespace Atoll {
 class Ota : public Task {
    public:
     const char *taskName() { return "Ota"; }
-    Recorder *recorder = nullptr;
     bool serving = false;
 
     void setup();
-    void setup(const char *hostName, Recorder *recorder = nullptr);
-    void setup(const char *hostName, uint16_t port, Recorder *recorder = nullptr);
+    void setup(const char *hostName, uint16_t port = 3232);
     void start();
     void loop();
     void stop();

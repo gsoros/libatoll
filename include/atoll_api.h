@@ -162,6 +162,7 @@ class Api : public Preferences {
                       BleServer *bleServer = nullptr,
                       const char *serviceUuid = nullptr);
     static bool addBleService(BleServer *bleServer, const char *serviceUuid);
+    virtual void beforeBleServiceStart(BLEService *s) {}
     static bool addCommand(ApiCommand command);
     static bool addResult(ApiResult result);
     static ApiMessage process(const char *commandWithArg, bool log = true);

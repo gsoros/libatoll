@@ -86,12 +86,25 @@ BLEService *BleServer::createService(const BLEUUID &uuid) {
     return server->createService(uuid);
 }
 
+void BleServer::removeService(BLEService *s) {
+    server->removeService(s);
+}
+
 void BleServer::advertiseService(const BLEUUID &uuid, uint8_t advType) {
     if (0 == advType)
         advertising->addServiceUUID(uuid);
     else if (1 == advType) {
         BLEAdvertisementData responseData;
         responseData.setCompleteServices(uuid);
+        advertising->setScanResponseData(responseData);
+    }
+}
+
+void BleServer::unAdvertiseService(const BLEUUID &uuid, uint8_t advType) {
+    if (0 == advType)
+        advertising->removeServiceUUID(uuid);
+    else if (1 == advType) {
+        BLEAdvertisementData responseData;
         advertising->setScanResponseData(responseData);
     }
 }

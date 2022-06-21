@@ -49,7 +49,9 @@ class BleServer : public Task,
 
     virtual void setSecurity(bool state, const uint32_t passkey = 0);
     virtual BLEService *createService(const BLEUUID &uuid);
+    virtual void removeService(BLEService *s);
     virtual void advertiseService(const BLEUUID &uuid, uint8_t advType = 0);
+    virtual void unAdvertiseService(const BLEUUID &uuid, uint8_t advType = 0);
     virtual BLEService *getService(const BLEUUID &uuid);
     virtual BLECharacteristic *getChar(const BLEUUID &serviceUuid, const BLEUUID &charUuid);
 

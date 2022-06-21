@@ -92,6 +92,10 @@ bool Api::addBleService(BleServer *bleServer, const char *serviceUuid) {
         return false;
     }
     d->setValue((uint8_t *)str, strlen(str));
+
+    if (instance)
+        instance->beforeBleServiceStart(s);
+
     if (!s->start()) {
         log_e("could not start service");
         return false;
