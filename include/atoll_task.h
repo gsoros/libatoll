@@ -109,6 +109,7 @@ class Task {
         Task *thisPtr = (Task *)p;
         thisPtr->_xLastWakeTime = xTaskGetTickCount();
         for (;;) {
+            // log_i("%s", thisPtr->taskName());
             ulong start = millis();
             thisPtr->loop();
             ulong loopTime = millis() - start;

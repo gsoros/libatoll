@@ -19,6 +19,8 @@ void WifiSerial::setup(
           _port,
           _maxClients,
           1 < _maxClients ? "s" : "");
+    _rxBuf.clear();
+    _txBuf.clear();
 }
 
 void WifiSerial::loop() {

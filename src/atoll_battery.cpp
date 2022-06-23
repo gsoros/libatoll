@@ -22,6 +22,8 @@ void Battery::setup(
 
     addBleService();
 
+    _voltageBuf.clear();
+
     if (nullptr == instance) return;
     if (nullptr != api)
         api->addCommand(ApiCommand("battery", batteryProcessor));
@@ -61,6 +63,7 @@ bool Battery::addBleService() {
         return false;
     }
     bleServer->advertiseService(serviceUuid);
+    log_i("added ble service");
     return true;
 }
 

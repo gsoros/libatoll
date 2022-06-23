@@ -42,6 +42,8 @@ void Api::setup(
 
     if (nullptr != bleServer && nullptr != serviceUuid)
         addBleService(bleServer, serviceUuid);
+
+    _commandBuf.clear();
 }
 
 bool Api::addBleService(BleServer *bleServer, const char *serviceUuid) {
@@ -94,13 +96,14 @@ bool Api::addBleService(BleServer *bleServer, const char *serviceUuid) {
     d->setValue((uint8_t *)str, strlen(str));
 
     if (instance)
-        instance->beforeBleServiceStart(s);
+        instance->beforeBleServiceStart(bleServer, s);
 
     if (!s->start()) {
         log_e("could not start service");
         return false;
     }
     bleServer->advertiseService(BLEUUID(serviceUuid), 1);
+    log_i("added ble service");
     return true;
 }
 
@@ -133,7 +136,7 @@ bool Api::addCommand(ApiCommand newCommand) {
         log_e("error adding %d:%s", newCommand.code, newCommand.name);
         return false;
     }
-    // log_i("Adding command %d:%s", newCommand.code, newCommand.name);
+    log_i("Adding command %d:%s", newCommand.code, newCommand.name);
     commands[numCommands] = newCommand;
     numCommands++;
     return true;
@@ -188,7 +191,7 @@ bool Api::addResult(ApiResult newResult) {
         log_e("error adding %d:%s", newResult.code, newResult.name);
         return false;
     }
-    // log_i("Adding result %d:%s", newResult.code, newResult.name);
+    log_i("Adding result %d:%s", newResult.code, newResult.name);
     results[numResults] = newResult;
     numResults++;
     return true;

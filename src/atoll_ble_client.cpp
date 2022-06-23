@@ -1,3 +1,5 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED) && !defined(CONFIG_BT_NIMBLE_ROLE_OBSERVER_DISABLED)
+
 #include "atoll_ble.h"
 #include "atoll_ble_client.h"
 
@@ -220,3 +222,5 @@ void BleClient::onResult(BLEAdvertisedDevice* advertisedDevice) {
 void BleClient::onScanComplete(BLEScanResults results) {
     log_i("scan end");
 }
+
+#endif

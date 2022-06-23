@@ -133,7 +133,7 @@ class Recorder : public Task {
     bool aquireMutex(SemaphoreHandle_t mutex, uint32_t timeout = 100);
     void releaseMutex(SemaphoreHandle_t mutex);
 
-    virtual bool rec2gpx(const char *in, const char *out);
+    virtual bool rec2gpx(const char *in, const char *out, bool overwrite = false);
 
     static ApiResult *recProcessor(ApiMessage *reply);
 };

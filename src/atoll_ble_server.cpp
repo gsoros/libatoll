@@ -1,8 +1,12 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_PERIPHERAL_DISABLED)
+
 #include "atoll_ble.h"
 #include "atoll_ble_server.h"
 
 using namespace Atoll;
-BleServer::BleServer() {}
+BleServer::BleServer() {
+    _clients.clear();
+}
 
 BleServer::~BleServer() {}
 
@@ -202,3 +206,5 @@ bool BleServer::onConfirmPIN(uint32_t pin) {
     log_i("%d", pin);
     return true;
 }
+
+#endif

@@ -72,7 +72,8 @@ class ApiMessage {
     char arg[ATOLL_API_MSG_ARG_LENGTH] = "";
     ApiResult *result;
     char reply[ATOLL_API_MSG_REPLY_LENGTH] = "";
-    bool log = true;  // set false to suppress logging when processing messages
+    size_t replyLength = 0;  // the actual length of the reply when it contains binary data
+    bool log = true;         // set false to suppress logging when processing messages
 
     bool argIs(const char *str) {
         return argStartsWith(str) && strlen(arg) == strlen(str);
@@ -162,7 +163,7 @@ class Api : public Preferences {
                       BleServer *bleServer = nullptr,
                       const char *serviceUuid = nullptr);
     static bool addBleService(BleServer *bleServer, const char *serviceUuid);
-    virtual void beforeBleServiceStart(BLEService *s) {}
+    virtual void beforeBleServiceStart(BleServer *server, BLEService *service) {}
     static bool addCommand(ApiCommand command);
     static bool addResult(ApiResult result);
     static ApiMessage process(const char *commandWithArg, bool log = true);

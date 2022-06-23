@@ -1,3 +1,5 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
+
 #include "atoll_peer_characteristic_battery.h"
 
 using namespace Atoll;
@@ -26,3 +28,5 @@ bool PeerCharacteristicBattery::encode(const uint8_t value, uint8_t* data, size_
     log_e("not implemented");
     return true;
 }
+
+#endif

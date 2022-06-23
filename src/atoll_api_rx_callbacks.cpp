@@ -16,23 +16,37 @@ void ApiRxCallbacks::onWrite(BLECharacteristic *c) {
         snprintf(resultStr, sizeof(resultStr), "%d:%s",
                  msg.result->code, msg.result->name);
     }
-    char croppedReply[ATOLL_BLE_SERVER_CHAR_VALUE_MAXLENGTH] = "";
+    char reply[ATOLL_BLE_SERVER_CHAR_VALUE_MAXLENGTH] = "";
+    snprintf(reply, sizeof(reply), "%s;%d=",
+             resultStr, msg.commandCode);
+    size_t replyLength = 0;
+    // in case of success we append the reply
     if (msg.result->code == Api::success()->code) {
-        // in case of success we append the reply
-        snprintf(croppedReply, sizeof(croppedReply), "%s;%d=%s",
-                 resultStr, msg.commandCode, msg.reply);
-    } else {
-        // in case of an error we append the arg
-        snprintf(croppedReply, sizeof(croppedReply), "%s;%d=%s",
-                 resultStr, msg.commandCode, msg.arg);
+        size_t replyTextLength = strlen(reply);
+        // msg.replyLength will be set when msg.reply contains binary data
+        size_t replyDataLength = 0 < msg.replyLength ? msg.replyLength : strlen(msg.reply);
+        if (sizeof(reply) < replyTextLength + replyDataLength - 1) {
+            size_t prevLength = replyDataLength;
+            replyDataLength = sizeof(reply) - replyTextLength - 1;
+            log_i("%s reply has been cropped from %d to %d bytes",
+                  reply, prevLength, replyDataLength);
+        }
+        // using memcpy to deal with binary data
+        log_i("reply: '%s', msg.replyLength: %d, replyTextLength: %d, replyDataLength: %d",
+              reply, msg.replyLength, replyTextLength, replyDataLength);
+        memcpy(reply + replyTextLength, msg.reply, replyDataLength);
+        replyLength = replyTextLength + replyDataLength;
+    } else {  // in case of an error we append the arg
+        msg.replyAppend(msg.arg);
+        replyLength = strlen(reply);
     }
-    // log_i("apiRxChar reply(%d): %s", strlen(croppedReply), croppedReply);
+    // log_i("apiRxChar reply(%d): %s", replyLength, reply);
     if (nullptr != Api::bleServer)
         Api::bleServer->notify(
             BLEUUID(API_SERVICE_UUID),
             BLEUUID(API_TX_CHAR_UUID),
-            (uint8_t *)croppedReply,
-            strlen(croppedReply));
+            (uint8_t *)reply,
+            replyLength);
 
     BLECharacteristicCallbacks::onWrite(c);
 }

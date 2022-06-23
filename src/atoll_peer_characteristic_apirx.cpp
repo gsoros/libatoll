@@ -1,3 +1,5 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
+
 #include "atoll_peer_characteristic_apirx.h"
 
 using namespace Atoll;
@@ -20,3 +22,5 @@ bool PeerCharacteristicApiRX::encode(const String value, uint8_t* data, size_t l
     log_e("not implemented");
     return true;
 }
+
+#endif

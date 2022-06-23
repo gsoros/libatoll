@@ -1,3 +1,5 @@
+#ifdef FEATURE_RECORDER
+
 #include "atoll_recorder.h"
 #include "atoll_serial.h"
 #include "atoll_time.h"
@@ -10,6 +12,10 @@ void Recorder::setup(GPS *gps,
                      Fs *device,
                      Api *api,
                      Recorder *instance) {
+    powerBuf.clear();
+    cadenceBuf.clear();
+    heartrateBuf.clear();
+
     if (nullptr == gps) {
         log_e("no gps");
         return;
@@ -578,7 +584,9 @@ void Recorder::releaseMutex(SemaphoreHandle_t mutex) {
 }
 
 // creates non-standard gpx that can be parsed by Str*v*
-bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
+bool Recorder::rec2gpx(const char *recPath,
+                       const char *gpxPathIn,
+                       bool overwrite) {
     if (nullptr == instance) {
         log_e("instance is null");
         return false;
@@ -602,25 +610,29 @@ bool Recorder::rec2gpx(const char *recPath, const char *gpxPathIn) {
     strncat(gpxPath, gpxPathIn, sizeof(gpxPath));
     if (fs->exists(gpxPath)) {
         log_i("%s already exists", gpxPath);
-        bool found = false;
-        char tmpPath[strlen(recPath) + 1] = "";
-        char testPath[sizeof(tmpPath) + 5] = "";
-        strncat(tmpPath, recPath, sizeof(tmpPath) - 2);
-        const char *pool = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVXYZ";
-        for (uint8_t i = 0; i < strlen(pool); i++) {
-            snprintf(testPath, sizeof(testPath), "%s%c.gpx", tmpPath, pool[i]);
-            log_i("testing %s", testPath);
-            if (!fs->exists(testPath)) {
-                found = true;
-                log_i("%s does not exist");
-                strncpy(gpxPath, testPath, sizeof(gpxPath));
-                break;
+        if (overwrite) {
+            log_w("overwriting %s", gpxPath);
+        } else {
+            bool found = false;
+            char tmpPath[strlen(recPath) + 1] = "";
+            char testPath[sizeof(tmpPath) + 5] = "";
+            strncat(tmpPath, recPath, sizeof(tmpPath) - 2);
+            const char *pool = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVXYZ";
+            for (uint8_t i = 0; i < strlen(pool); i++) {
+                snprintf(testPath, sizeof(testPath), "%s%c.gpx", tmpPath, pool[i]);
+                log_i("testing %s", testPath);
+                if (!fs->exists(testPath)) {
+                    found = true;
+                    log_i("%s does not exist");
+                    strncpy(gpxPath, testPath, sizeof(gpxPath));
+                    break;
+                }
             }
-        }
-        if (!found) {
-            log_e("could not create unused gpx file name");
-            device->releaseMutex();
-            return false;
+            if (!found) {
+                log_e("could not create unused gpx file name");
+                device->releaseMutex();
+                return false;
+            }
         }
     }
     File rec = fs->open(recPath);
@@ -886,7 +898,17 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             if (!instance->pause()) result = Api::error();
         } else if (msg->argIs("end")) {
             if (!instance->end()) result = Api::error();
-        } else if (msg->argIs("files")) {
+        } else if (msg->argStartsWith("files")) {
+            const char *cPath = instance->currentPath();
+            static const uint8_t modeRec = 1;
+            static const uint8_t modeGpx = 2;
+            uint8_t mode = 0;
+            if (msg->argIs("files") || msg->argIs("files:rec"))
+                mode = modeRec;
+            else if (msg->argIs("files:gpx"))
+                mode = modeGpx;
+            else
+                return Api::argInvalid();
             if (!instance->device) {
                 log_e("device error");
                 return Api::internalError();
@@ -920,7 +942,15 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                     continue;
                 }
                 // log_i("checking %s ext: %s", f.name(), f.name() + strlen(f.name()) - 4);
-                if (0 != strcmp(f.name() + strlen(f.name()) - 4, ".gpx")) {
+                if (mode == modeGpx &&
+                    0 != strcmp(f.name() + strlen(f.name()) - 4, ".gpx")) {
+                    f.close();
+                    continue;
+                }
+                if (mode == modeRec &&
+                    (8 != strlen(f.name()) ||
+                     nullptr != strchr(f.name(), '.') ||
+                     0 == strcmp(cPath, f.path()))) {
                     f.close();
                     continue;
                 }
@@ -966,12 +996,13 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             }
             snprintf(msg->reply, sizeof(msg->reply), "info:%s;size:%d", f.name(), f.size());
             f.close();
-            char extLess[strlen(name)] = "";
-            for (uint8_t i = 0; i < strlen(name); i++) {
+            char extLess[strlen(name) + 1] = "";
+            uint8_t i;
+            for (i = 0; i < strlen(name); i++) {
                 if (name[i] == '.') break;
                 extLess[i] = name[i];
             }
-            strncat(extLess, "\0", 1);
+            extLess[i + 1] = 0;
             log_i("extLess: %s", extLess);
             snprintf(path, sizeof(path), "%s/%s%s", instance->basePath, extLess, instance->statsExt);
             log_i("path: %s", path);
@@ -1023,6 +1054,7 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             if (!msg->argGetParam("offset:", offsetStr, sizeof(offsetStr))) {
                 f.close();
                 instance->device->releaseMutex();
+                log_e("missing offset");
                 return Api::argInvalid();
             }
             int offset = atoi(offsetStr);
@@ -1042,14 +1074,16 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                 log_e("could not seek to %d", offset);
                 return Api::internalError();
             }
-            char buf[sizeof(msg->reply) - strlen(name) - strlen(offsetStr) - 9];
-            size_t read = f.readBytes(buf, sizeof(buf) - 1);
+            snprintf(msg->reply, sizeof(msg->reply),
+                     "get:%s:%s;", name, offsetStr);
+            size_t replyTextLen = strlen(msg->reply);
+            char buf[sizeof(msg->reply) - replyTextLen - 6];
+            size_t read = f.readBytes(buf, sizeof(buf));
             f.close();
             instance->device->releaseMutex();
-            buf[read] = '\0';
-            snprintf(msg->reply, sizeof(msg->reply),
-                     "get:%s:%s;%s", name, offsetStr, buf);
-            log_i("get %s:%d sent %d bytes", name, offset, strlen(buf));
+            memcpy(msg->reply + replyTextLen, &buf, read);
+            msg->replyLength = replyTextLen + read;
+            log_i("get %s:%s sent %d bytes", name, offsetStr, read);
             return Api::success();
         } else if (msg->argStartsWith("delete:")) {
             char name[16] = "";
@@ -1084,10 +1118,56 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                      success ? "deleted: %s" : "failed to delete: %s", name);
             log_i("deleted %s", name);
             return Api::success();
+        } else if (msg->argStartsWith("regen:")) {
+            char gpxName[16] = "";
+            if (!msg->argGetParam("regen:", gpxName, sizeof(gpxName)) || strlen(gpxName) < 2)
+                return Api::argInvalid();
+            char *gpx = strstr(gpxName, ".gpx");
+            if (!gpx) return Api::argInvalid();
+            char recName[sizeof(gpxName)] = "";
+            strncpy(recName, gpxName, gpx - gpxName);
+            log_i("recName: %s", recName);
+            if (!instance->device) {
+                log_e("device error");
+                return Api::internalError();
+            }
+            if (!instance->device->aquireMutex()) {
+                log_e("mutex error");
+                return Api::internalError();
+            }
+            if (!instance->fs) {
+                instance->device->releaseMutex();
+                log_e("fs error");
+                return Api::internalError();
+            }
+            char gpxPath[ATOLL_RECORDER_PATH_LENGTH] = "";
+            snprintf(gpxPath, sizeof(gpxPath),
+                     "%s/%s", instance->basePath, gpxName);
+            char recPath[ATOLL_RECORDER_PATH_LENGTH] = "";
+            snprintf(recPath, sizeof(recPath),
+                     "%s/%s", instance->basePath, recName);
+            log_i("recPath: %s, gpxPath: %s", recPath, gpxPath);
+            if (!instance->fs->exists(recPath)) {
+                instance->device->releaseMutex();
+                log_e("%s not found", recPath);
+                return Api::argInvalid();
+            }
+            if (!instance->fs->exists(gpxPath)) {
+                instance->device->releaseMutex();
+                log_e("%s not found", gpxPath);
+                return Api::argInvalid();
+            }
+            instance->device->releaseMutex();
+            bool success = instance->rec2gpx(recPath, gpxPath, true);  // overwrite
+            snprintf(msg->reply, sizeof(msg->reply),
+                     success ? "regen:%s" : "failed: %s", gpxName);
+            log_i("regenerated %s", gpxName);
+            return success ? Api::success() : Api::error();
         } else {
             snprintf(msg->reply, sizeof(msg->reply),
-                     "start|pause|end|files|info:filename.gpx|"
-                     "get:filename.gpx;offset:1234|delete:filename.gpx");
+                     "start|pause|end|files[:rec|:gpx]|info:filename[.gpx]|"
+                     "get:filename[.gpx];offset:1234|delete:filename.gpx|"
+                     "regen:filename.gpx");
             return Api::result("argInvalid");
         }
     }
@@ -1095,3 +1175,5 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
              "%d", instance->isRecording);
     return result;
 }
+
+#endif

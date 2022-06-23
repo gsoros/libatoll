@@ -1,3 +1,5 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
+
 #include "atoll_peer_characteristic_heartrate.h"
 
 using namespace Atoll;
@@ -48,3 +50,5 @@ bool PeerCharacteristicHeartrate::encode(const uint16_t value, uint8_t* data, si
     log_i("not implemented");
     return true;
 }
+
+#endif

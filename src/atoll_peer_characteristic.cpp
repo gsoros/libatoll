@@ -1,3 +1,5 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
+
 #include "atoll_peer_characteristic.h"
 #include "atoll_ble_client.h"
 
@@ -53,3 +55,5 @@ bool PeerCharacteristic::unsubscribe() {
     log_i("unsub: %s", res ? "succ" : "fail");
     return res;
 }
+
+#endif

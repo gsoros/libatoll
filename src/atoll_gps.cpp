@@ -1,3 +1,5 @@
+#ifdef FEATURE_GPS
+
 #include "atoll_gps.h"
 #include "atoll_time.h"
 
@@ -69,3 +71,5 @@ bool GPS::syncSystemTime() {
 
     return true;
 }
+
+#endif

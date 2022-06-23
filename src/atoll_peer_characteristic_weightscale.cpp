@@ -1,3 +1,5 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
+
 #include "atoll_peer_characteristic_weightscale.h"
 
 using namespace Atoll;
@@ -38,3 +40,5 @@ bool PeerCharacteristicWeightscale::encode(const double value, uint8_t* data, si
     log_e("not implemented");
     return true;
 }
+
+#endif

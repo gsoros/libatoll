@@ -1,3 +1,5 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
+
 #include "atoll_ble_client.h"
 #include "atoll_peer.h"
 
@@ -215,3 +217,5 @@ void Peer::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bo
     strncpy(buf, (char*)data, length);
     log_i("%s uuid: %s, data: '%s', len: %d", name, c->getUUID().toString().c_str(), buf, length);
 }
+
+#endif
