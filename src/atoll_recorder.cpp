@@ -69,7 +69,7 @@ void Recorder::addDataPoint() {
     //     return;
     // }
     if (!gps->isMoving()) {
-        return;
+        // return;
     }
     if (sizeof(buffer) <= bufIndex) {
         log_e("index %d out of range", bufIndex);
@@ -144,6 +144,16 @@ void Recorder::addDataPoint() {
           point->power,
           point->cadence,
           point->heartrate);
+
+    char bufDump[sizeof(DataPoint) * 5] = "";
+    char bufDec[4] = "";
+    uint8_t *p = (uint8_t *)point;
+    for (size_t i = 0; i < sizeof(DataPoint); i++) {
+        if (0 < i) strncat(bufDump, ", ", sizeof(bufDump) - strlen(bufDump) - 1);
+        snprintf(bufDec, sizeof(bufDec), "%d", p[i]);
+        strncat(bufDump, bufDec, sizeof(bufDump) - strlen(bufDump) - 1);
+    }
+    log_i("Point time: %d, dump: %s", point->time, bufDump);
 
     bufIndex++;
 }
@@ -950,7 +960,8 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                 if (mode == modeRec &&
                     (8 != strlen(f.name()) ||
                      nullptr != strchr(f.name(), '.') ||
-                     0 == strcmp(cPath, f.path()))) {
+                     (nullptr != cPath &&
+                      0 == strcmp(cPath, f.path())))) {
                     f.close();
                     continue;
                 }

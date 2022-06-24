@@ -46,20 +46,57 @@
 #define ATOLL_RECORDER_PATH_LENGTH 32
 #endif
 
+//#define ATOLL_RECORDER_DATAPOINT_SIZE 29
+
 namespace Atoll {
 
 class Recorder : public Task {
    public:
-    struct DataPoint {
-        byte flags = 0;
-        time_t time = 0;          // UTS
-        double lat = 0.0;         // GCS latitude 0°... 90˚
-        double lon = 0.0;         // GCS longitude 0°... 180˚
-        int16_t altitude = 0;     // m
-        uint16_t power = 0;       // W
-        uint8_t cadence = 0;      // rpm
-        uint8_t heartrate = 0;    // bpm
-        int16_t temperature = 0;  // ˚C / 10, unused
+    struct __attribute__((packed)) DataPoint {
+        byte flags = 0;           // length: 1;
+        time_t time = 0;          // length: 4; unit: seconds; UTS
+        double lat = 0.0;         // length: 8; GCS latitude 0°... 90˚
+        double lon = 0.0;         // length: 8; GCS longitude 0°... 180˚
+        int16_t altitude = 0;     // length: 2; unit: m
+        uint16_t power = 0;       // length: 2; unit: W
+        uint8_t cadence = 0;      // length: 1; unit: rpm
+        uint8_t heartrate = 0;    // length: 1; unit: bpm
+        int16_t temperature = 0;  // length: 2; unit: ˚C / 10; unused
+
+        /*
+        void write(uint8_t *buf, size_t size) {
+            if (size < ATOLL_RECORDER_DATAPOINT_SIZE) {
+                log_e("buffer too small");
+                return;
+            }
+            uint8_t cursor = 0;
+            uint8_t i;
+            buf[cursor] = flags;
+            cursor++;
+            for (i = 0; i < 4; i++)
+                buf[cursor + i] = (time >> (i * 8)) & 0xff;
+            cursor += i + 1;
+            for (i = 0; i < 8; i++)
+                buf[cursor + i] = (lat >> (i * 8)) & 0xff;
+            cursor += i + 1;
+            for (i = 0; i < 8; i++)
+                buf[cursor + i] = (lon >> (i * 8)) & 0xff;
+            cursor += i + 1;
+        }
+
+        void read(uint8_t *buf, size_t size) {
+            if (size < ATOLL_RECORDER_DATAPOINT_SIZE) {
+                log_e("buffer too small");
+                return;
+            }
+            flags = buf[0];
+            time = buf[1] | (buf[2] << 8) | (buf[3] << 16) | (buf[4] << 24);
+            lat = buf[5] | (buf[6] << 8) | (buf[7] << 16) | (buf[8] << 24) |  //
+                  (buf[9] << 32) | (buf[10] << 40) | (buf[11] << 48) | (buf[12] << 56);
+            lon = buf[13] | (buf[14] << 8) | (buf[15] << 16) | (buf[16] << 24) |  //
+                  (buf[17] << 32) | (buf[18] << 40) | (buf[19] << 48) | (buf[20] << 56);
+        }
+        */
     };
 
     struct Flags {
