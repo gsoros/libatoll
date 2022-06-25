@@ -109,7 +109,7 @@ class ApiMessage {
             cp++;
         }
         buf[copied] = '\0';
-        log_i("found '%s' for '%s' in '%s'", buf, str, arg);
+        // log_i("found '%s' for '%s' in '%s'", buf, str, arg);
         return copied;
     }
 

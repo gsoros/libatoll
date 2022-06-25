@@ -56,12 +56,8 @@ void Recorder::loop() {
 
 void Recorder::addDataPoint() {
     if (!isRecording) return;
-    if (nullptr == gps) {
+    if (!gps) {
         log_e("no gps");
-        return;
-    }
-    if (!systemTimeLastSet()) {
-        log_i("not adding data point, waiting for system time update");
         return;
     }
     // if (!gps->gps.location.isValid()) {
@@ -69,7 +65,11 @@ void Recorder::addDataPoint() {
     //     return;
     // }
     if (!gps->isMoving()) {
-        // return;
+        return;
+    }
+    if (!systemTimeLastSet()) {
+        log_i("not adding data point, waiting for system time update");
+        return;
     }
     if (sizeof(buffer) <= bufIndex) {
         log_e("index %d out of range", bufIndex);
@@ -145,15 +145,15 @@ void Recorder::addDataPoint() {
           point->cadence,
           point->heartrate);
 
-    char bufDump[sizeof(DataPoint) * 5] = "";
-    char bufDec[4] = "";
-    uint8_t *p = (uint8_t *)point;
-    for (size_t i = 0; i < sizeof(DataPoint); i++) {
-        if (0 < i) strncat(bufDump, ", ", sizeof(bufDump) - strlen(bufDump) - 1);
-        snprintf(bufDec, sizeof(bufDec), "%d", p[i]);
-        strncat(bufDump, bufDec, sizeof(bufDump) - strlen(bufDump) - 1);
-    }
-    log_i("Point time: %d, dump: %s", point->time, bufDump);
+    // char bufDump[sizeof(DataPoint) * 5] = "";
+    // char bufDec[4] = "";
+    // uint8_t *p = (uint8_t *)point;
+    // for (size_t i = 0; i < sizeof(DataPoint); i++) {
+    //     if (0 < i) strncat(bufDump, ", ", sizeof(bufDump) - strlen(bufDump) - 1);
+    //     snprintf(bufDec, sizeof(bufDec), "%d", p[i]);
+    //     strncat(bufDump, bufDec, sizeof(bufDump) - strlen(bufDump) - 1);
+    // }
+    // log_i("Point time: %d, dump: %s", point->time, bufDump);
 
     bufIndex++;
 }
@@ -913,12 +913,16 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             static const uint8_t modeRec = 1;
             static const uint8_t modeGpx = 2;
             uint8_t mode = 0;
-            if (msg->argIs("files") || msg->argIs("files:rec"))
+            if (msg->argIs("files"))
+                mode = modeRec | modeGpx;
+            else if (msg->argIs("files:rec"))
                 mode = modeRec;
             else if (msg->argIs("files:gpx"))
                 mode = modeGpx;
             else
                 return Api::argInvalid();
+            // log_i("mode: %d, rec: %d, gpx: %d",
+            //       mode, (mode & modeRec) ? 1 : 0, (mode & modeGpx) ? 1 : 0);
             if (!instance->device) {
                 log_e("device error");
                 return Api::internalError();
@@ -946,22 +950,23 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             snprintf(msg->reply, sizeof(msg->reply), "files:");
             File f;
             size_t added = 0;
+            bool add;
             while (f = dir.openNextFile()) {
-                if (strlen(f.name()) < 4) {
+                add = false;
+                if (strlen(f.name()) < 5) {  // /rec/last
                     f.close();
                     continue;
                 }
                 // log_i("checking %s ext: %s", f.name(), f.name() + strlen(f.name()) - 4);
-                if (mode == modeGpx &&
-                    0 != strcmp(f.name() + strlen(f.name()) - 4, ".gpx")) {
-                    f.close();
-                    continue;
-                }
-                if (mode == modeRec &&
-                    (8 != strlen(f.name()) ||
-                     nullptr != strchr(f.name(), '.') ||
-                     (nullptr != cPath &&
-                      0 == strcmp(cPath, f.path())))) {
+                if ((mode & modeGpx) &&
+                    0 == strcmp(f.name() + strlen(f.name()) - 4, ".gpx"))
+                    add = true;
+                else if ((mode & modeRec) &&
+                         8 == strlen(f.name()) &&
+                         !strchr(f.name(), '.') &&
+                         (!cPath || 0 != strcmp(cPath, f.path())))
+                    add = true;
+                if (!add) {
                     f.close();
                     continue;
                 }
@@ -1124,6 +1129,12 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
                 return Api::argInvalid();
             }
             bool success = instance->fs->remove(path);
+            if (nullptr == strchr(name, '.') && 8 == strlen(name)) {
+                snprintf(path, sizeof(path),
+                         "%s/%s%s", instance->basePath, name, instance->statsExt);
+                if (instance->fs->exists(path) && instance->fs->remove(path))
+                    log_i("deleted %s", path);
+            }
             instance->device->releaseMutex();
             snprintf(msg->reply, sizeof(msg->reply),
                      success ? "deleted: %s" : "failed to delete: %s", name);
