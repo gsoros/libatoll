@@ -10,6 +10,7 @@ CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> Api::_commandBuf;
 
 Api *Api::instance = nullptr;
 BleServer *Api::bleServer = nullptr;
+BLEUUID Api::serviceUuid = BLEUUID("DEAD");
 bool Api::secureBle = false;                // whether to use LESC for BLE API service
 uint32_t Api::passkey = ATOLL_API_PASSKEY;  // passkey for BLE API service, max 6 digits
 
@@ -21,8 +22,11 @@ void Api::setup(
     const char *serviceUuid) {
     Atoll::Api::instance = instance;
     Atoll::Api::bleServer = bleServer;
-
-    if (nullptr != instance)
+    if (serviceUuid && strlen(serviceUuid))
+        Atoll::Api::serviceUuid = BLEUUID(serviceUuid);
+    else if (bleServer)
+        log_e("bleServer is set but serviceUuid is not");
+    if (instance)
         instance->preferencesSetup(p, preferencesNS);
 
     addResult(ApiResult("success", 1));
@@ -41,21 +45,21 @@ void Api::setup(
     printSettings();
 
     if (nullptr != bleServer && nullptr != serviceUuid)
-        addBleService(bleServer, serviceUuid);
+        addBleService();
 
     _commandBuf.clear();
 }
 
-bool Api::addBleService(BleServer *bleServer, const char *serviceUuid) {
+bool Api::addBleService() {
     log_i("adding API service to BleServer");
-    if (nullptr == bleServer) {
+    if (!bleServer) {
         log_e("bleServer is null");
         return false;
     }
     if (secureBle)
         bleServer->setSecurity(true, passkey);
 
-    BLEService *s = bleServer->createService(BLEUUID(serviceUuid));
+    BLEService *s = bleServer->createService(serviceUuid);
     if (nullptr == s) {
         log_e("could not create service");
         return false;
@@ -96,13 +100,13 @@ bool Api::addBleService(BleServer *bleServer, const char *serviceUuid) {
     d->setValue((uint8_t *)str, strlen(str));
 
     if (instance)
-        instance->beforeBleServiceStart(bleServer, s);
+        instance->beforeBleServiceStart(s);
 
     if (!s->start()) {
         log_e("could not start service");
         return false;
     }
-    bleServer->advertiseService(BLEUUID(serviceUuid), 1);
+    bleServer->advertiseService(serviceUuid, 1);
     log_i("added ble service");
     return true;
 }
@@ -400,7 +404,7 @@ ApiMessage Api::process(const char *commandWithArg, bool log) {
 // and return the results in the format: commandCode:commandName=value;...
 ApiResult *Api::initProcessor(ApiMessage *msg) {
     char reply[msgReplyLength] = "";
-    char token[6 + ATOLL_API_COMMAND_NAME_LENGTH + ATOLL_API_MSG_REPLY_LENGTH];
+    char token[6 + ATOLL_API_COMMAND_NAME_LENGTH + msgReplyLength];
     ApiResult *successResult = success();
     for (int i = 0; i < numCommands; i++) {
         if (0 == strcmp(commands[i].name, "init")) continue;
@@ -417,7 +421,10 @@ ApiResult *Api::initProcessor(ApiMessage *msg) {
                      commands[i].name);
         int16_t remaining = msgReplyLength - strlen(reply) - 1;
         if (remaining < strlen(token)) {
-            log_e("no space left for adding %s to %s", token, reply);
+            log_e("reply out of space: %d + %d + 1 > %d",
+                  strlen(reply), strlen(token), msgReplyLength);
+            log_e("token: %s", token);
+            log_e("reply: %s", reply);
             return internalError();
         }
         strncat(reply, token, remaining);

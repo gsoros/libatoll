@@ -154,6 +154,7 @@ class Api : public Preferences {
    public:
     static Api *instance;
     static BleServer *bleServer;
+    static BLEUUID serviceUuid;
     static bool secureBle;    // whether to use LESC for BLE API service
     static uint32_t passkey;  // passkey for BLE API service, max 6 digits
 
@@ -162,8 +163,8 @@ class Api : public Preferences {
                       const char *preferencesNS,
                       BleServer *bleServer = nullptr,
                       const char *serviceUuid = nullptr);
-    static bool addBleService(BleServer *bleServer, const char *serviceUuid);
-    virtual void beforeBleServiceStart(BleServer *server, BLEService *service) {}
+    static bool addBleService();
+    virtual void beforeBleServiceStart(BLEService *service) {}
     static bool addCommand(ApiCommand command);
     static bool addResult(ApiResult result);
     static ApiMessage process(const char *commandWithArg, bool log = true);

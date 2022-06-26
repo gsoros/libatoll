@@ -24,13 +24,13 @@ void Wifi::setup(
 
     if (nullptr == instance) return;
     if (nullptr == api) return;
-    api->addCommand(ApiCommand("wifi", enabledProcessor));
-    api->addCommand(ApiCommand("wifiAp", apProcessor));
-    api->addCommand(ApiCommand("wifiApSSID", apSSIDProcessor));
-    api->addCommand(ApiCommand("wifiApPassword", apPasswordProcessor));
-    api->addCommand(ApiCommand("wifiSta", staProcessor));
-    api->addCommand(ApiCommand("wifiStaSSID", staSSIDProcessor));
-    api->addCommand(ApiCommand("wifiStaPassword", staPasswordProcessor));
+    api->addCommand(ApiCommand("w", enabledProcessor));
+    api->addCommand(ApiCommand("wa", apProcessor));
+    api->addCommand(ApiCommand("was", apSSIDProcessor));
+    api->addCommand(ApiCommand("wap", apPasswordProcessor));
+    api->addCommand(ApiCommand("ws", staProcessor));
+    api->addCommand(ApiCommand("wss", staSSIDProcessor));
+    api->addCommand(ApiCommand("wsp", staPasswordProcessor));
 };
 
 void Wifi::loop() {

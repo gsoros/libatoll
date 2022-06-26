@@ -26,7 +26,7 @@ void Battery::setup(
 
     if (nullptr == instance) return;
     if (nullptr != api)
-        api->addCommand(ApiCommand("battery", batteryProcessor));
+        api->addCommand(ApiCommand("bat", batteryProcessor));
 }
 
 bool Battery::addBleService() {
@@ -216,6 +216,6 @@ ApiResult *Battery::batteryProcessor(ApiMessage *msg) {
         }
     }
     // get current voltage
-    snprintf(msg->reply, sizeof(msg->reply), "%f", instance->voltage);
+    snprintf(msg->reply, sizeof(msg->reply), "%.2f", instance->voltage);
     return Api::success();
 }

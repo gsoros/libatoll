@@ -41,9 +41,9 @@ void ApiRxCallbacks::onWrite(BLECharacteristic *c) {
         replyLength = strlen(reply);
     }
     // log_i("apiRxChar reply(%d): %s", replyLength, reply);
-    if (nullptr != Api::bleServer)
+    if (Api::bleServer)
         Api::bleServer->notify(
-            BLEUUID(API_SERVICE_UUID),
+            Api::serviceUuid,
             BLEUUID(API_TX_CHAR_UUID),
             (uint8_t *)reply,
             replyLength);
