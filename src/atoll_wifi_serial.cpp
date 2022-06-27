@@ -62,7 +62,7 @@ void WifiSerial::loop() {
 }
 
 void WifiSerial::start() {
-    _server.begin();
+    _server.begin(_port);
 }
 
 void WifiSerial::stop() {

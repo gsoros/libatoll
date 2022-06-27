@@ -9,7 +9,7 @@ using namespace Atoll;
 void Ota::setup() {
     setup("libAtollOta_unnamed");
 }
-void Ota::setup(const char *hostName, uint16_t port) {
+void Ota::setup(const char *hostName, uint16_t port, bool mdnsEnabled) {
     if (serving) {
         log_i("already serving");
         return;
@@ -18,7 +18,7 @@ void Ota::setup(const char *hostName, uint16_t port) {
     ArduinoOTA.setHostname(hostName);  // Hostname defaults to esp3232-[MAC]
     ArduinoOTA.setPort(port);          // Port defaults to 3232
     ArduinoOTA.setTimeout(5000);       // for choppy WiFi
-    ArduinoOTA.setMdnsEnabled(false);
+    ArduinoOTA.setMdnsEnabled(mdnsEnabled);
 
     // ArduinoOTA.setPassword("admin");// No authentication by default
     // Password can be set with it's md5 value as well

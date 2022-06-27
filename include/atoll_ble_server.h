@@ -81,7 +81,7 @@ class BleServer : public Task,
     }
 
     virtual void onNotify(BLECharacteristic *c) {
-        log_i("%d", c->getValue<int>());
+        // log_i("%d", c->getValue<int>());
     }
 
     virtual void onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {

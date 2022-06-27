@@ -22,7 +22,7 @@ class Ota : public Task {
     bool serving = false;
 
     void setup();
-    void setup(const char *hostName, uint16_t port = 3232);
+    void setup(const char *hostName, uint16_t port = 3232, bool mdnsEnabled = false);
     void start();
     void loop();
     void stop();
