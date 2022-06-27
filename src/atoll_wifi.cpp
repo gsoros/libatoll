@@ -139,18 +139,18 @@ void Wifi::applySettings() {
         wifiMode = WIFI_MODE_NULL;
     WiFi.mode(wifiMode);
     if (settings.enabled && settings.apEnabled) {
-        if (0 == strcmp("", const_cast<char *>(settings.apSSID))) {
+        if (0 == strlen(settings.apSSID)) {
             log_w("cannot enable AP with empty SSID");
-            settings.apEnabled = false;
+            // settings.apEnabled = false;
         } else {
             log_i("setting up AP '%s'", settings.apSSID);
             WiFi.softAP(settings.apSSID, settings.apPassword);
         }
     }
     if (settings.enabled && settings.staEnabled) {
-        if (0 == strcmp("", const_cast<char *>(settings.staSSID))) {
+        if (0 == strlen(settings.staSSID)) {
             log_w("cannot enable STA with empty SSID");
-            settings.staEnabled = false;
+            // settings.staEnabled = false;
         } else {
             log_i("connecting to AP '%s'", settings.staSSID);
             WiFi.begin(settings.staSSID, settings.staPassword);

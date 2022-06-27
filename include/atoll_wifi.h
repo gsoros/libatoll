@@ -20,13 +20,13 @@ class Wifi : public Preferences, public Task {
    public:
     typedef struct
     {
-        bool enabled;
-        bool apEnabled;
-        char apSSID[SETTINGS_STR_LENGTH];
-        char apPassword[SETTINGS_STR_LENGTH];
-        bool staEnabled;
-        char staSSID[SETTINGS_STR_LENGTH];
-        char staPassword[SETTINGS_STR_LENGTH];
+        bool enabled = false;
+        bool apEnabled = false;
+        char apSSID[SETTINGS_STR_LENGTH] = "";
+        char apPassword[SETTINGS_STR_LENGTH] = "";
+        bool staEnabled = false;
+        char staSSID[SETTINGS_STR_LENGTH] = "";
+        char staPassword[SETTINGS_STR_LENGTH] = "";
     } Settings;
 
     const char *taskName() { return "Wifi"; }
