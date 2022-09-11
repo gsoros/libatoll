@@ -62,6 +62,8 @@ class Recorder : public Task {
         uint8_t cadence = 0;      // length: 1; unit: rpm
         uint8_t heartrate = 0;    // length: 1; unit: bpm
         int16_t temperature = 0;  // length: 2; unit: ˚C / 10; unused
+        // TODO uint32_t crc = 0; // crc32 checksum
+        // https://stackoverflow.com/questions/21001659/crc32-algorithm-implementation-in-c-without-a-look-up-table-and-with-a-public-li
 
         /*
         void write(uint8_t *buf, size_t size) {
