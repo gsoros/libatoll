@@ -109,6 +109,7 @@ class Recorder : public Task {
         const byte heartrate = 16;
         const byte temperature = 32;  // unused
         const byte lap = 64;          // unused
+        // const byte isChecksum = 128; // TODO if set, the first four bytes after the flags contain the crc32 checksum of the previous datapoints
     } const Flags;
 
     struct Stats {
