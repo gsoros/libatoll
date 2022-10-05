@@ -31,11 +31,19 @@ class Touch : public Task, public Preferences {
         int pin = -1;
         uint8_t index = 0;
         uint16_t threshold = 85;  // touch sensitivity
-        volatile ulong last = 0;
-        ulong start = 0;
-        ulong end = 0;
-        ulong singleTouch = 0;
-        ulong longTouch = 0;
+        volatile ulong last = 0;  // time of last touch
+        ulong start = 0;          // time of start of touch
+        ulong end = 0;            // time of end of touch
+        ulong singleTouch = 0;    // time of single touch
+        ulong longTouch = 0;      // time of long touch
+        ulong first = 0;          // time of first if three or more touches
+        uint8_t count = 0;        // number of touches
+
+        void dump() {
+            ulong t = millis();
+            log_i("pad #%d last: %3d, start: %3d, end: %3d, single: %3d, long: %3d, first: %3d, count: %d",
+                  index, t - last, t - start, t - end, t - singleTouch, t - longTouch, t - first, count);
+        }
     };
 
     const char *taskName() { return "Touch"; }
@@ -48,12 +56,26 @@ class Touch : public Task, public Preferences {
         end,
         singleTouch,
         doubleTouch,
+        tripleTouch,
+        quadrupleTouch,
+        quintupleTouch,
+        // sextupleTouch,
+        // septupleTouch,
         longTouch
     };
 
-    static const uint16_t touchTime = 50;         // ms, min time to register a touch
-    static const uint16_t doubleTouchTime = 200;  // ms, max time between two touches to register a double touch
-    static const uint16_t longTouchTime = 800;    // ms, min time to register a long touch
+    // ms, min time to register a touch
+    static const uint16_t touchTime = 50;
+    // ms, max time between two touches to register a double touch
+    static const uint16_t doubleTouchTime = 200;
+    // ms, max time between the first and last of three touches to register a triple touch
+    static const uint16_t tripleTouchTime = 300;
+    // ms, max time between the first and last of four touches to register a quadruple touch
+    static const uint16_t quadrupleTouchTime = 400;
+    // ms, max time between the first and last of five touches to register a quintuple touch
+    static const uint16_t quintupleTouchTime = 500;
+    // ms, min time to register a long touch
+    static const uint16_t longTouchTime = 800;
 
     bool enabled = true;  // enable touch events
     ulong enableAfter = 0;
@@ -205,16 +227,19 @@ class Touch : public Task, public Preferences {
                     p->start < t - touchTime) {
                     p->start = 0;
                     p->end = t;
-                    if (0 == p->longTouch)  // don't fire end after long
+                    if (0 == p->longTouch) {  // don't fire end after long
                         fireEvent(i, Event::end);
-                    else
+                        p->dump();
+                    } else {
                         p->singleTouch = t;  // don't fire single after long
+                    }
                     p->longTouch = 0;
                     continue;
                 }
                 if (p->end && p->end < t - doubleTouchTime && 0 == p->singleTouch) {
                     fireEvent(i, Event::singleTouch);
                     p->singleTouch = t;
+                    p->dump();
                 }
                 continue;
             }
@@ -225,10 +250,12 @@ class Touch : public Task, public Preferences {
                     p->end = 0;
                     p->singleTouch = t;  // don't fire single after double
                     fireEvent(i, Event::doubleTouch);
+                    p->dump();
                     continue;
                 }
                 p->start = t;
                 fireEvent(i, Event::start);
+                p->dump();
                 continue;
             }
             fireEvent(i, Event::touching);
@@ -237,6 +264,7 @@ class Touch : public Task, public Preferences {
                 p->longTouch = t;
                 fireEvent(i, Event::longTouch);
             }
+            p->dump();
         }
     }
 
