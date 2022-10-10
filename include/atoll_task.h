@@ -128,10 +128,10 @@ class Task {
             thisPtr->loop();
             ulong loopTime = millis() - start;
             if (thisPtr->_taskDelay < loopTime)
-                log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
-                      thisPtr->taskName(), loopTime,
-                      pdTICKS_TO_MS(thisPtr->_taskDelay), thisPtr->_taskFreq);
-            thisPtr->_taskLastWakeTime = xTaskGetTickCount();
+                // log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
+                //       thisPtr->taskName(), loopTime,
+                //       pdTICKS_TO_MS(thisPtr->_taskDelay), thisPtr->_taskFreq);
+                thisPtr->_taskLastWakeTime = xTaskGetTickCount();
             thisPtr->_taskNextWakeTime = thisPtr->_taskLastWakeTime + thisPtr->_taskDelay;
             // log_i("%s delaying for %dms", thisPtr->taskName(),
             //       pdTICKS_TO_MS(thisPtr->_taskNextWakeTime) - millis());
@@ -166,7 +166,7 @@ class Task {
 
     void _taskAbortDelay() {
         if (NULL == taskHandle) {
-            log_e("taskHandle is null");
+            log_w("taskHandle is null");
             return;
         }
         _taskDebug("_taskAbortDelay");

@@ -34,15 +34,11 @@ class Touch : public Task, public Preferences {
         volatile ulong last = 0;  // time of last touch
         ulong start = 0;          // time of start of touch
         ulong end = 0;            // time of end of touch
-        ulong singleTouch = 0;    // time of single touch
-        ulong longTouch = 0;      // time of long touch
-        ulong first = 0;          // time of first if three or more touches
         uint8_t count = 0;        // number of touches
 
         void dump() {
-            ulong t = millis();
-            log_i("pad #%d last: %3d, start: %3d, end: %3d, single: %3d, long: %3d, first: %3d, count: %d",
-                  index, t - last, t - start, t - end, t - singleTouch, t - longTouch, t - first, count);
+            log_i("pad #%d last: %d, start: %d, end: %d, count: %d",
+                  index, last, start, end, count);
         }
     };
 
@@ -51,6 +47,7 @@ class Touch : public Task, public Preferences {
     static const unsigned char numPads;
 
     enum Event {
+        invalid,
         start,
         touching,
         end,
@@ -61,24 +58,18 @@ class Touch : public Task, public Preferences {
         quintupleTouch,
         // sextupleTouch,
         // septupleTouch,
-        longTouch
+        longTouch,
+        EVENT_MAX
     };
 
-    // ms, min time to register a touch
-    static const uint16_t touchTime = 50;
-    // ms, max time between two touches to register a double touch
-    static const uint16_t doubleTouchTime = 200;
-    // ms, max time between the first and last of three touches to register a triple touch
-    static const uint16_t tripleTouchTime = 300;
-    // ms, max time between the first and last of four touches to register a quadruple touch
-    static const uint16_t quadrupleTouchTime = 400;
-    // ms, max time between the first and last of five touches to register a quintuple touch
-    static const uint16_t quintupleTouchTime = 500;
+    // ms, max time between two touches to register a multi-touch
+    static const uint16_t multiTouchTime = 200;
     // ms, min time to register a long touch
     static const uint16_t longTouchTime = 800;
 
     bool enabled = true;  // enable touch events
     ulong enableAfter = 0;
+    ulong lastLoopTime = 0;
 
     Touch(int pin0 = -1,
           int pin1 = -1,
@@ -109,13 +100,13 @@ class Touch : public Task, public Preferences {
     }
 
     bool padIsTouched(Pad *pad) {
-        return millis() - pad->last < touchTime;
+        return enabled && pad->last && lastLoopTime <= pad->last;
     }
 
     bool anyPadIsTouched() {
-        ulong t = millis();
+        if (!enabled) return false;
         for (uint8_t i = 0; i < numPads; i++)
-            if (t - pads[i].last < touchTime)
+            if (pads[i].last && lastLoopTime <= pads[i].last)
                 return true;
         return false;
     }
@@ -130,15 +121,38 @@ class Touch : public Task, public Preferences {
                 return "singleTouch";
             case doubleTouch:
                 return "doubleTouch";
+            case tripleTouch:
+                return "tripleTouch";
+            case quadrupleTouch:
+                return "quadrupleTouch";
+            case quintupleTouch:
+                return "quintupleTouch";
             case longTouch:
                 return "longTouch";
             case end:
                 return "end";
             default:
                 log_e("%d not handled", event);
-                break;
+                return "invalid";
         }
-        return "unknown";
+    }
+
+    static Event eventType(uint8_t numTouches) {
+        switch (numTouches) {
+            case 1:
+                return Event::singleTouch;
+            case 2:
+                return Event::doubleTouch;
+            case 3:
+                return Event::tripleTouch;
+            case 4:
+                return Event::quadrupleTouch;
+            case 5:
+                return Event::quintupleTouch;
+            default:
+                log_e("%d not handled", numTouches);
+                return Event::invalid;
+        }
     }
 
     bool loadSettings() {
@@ -201,7 +215,9 @@ class Touch : public Task, public Preferences {
         return touchRead(pads[index].pin);
     }
 
-    virtual void onEnabledChanged() {}
+    virtual void onEnabledChanged() {
+        log_i("touch %sabled", enabled ? "en" : "dis");
+    }
 
    protected:
     static ::Preferences *preferences;
@@ -215,57 +231,45 @@ class Touch : public Task, public Preferences {
                 enableAfter = 0;
                 attachInterrupts();  // interrupt is disabled by read()
                 onEnabledChanged();
-                log_i("touch enabled");
             } else
                 return;
         }
+        static Pad *p;
         for (uint8_t i = 0; i < numPads; i++) {
-            Pad *p = &pads[i];
-            if (!p->last) continue;         // not touched yet
-            if (p->last < t - touchTime) {  // not touched recently
-                if (p->start != 0 &&
-                    p->start < t - touchTime) {
-                    p->start = 0;
-                    p->end = t;
-                    if (0 == p->longTouch) {  // don't fire end after long
-                        fireEvent(i, Event::end);
-                        p->dump();
-                    } else {
-                        p->singleTouch = t;  // don't fire single after long
+            p = &pads[i];
+            if (!p->last) continue;                                 // not touched yet
+            if (lastLoopTime <= p->last) {                          // touched since last loop
+                if (!p->start) {                                    // start not set
+                    p->start = t;                                   // set start
+                    p->end = 0;                                     // reset end
+                    p->count++;                                     // increase count
+                    fireEvent(i, Event::start);                     // fire start event
+                } else {                                            // start is set
+                    fireEvent(i, Event::touching);                  // fire touching event
+                }                                                   //
+            } else {                                                // not touched since last loop
+                if (!p->end) {                                      // end not set
+                    if (p->start) {                                 // start is set
+                        p->end = t;                                 // set end
+                        fireEvent(i, Event::end);                   // fire end event
+                        if (p->start <= t - longTouchTime) {        // long touch
+                            p->end = 0;                             // reset end
+                            p->count = 0;                           // reset count
+                            fireEvent(i, Event::longTouch);         // fire long event
+                        }                                           //
+                        p->start = 0;                               // reset start
+                    }                                               //
+                }                                                   //
+                else {                                              // end is set
+                    if (p->end < t - multiTouchTime && p->count) {  // multitouch time passed
+                        p->end = 0;                                 // reset end
+                        fireEvent(i, eventType(p->count));          // fire (multi)touch event
+                        p->count = 0;                               // reset count
                     }
-                    p->longTouch = 0;
-                    continue;
                 }
-                if (p->end && p->end < t - doubleTouchTime && 0 == p->singleTouch) {
-                    fireEvent(i, Event::singleTouch);
-                    p->singleTouch = t;
-                    p->dump();
-                }
-                continue;
             }
-            // touched recently
-            p->singleTouch = 0;
-            if (p->start == 0) {
-                if (t - p->end < doubleTouchTime) {
-                    p->end = 0;
-                    p->singleTouch = t;  // don't fire single after double
-                    fireEvent(i, Event::doubleTouch);
-                    p->dump();
-                    continue;
-                }
-                p->start = t;
-                fireEvent(i, Event::start);
-                p->dump();
-                continue;
-            }
-            fireEvent(i, Event::touching);
-            if (p->start < t - longTouchTime &&
-                p->longTouch < p->start) {
-                p->longTouch = t;
-                fireEvent(i, Event::longTouch);
-            }
-            p->dump();
         }
+        lastLoopTime = t;
     }
 
     virtual void fireEvent(uint8_t index, Event event) {
