@@ -166,7 +166,7 @@ class Task {
 
     void _taskAbortDelay() {
         if (NULL == taskHandle) {
-            log_w("taskHandle is null");
+            // log_w("taskHandle is null");
             return;
         }
         _taskDebug("_taskAbortDelay");
