@@ -21,13 +21,14 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
     virtual bool encode(const T value, uint8_t* data, size_t length) = 0;
 
     virtual T read() {
-        if (!characteristic) return lastValue;
-        if (!characteristic->canRead()) {
+        BLERemoteCharacteristic* c = getRemoteChar();
+        if (!c) return lastValue;
+        if (!c->canRead()) {
             log_e("%s not readable", label);
             return lastValue;
         }
-        // lastValue = characteristic->readValue<T>();
-        snprintf(readBuffer, sizeof(readBuffer), "%s", characteristic->readValue().c_str());
+        // lastValue = c->readValue<T>();
+        snprintf(readBuffer, sizeof(readBuffer), "%s", c->readValue().c_str());
         size_t len = strlen(readBuffer);
         log_i("readBuf len=%d", len);
         if (!len) return lastValue;
@@ -37,12 +38,13 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
     }
 
     virtual bool write(T value, size_t length) {
-        if (!characteristic) return false;
-        if (!characteristic->canWrite()) {
+        BLERemoteCharacteristic* c = getRemoteChar();
+        if (!c) return false;
+        if (!c->canWrite()) {
             log_e("%s not writable", label);
             return false;
         }
-        return characteristic->writeValue<T>(value, length);
+        return c->writeValue<T>(value, length);
     }
 
     virtual void onNotify(

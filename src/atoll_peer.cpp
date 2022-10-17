@@ -24,6 +24,7 @@ void Peer::connect() {
         log_i("%s already connected", name);
         goto end;
     }
+    log_i("%s connecting", name);
     if (BLEDevice::getClientListSize()) {
         setClient(BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType)));
         if (hasClient()) {
@@ -40,7 +41,11 @@ void Peer::connect() {
             log_e("%s max clients reached", name);
             goto end;
         }
-        setClient(BLEDevice::createClient(BLEAddress(address, addressType)));
+        BLEClient* c = BLEDevice::createClient(BLEAddress(address, addressType));
+        // c->setConnectionParams(120, 120, 0, 60);
+        // c->setConnectionParams(32, 160, 0, 500);
+        // c->setConnectionParams(24, 48, 0, 60);
+        setClient(c);
         log_i("%s new client created", name);
         if (!connectClient()) {
             // log_i("%s failed to connect new client", name);
@@ -61,10 +66,15 @@ end:
     connecting = false;
 }
 
-void Peer::subscribeChars() {
+void Peer::subscribeChars(bool onConnect) {
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
-            log_i("subscribing %s", chars[i]->label);
+            if (onConnect && !chars[i]->subscribeOnConnect()) {
+                log_i("%s not subscribing %s", name, chars[i]->label);
+                // chars[i]->getRemoteChar(client);  // get remote service and char
+                continue;
+            }
+            log_i("%s subscribing %s", name, chars[i]->label);
             chars[i]->subscribe(client);
         }
 }
@@ -74,6 +84,8 @@ void Peer::unsubscribeChars() {
         if (nullptr != chars[i]) {
             log_i("%s unsubscribing %s", name, chars[i]->label);
             chars[i]->unsubscribe();
+            chars[i]->unsetRemoteChar();
+            chars[i]->unsetRemoteService();
         }
 }
 
@@ -148,7 +160,11 @@ uint8_t Peer::deleteChars(const char* label) {
  */
 void Peer::onConnect(BLEClient* client) {
     connected = true;
-    log_i("%s connected, subscribing...", name);
+    log_i("%s connected", name);
+    // log_i("%s connected, requesting conn params...", name);
+    // client->updateConnParams(120, 120, 0, 60);
+    // client->updateConnParams(32, 160, 0, 500);
+    log_i("%s subscribing...", name);
     subscribeChars();
 }
 
@@ -158,7 +174,8 @@ void Peer::onConnect(BLEClient* client) {
  */
 void Peer::onDisconnect(BLEClient* client) {
     connected = false;
-    log_i("%s disconnected", name);
+    log_i("%s disconnected, unsubscribing", name);
+    unsubscribeChars();
 }
 
 /**
@@ -218,4 +235,37 @@ void Peer::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bo
     log_i("%s uuid: %s, data: '%s', len: %d", name, c->getUUID().toString().c_str(), buf, length);
 }
 
+ESPM::ESPM(
+    const char* address,
+    uint8_t addressType,
+    const char* type,
+    const char* name,
+    PeerCharacteristicPower* customPowerChar,
+    PeerCharacteristicBattery* customBattChar,
+    PeerCharacteristicApiTX* customApiTxChar,
+    PeerCharacteristicApiRX* customApiRxChar,
+    PeerCharacteristicWeightscale* customWeightChar)
+    : PowerMeter(
+          address,
+          addressType,
+          type,
+          name,
+          customPowerChar,
+          customBattChar) {
+    // addChar(nullptr != customApiTxChar
+    //             ? customApiTxChar
+    //             : new PeerCharacteristicApiTX());
+    addChar(nullptr != customApiRxChar
+                ? customApiRxChar
+                : new PeerCharacteristicApiRX());
+    addChar(nullptr != customWeightChar
+                ? customWeightChar
+                : new PeerCharacteristicWeightscale());
+}
+
+void ESPM::onConnect(BLEClient* client) {
+    // log_i("calling secureConnection()");
+    // client->secureConnection();
+    PowerMeter::onConnect(client);
+}
 #endif

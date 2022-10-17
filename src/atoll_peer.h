@@ -235,7 +235,7 @@ class Peer : public BLEClientCallbacks {
         }
     }
 
-    virtual void subscribeChars();
+    virtual void subscribeChars(bool onConnect = true);
     virtual void unsubscribeChars();
     virtual int8_t charIndex(const char* label);
     virtual bool charExists(const char* label);
@@ -300,24 +300,9 @@ class ESPM : public PowerMeter {
         PeerCharacteristicBattery* customBattChar = nullptr,
         PeerCharacteristicApiTX* customApiTxChar = nullptr,
         PeerCharacteristicApiRX* customApiRxChar = nullptr,
-        PeerCharacteristicWeightscale* customWeightChar = nullptr)
-        : PowerMeter(
-              address,
-              addressType,
-              type,
-              name,
-              customPowerChar,
-              customBattChar) {
-        // addChar(nullptr != customApiTxChar
-        //             ? customApiTxChar
-        //             : new PeerCharacteristicApiTX());
-        // addChar(nullptr != customApiRxChar
-        //             ? customApiRxChar
-        //             : new PeerCharacteristicApiRX());
-        addChar(nullptr != customWeightChar
-                    ? customWeightChar
-                    : new PeerCharacteristicWeightscale());
-    }
+        PeerCharacteristicWeightscale* customWeightChar = nullptr);
+
+    virtual void onConnect(BLEClient* pClient) override;
 };
 
 class HeartrateMonitor : public Peer {

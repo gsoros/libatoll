@@ -14,7 +14,7 @@ PeerCharacteristicApiTX::PeerCharacteristicApiTX(const char* label,
 
 String PeerCharacteristicApiTX::decode(const uint8_t* data, const size_t length) {
     log_e("not implemented");
-    lastValue = String("not implemented");
+    lastValue = String("TODO not implemented");
     return lastValue;
 }
 

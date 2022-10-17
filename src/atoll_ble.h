@@ -6,24 +6,15 @@
 
 #include "atoll_log.h"
 
+#ifndef BLE_SECURITY_IOCAP
+#define BLE_SECURITY_IOCAP BLE_HS_IO_DISPLAY_ONLY
+#endif
+
 namespace Atoll {
 
 class Ble {
    public:
-    static void init(const char *deviceName) {
-        if (initDone) {
-            // log_i("init already done");
-            return;
-        }
-
-        BLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
-        BLEDevice::setScanDuplicateCacheSize(200);
-
-        BLEDevice::init(deviceName);
-
-        // BLEDevice::setMTU(517);
-        initDone = true;
-    }
+    static void init(const char *deviceName);
 
    protected:
     static bool initDone;

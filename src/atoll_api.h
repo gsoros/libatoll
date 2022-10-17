@@ -155,7 +155,7 @@ class ApiCommand {
 class Api : public Preferences {
    public:
     static Api *instance;
-    static BleServer *bleServer;
+    static Atoll::BleServer *bleServer;
     static BLEUUID serviceUuid;
     static bool secureBle;    // whether to use LESC for BLE API service
     static uint32_t passkey;  // passkey for BLE API service, max 6 digits

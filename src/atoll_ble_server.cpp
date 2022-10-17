@@ -4,6 +4,7 @@
 #include "atoll_ble_server.h"
 
 using namespace Atoll;
+
 BleServer::BleServer() {
     _clients.clear();
 }
@@ -73,17 +74,15 @@ void BleServer::loop() {
 }
 
 void BleServer::setSecurity(bool state, const uint32_t passkey) {
-    log_i("%s", state ? "true" : "false");
+    log_i("state: %s, passkey: %d", state ? "true" : "false", passkey);
     if (state) {
-        NimBLEDevice::setSecurityAuth(true, true, true);
+        BLEDevice::setSecurityAuth(true, true, true);
         if (passkey) {
-            log_i("passkey: %d", passkey);
-            NimBLEDevice::setSecurityPasskey(passkey);
+            BLEDevice::setSecurityPasskey(passkey);
         }
-        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
         return;
     }
-    NimBLEDevice::setSecurityAuth(false, false, false);
+    BLEDevice::setSecurityAuth(false, false, false);
 }
 
 BLEService *BleServer::createService(const BLEUUID &uuid) {
@@ -175,7 +174,6 @@ void BleServer::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
     log_i("client %d connected, %s",
           desc->conn_handle,
           BLEAddress(desc->peer_ota_addr).toString().c_str());
-    // BLEDevice::startSecurity(desc->conn_handle);
     //  save client handle so we can gracefully disconnect them
     bool savedClientHandle = false;
     for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++)

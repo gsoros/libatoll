@@ -23,4 +23,8 @@ bool PeerCharacteristicApiRX::encode(const String value, uint8_t* data, size_t l
     return true;
 }
 
+bool PeerCharacteristicApiRX::subscribeOnConnect() {
+    return false;
+}
+
 #endif

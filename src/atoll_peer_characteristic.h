@@ -17,15 +17,23 @@ class PeerCharacteristic {
     char label[SETTINGS_STR_LENGTH] = "unnamed characteristic";
     BLEUUID serviceUuid = BLEUUID((uint16_t)0);
     BLEUUID charUuid = BLEUUID((uint16_t)0);
-    BLERemoteService* service = nullptr;
-    BLERemoteCharacteristic* characteristic = nullptr;
 
     virtual ~PeerCharacteristic();  // virt dtor so we can safely delete
+
+    virtual BLERemoteService* getRemoteService(BLEClient* client = nullptr);
+    virtual void unsetRemoteService();
+    virtual BLERemoteCharacteristic* getRemoteChar(BLEClient* client = nullptr);
+    virtual void unsetRemoteChar();
 
     virtual bool subscribe(BLEClient* client);
     virtual bool unsubscribe();
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) = 0;
-    virtual bool readOnSubscribe() { return true; }
+    virtual bool readOnSubscribe();
+    virtual bool subscribeOnConnect();
+
+   private:
+    BLERemoteService* remoteService = nullptr;
+    BLERemoteCharacteristic* remoteChar = nullptr;
 };
 
 }  // namespace Atoll
