@@ -49,6 +49,11 @@ class Peer : public BLEClientCallbacks {
     bool markedForRemoval = false;
     static const uint8_t packedMaxLength = ATOLL_BLE_PEER_DEVICE_PACKED_LENGTH;  // for convenience
 
+    enum ConnectionParamsProfile {
+        APCPP_INITIAL,     // initial connection phase
+        APCPP_ESTABLISHED  // established phase
+    };
+
     virtual ~Peer();
 
     Peer(const char* address,
@@ -186,6 +191,7 @@ class Peer : public BLEClientCallbacks {
         return hasClient() && getClient()->isConnected();
     }
 
+    virtual void setConnectionParams(BLEClient* client, uint8_t profile, bool update = false);
     virtual void connect();
 
     virtual void disconnect() {
@@ -229,12 +235,12 @@ class Peer : public BLEClientCallbacks {
 
     // client callbacks
     virtual void onConnect(BLEClient* pClient) override;
-    virtual void onDisconnect(BLEClient* pClient) override;
+    virtual void onDisconnect(BLEClient* pClient, int reason) override;
     virtual bool onConnParamsUpdateRequest(BLEClient* pClient, const ble_gap_upd_params* params) override;
     virtual uint32_t onPassKeyRequest() override;
     // virtual void onPassKeyNotify(uint32_t pass_key) override;
     // virtual bool onSecurityRequest() override;
-    virtual void onAuthenticationComplete(ble_gap_conn_desc* desc) override;
+    virtual void onAuthenticationComplete(NimBLEConnInfo& connInfo) override;
     virtual bool onConfirmPIN(uint32_t pin) override;
 
     // notification callback

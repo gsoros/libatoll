@@ -24,7 +24,7 @@ void BleClient::setup(
     Ble::init(deviceName);
 
     scan = BLEDevice::getScan();
-    scan->setAdvertisedDeviceCallbacks(this);
+    scan->setScanCallbacks(this);
 
     // client->start();
 }
@@ -105,13 +105,9 @@ uint32_t BleClient::startScan(uint32_t duration) {
     scan->setWindow(37);        // How long to scan during the interval; in milliseconds.
     scan->setMaxResults(0);     // do not store the scan results, use callback only.
 
-    if (callScanStart(duration))
+    if (scan->start(duration, false))
         return duration;
     return 0;
-}
-
-bool BleClient::callScanStart(uint32_t duration) {
-    return scan->start(duration, onScanComplete, false);
 }
 
 // get index of existing peer address
@@ -219,7 +215,7 @@ void BleClient::onResult(BLEAdvertisedDevice* advertisedDevice) {
     log_i("scan found %s", advertisedDevice->toString().c_str());
 }
 
-void BleClient::onScanComplete(BLEScanResults results) {
+void BleClient::onScanEnd(BLEScanResults results) {
     log_i("scan end");
 }
 

@@ -2,7 +2,7 @@
 
 using namespace Atoll;
 
-void ApiRxCallbacks::onWrite(BLECharacteristic *c) {
+void ApiRxCallbacks::onWrite(BLECharacteristic *c, BLEConnInfo &info) {
     ApiMessage msg = Api::process(c->getValue().c_str());
 
     // length = length(uint8max) + ":" + resultName
@@ -48,5 +48,5 @@ void ApiRxCallbacks::onWrite(BLECharacteristic *c) {
             (uint8_t *)reply,
             replyLength);
 
-    BLECharacteristicCallbacks::onWrite(c);
+    BLECharacteristicCallbacks::onWrite(c, info);
 }

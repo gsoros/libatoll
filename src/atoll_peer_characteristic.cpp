@@ -69,8 +69,7 @@ bool PeerCharacteristic::subscribe(BLEClient* client) {
                 size_t length,
                 bool isNotify) {
                 onNotify(c, data, length, isNotify);
-            },
-            false)) {
+            })) {
         log_e("could not subscribe to '%s' remoteChar", label);
         return false;
     }

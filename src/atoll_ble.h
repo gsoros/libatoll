@@ -18,6 +18,8 @@ class Ble {
         const char *deviceName,
         uint8_t securityIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT);
 
+    static String connInfoToStr(BLEConnInfo *info);
+
    protected:
     static bool initDone;
 };

@@ -7,7 +7,7 @@
 namespace Atoll {
 class ApiRxCallbacks : public BLECharacteristicCallbacks {
    public:
-    void onWrite(BLECharacteristic *c);
+    void onWrite(BLECharacteristic* c, BLEConnInfo& connInfo) override;
 };
 
 }  // namespace Atoll

@@ -1,5 +1,6 @@
 #if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
 
+#include "atoll_ble.h"
 #include "atoll_ble_client.h"
 #include "atoll_peer.h"
 
@@ -10,6 +11,32 @@ Peer::~Peer() {
     // log_i("calling deleteClient() for %s", name);
     // deleteClient();
     unsetClient();
+}
+
+void Peer::setConnectionParams(BLEClient* client, uint8_t profile, bool update) {
+    // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
+    // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
+    // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
+    // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
+    // scanInterval | The scan interval to use when attempting to connect in 0.625ms units.
+    // scanWindow   | The scan window to use when attempting to connect in 0.625ms units.
+    //      if (maxinterval * latency > timeout) { return invalidParams; )
+    switch (profile) {
+        case APCPP_ESTABLISHED:
+            log_i("setting established connection params");
+            if (update)
+                client->updateConnParams(128, 128, 0, 42);
+            else
+                client->setConnectionParams(128, 128, 0, 42);
+            break;
+        case APCPP_INITIAL:
+        default:
+            log_i("setting initial connection params");
+            if (update)
+                client->updateConnParams(6, 12, 0, 42);
+            else
+                client->setConnectionParams(6, 12, 0, 42);
+    }
 }
 
 void Peer::connect() {
@@ -28,6 +55,7 @@ void Peer::connect() {
     if (BLEDevice::getClientListSize()) {
         setClient(BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType)));
         if (hasClient()) {
+            setConnectionParams(getClient(), APCPP_INITIAL);
             if (!connectClient(false)) {
                 // log_i("%s reconnect failed", name);
                 goto end;
@@ -44,20 +72,8 @@ void Peer::connect() {
         BLEClient* c = BLEDevice::createClient(BLEAddress(address, addressType));
         log_i("%s new client created, setting conn params", name);
 
-        // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
-        // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
-        // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
-        // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
-        // scanInterval | The scan interval to use when attempting to connect in 0.625ms units.
-        // scanWindow   | The scan window to use when attempting to connect in 0.625ms units.
-        //      if (maxinterval * latency > timeout) { return invalidParams; )
-        // c->setConnectionParams(12, 12, 0, 51, 16, 16);
-        // c->setConnectionParams(6, 500, 1, 500, 16, 16);
-        c->setConnectionParams(6, 12, 0, 42);
-        // c->setConnectionParams(48, 48, 3, 1000, 16, 16);
-
-        // Set the timeout to wait for connection attempt to complete. (seconds)
-        c->setConnectTimeout(5);
+        setConnectionParams(c, APCPP_INITIAL);
+        c->setConnectTimeout(2000);
 
         setClient(c);
 
@@ -197,24 +213,16 @@ void Peer::onConnect(BLEClient* client) {
     log_i("%s subscribing...", name);
     subscribeChars(client);
 
-    // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
-    // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
-    // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
-    // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
-    //      if (maxinterval * latency > timeout) { return invalidParams; )
-    // client->updateConnParams(120, 120, 0, 60);
-    // client->updateConnParams(32, 160, 0, 500);
-    // client->updateConnParams(120, 120, 3, 512);
     log_i("%s requesting conn param update...", name);
-    client->updateConnParams(128, 128, 0, 42);
+    setConnectionParams(client, APCPP_ESTABLISHED, true);
 }
 
 /**
  * @brief Called when disconnected from the server.
  * @param [in] device->client A pointer to the calling client object.
  */
-void Peer::onDisconnect(BLEClient* client) {
-    log_i("%s disconnected, unsubscribing", name);
+void Peer::onDisconnect(BLEClient* client, int reason) {
+    log_i("%s disconnected, reason %d, unsubscribing", name, reason);
     unsubscribeChars(client);
     unsetClient();
 }
@@ -226,7 +234,7 @@ void Peer::onDisconnect(BLEClient* client) {
  * @return True to accept the parmeters.
  */
 bool Peer::onConnParamsUpdateRequest(BLEClient* client, const ble_gap_upd_params* params) {
-    log_i("%s, interval: %d-%d, latency: %d, ce: %d-%d, timeout: %d",
+    log_i("%s requested: interval: %d-%d, latency: %d, ce: %d-%d, timeout: %d",
           name,
           params->itvl_min,
           params->itvl_max,
@@ -234,6 +242,7 @@ bool Peer::onConnParamsUpdateRequest(BLEClient* client, const ble_gap_upd_params
           params->min_ce_len,
           params->max_ce_len,
           params->supervision_timeout);
+    log_i("%s accepting request", name);
     return true;
 }
 
@@ -256,13 +265,8 @@ bool Peer::onSecurityRequest() {}
  * @param [in] desc A pointer to the struct containing the connection information.\n
  * This can be used to check the status of the connection encryption/pairing.
  */
-void Peer::onAuthenticationComplete(ble_gap_conn_desc* desc) {
-    log_i("role: %s, encrypted: %d, authenticated: %d, bonded: %d, key size: %d",
-          desc->role == BLE_GAP_ROLE_SLAVE ? "slave" : "master",
-          desc->sec_state.encrypted,
-          desc->sec_state.authenticated,
-          desc->sec_state.bonded,
-          desc->sec_state.key_size);
+void Peer::onAuthenticationComplete(NimBLEConnInfo& info) {
+    log_i("%s", Ble::connInfoToStr(&info).c_str());
 }
 
 /**

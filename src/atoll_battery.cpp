@@ -109,22 +109,26 @@ void Battery::loop() {
 void Battery::detectChargingEvent(float oldVoltage) {
     // log_i("%f %f", oldVoltage, voltage);
     if (oldVoltage < ATOLL_BATTERY_EMPTY) return;
+    if (voltage < ATOLL_BATTERY_EMPTY) return;
+    if (oldVoltage == ATOLL_BATTERY_EMPTY && voltage == ATOLL_BATTERY_FULL) return;
+    if (oldVoltage == ATOLL_BATTERY_FULL && voltage == ATOLL_BATTERY_EMPTY) return;
+
     if ((oldVoltage < voltage) &&
         (ATOLL_BATTERY_CHARGE_START_VOLTAGE_RISE <= (voltage - oldVoltage)))
-        log_i("TODO charge START event %f %f", oldVoltage, voltage);
+        log_i("TODO charge START event %.2f => %.2f", oldVoltage, voltage);
     else if (ATOLL_BATTERY_CHARGE_END_VOLTAGE_DROP <= (oldVoltage - voltage))
-        log_i("TODO charge END event %f %f", oldVoltage, voltage);
+        log_i("TODO charge END event %.2f => %.2f", oldVoltage, voltage);
 }
 
 float Battery::voltageAvg() {
-    float voltage = 0.0;
+    float v = 0.0;
     for (decltype(_voltageBuf)::index_t i = 0; i < _voltageBuf.size(); i++)
-        voltage += _voltageBuf[i] / _voltageBuf.size();
-    if (voltage < ATOLL_BATTERY_EMPTY)
-        voltage = ATOLL_BATTERY_EMPTY;
-    else if (ATOLL_BATTERY_FULL < voltage)
-        voltage = ATOLL_BATTERY_FULL;
-    return voltage;
+        v += _voltageBuf[i] / _voltageBuf.size();
+    if (v < ATOLL_BATTERY_EMPTY)
+        v = ATOLL_BATTERY_EMPTY;
+    else if (ATOLL_BATTERY_FULL < v)
+        v = ATOLL_BATTERY_FULL;
+    return v;
 }
 
 uint8_t Battery::calculateLevel() {
@@ -170,6 +174,10 @@ float Battery::measureVoltage(bool useCorrection) {
         samples /
         100.0;  // double division
     voltage = pinVoltage * corrF;
+    if (voltage < ATOLL_BATTERY_EMPTY)
+        voltage = ATOLL_BATTERY_EMPTY;
+    else if (ATOLL_BATTERY_FULL < voltage)
+        voltage = ATOLL_BATTERY_FULL;
     // log_i("Measured: (%d) = %fV ==> with correction: %fV", sum / samples, pinVoltage, voltage);
     _voltageBuf.push(voltage);
     return useCorrection ? voltage : pinVoltage;

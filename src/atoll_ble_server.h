@@ -68,43 +68,19 @@ class BleServer : public Task,
     virtual void stop();
 
     // BLEServerCallbacks
-    virtual void onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) override;
-    virtual void onDisconnect(BLEServer *pServer, ble_gap_conn_desc *desc) override;
-    virtual void onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc) override;
+    virtual void onConnect(BLEServer *pServer, BLEConnInfo &connInfo) override;
+    virtual void onDisconnect(BLEServer *pServer, BLEConnInfo &connInfo, int reason) override;
+    virtual void onMTUChange(uint16_t MTU, BLEConnInfo &connInfo) override;
     virtual uint32_t onPassKeyRequest() override;
-    virtual void onAuthenticationComplete(ble_gap_conn_desc *desc) override;
+    virtual void onAuthenticationComplete(BLEConnInfo &connInfo) override;
     virtual bool onConfirmPIN(uint32_t pin) override;
 
     // BLECharacteristicCallbacks
-    virtual void onRead(BLECharacteristic *c) override {
-        log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
-    }
-
-    virtual void onWrite(BLECharacteristic *c) override {
-        log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
-    }
-
-    virtual void onNotify(BLECharacteristic *c) override {
-        // log_i("%d", c->getValue<int>());
-    }
-
-    virtual void onStatus(BLECharacteristic *c, Status s, int code) override {
-        // log_i("char: %s, status: %d, code: %d", c->getUUID().toString().c_str(), s, code);
-    }
-
-    virtual void onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) override {
-        log_i("client ID: %d Address: %s ...",
-              desc->conn_handle,
-              BLEAddress(desc->peer_ota_addr).toString().c_str());
-        if (subValue == 0)
-            log_i("... unsubscribed from %s", c->getUUID().toString().c_str());
-        else if (subValue == 1)
-            log_i("... subscribed to notfications for %s", c->getUUID().toString().c_str());
-        else if (subValue == 2)
-            log_i("... Subscribed to indications for %s", c->getUUID().toString().c_str());
-        else if (subValue == 3)
-            log_i("... subscribed to notifications and indications for %s", c->getUUID().toString().c_str());
-    }
+    virtual void onRead(BLECharacteristic *c, BLEConnInfo &connInfo) override;
+    virtual void onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) override;
+    virtual void onNotify(BLECharacteristic *c) override;
+    virtual void onStatus(BLECharacteristic *c, int code) override;
+    virtual void onSubscribe(BLECharacteristic *c, BLEConnInfo &connInfo, uint16_t subValue) override;
 
    protected:
     // keeps track of connected client handles, in order to gracefully disconnect them before deep sleep or reboot; TODO add has() to CircularBuffer

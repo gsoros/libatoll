@@ -180,38 +180,33 @@ void BleServer::stop() {
     delay(100);  // give the stack a chance to clear packets
 }
 
-void BleServer::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
-    log_i("client %d connected, address: %s, interval: %d, latency: %d, timeout: %d, sec_state: %d",
-          desc->conn_handle,
-          BLEAddress(desc->peer_ota_addr).toString().c_str(),
-          desc->conn_itvl,
-          desc->conn_latency,
-          desc->supervision_timeout,
-          desc->sec_state);
+// BLEServerCallbacks
+
+void BleServer::onConnect(BLEServer *pServer, BLEConnInfo &info) {
+    log_i("client connected, %s", Ble::connInfoToStr(&info).c_str());
     //  save client handle so we can gracefully disconnect them
     bool handleExists = false;
     for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++)
-        if (_clients[i] == desc->conn_handle)
+        if (_clients[i] == info.getConnHandle())
             handleExists = true;
     if (!handleExists)
-        _clients.push(desc->conn_handle);
+        _clients.push(info.getConnHandle());
 }
 
-void BleServer::onDisconnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
-    log_i("client %d disconnected", desc->conn_handle);
+void BleServer::onDisconnect(BLEServer *pServer, BLEConnInfo &info, int reason) {
+    log_i("client disconnected (reason %d), %s", reason, Ble::connInfoToStr(&info).c_str());
     uint16_t handle;
     // remove saved handle
     for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++) {
         if (_clients.isEmpty()) break;
         handle = _clients.shift();
-        if (handle != desc->conn_handle)
+        if (handle != info.getConnHandle())
             _clients.push(handle);
     }
 }
 
-void BleServer::onMTUChange(uint16_t mtu, ble_gap_conn_desc *desc) {
-    log_i("MTU: %d interval: %d, latency: %d, timeout: %d",
-          mtu, desc->conn_itvl, desc->conn_latency, desc->supervision_timeout);
+void BleServer::onMTUChange(uint16_t mtu, BLEConnInfo &info) {
+    log_i("MTU changed: %s", Ble::connInfoToStr(&info).c_str());
 }
 
 uint32_t BleServer::onPassKeyRequest() {
@@ -219,13 +214,8 @@ uint32_t BleServer::onPassKeyRequest() {
     return 696669;
 }
 
-void BleServer::onAuthenticationComplete(ble_gap_conn_desc *desc) {
-    log_i("role: %s, encrypted: %d, authenticated: %d, bonded: %d, key size: %d",
-          desc->role == BLE_GAP_ROLE_SLAVE ? "slave" : "master",
-          desc->sec_state.encrypted,
-          desc->sec_state.authenticated,
-          desc->sec_state.bonded,
-          desc->sec_state.key_size);
+void BleServer::onAuthenticationComplete(BLEConnInfo &info) {
+    log_i("auth complete, %s", Ble::connInfoToStr(&info).c_str());
 }
 
 bool BleServer::onConfirmPIN(uint32_t pin) {
@@ -233,4 +223,44 @@ bool BleServer::onConfirmPIN(uint32_t pin) {
     return true;
 }
 
+// BLECharacteristicCallbacks
+
+void BleServer::onRead(BLECharacteristic *c, BLEConnInfo &connInfo) {
+    log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
+}
+
+void BleServer::onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) {
+    log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
+}
+
+void BleServer::onNotify(BLECharacteristic *c) {
+    // log_i("%d", c->getValue<int>());
+}
+
+void BleServer::onStatus(BLECharacteristic *c, int code) {
+    // log_i("char: %s, code: %d", c->getUUID().toString().c_str(), code);
+}
+
+void BleServer::onSubscribe(BLECharacteristic *c, BLEConnInfo &info, uint16_t subValue) {
+    char remote[64];
+    snprintf(remote, sizeof(remote), "client ID: %d Address: %s (%s) ",
+             info.getConnHandle(),
+             info.getAddress().toString().c_str(), info.getIdAddress().toString().c_str());
+    switch (subValue) {
+        case 0:
+            log_i("%s unsubscribed from %s", remote, c->getUUID().toString().c_str());
+            break;
+        case 1:
+            log_i("%s subscribed to notfications for %s", remote, c->getUUID().toString().c_str());
+            break;
+        case 2:
+            log_i("%s subscribed to indications for %s", remote, c->getUUID().toString().c_str());
+            break;
+        case 3:
+            log_i("%s subscribed to notifications and indications for %s", remote, c->getUUID().toString().c_str());
+            break;
+        default:
+            log_i("%s did something to %s", remote, c->getUUID().toString().c_str());
+    }
+}
 #endif

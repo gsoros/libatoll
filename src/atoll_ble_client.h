@@ -29,7 +29,7 @@ namespace Atoll {
 
 class BleClient : public Task,
                   public Preferences,
-                  public BLEAdvertisedDeviceCallbacks {
+                  public NimBLEScanCallbacks {
    public:
     const char* taskName() { return "BleClient"; }
     char deviceName[SETTINGS_STR_LENGTH] = HOSTNAME;         // device name
@@ -50,8 +50,8 @@ class BleClient : public Task,
     virtual void disconnectPeers();
     virtual void deleteClients();
 
+    // duration is in milliseconds
     virtual uint32_t startScan(uint32_t duration);
-    virtual bool callScanStart(uint32_t duration);
 
     virtual int8_t peerIndex(const char* address);
     virtual bool peerExists(const char* address);
@@ -68,13 +68,9 @@ class BleClient : public Task,
    protected:
     bool shouldStop = false;
 
-    // advertised device callback
-    virtual void onResult(BLEAdvertisedDevice* advertisedDevice);
-
-    // scan results callback
-    static void onScanComplete(BLEScanResults results);
-
-   private:
+    // NimBLEScanCallbacks
+    virtual void onResult(BLEAdvertisedDevice* advertisedDevice) override;
+    virtual void onScanEnd(BLEScanResults results) override;
 };
 
 }  // namespace Atoll
