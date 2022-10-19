@@ -2,7 +2,7 @@
 
 using namespace Atoll;
 
-void Ble::init(const char *deviceName) {
+void Ble::init(const char *deviceName, uint8_t securityIOCap) {
     if (initDone) {
         // log_i("init already done");
         return;
@@ -13,8 +13,11 @@ void Ble::init(const char *deviceName) {
 
     BLEDevice::init(deviceName);
 
-    log_i("setSecurityIOCap(%d)", BLE_SECURITY_IOCAP);
-    BLEDevice::setSecurityIOCap(BLE_SECURITY_IOCAP);
+    log_i("setMTU(512)");
+    BLEDevice::setMTU(512);
+
+    log_i("setSecurityIOCap(%d)", securityIOCap);
+    BLEDevice::setSecurityIOCap(securityIOCap);
 
     initDone = true;
 }

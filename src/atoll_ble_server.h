@@ -44,6 +44,8 @@ class BleServer : public Task,
     virtual ~BleServer();
 
     virtual void setup(const char *deviceName);
+    virtual void init();
+    virtual uint16_t getAppearance();
     virtual bool createDeviceInformationService();
     virtual void loop();
 
@@ -65,26 +67,32 @@ class BleServer : public Task,
 
     virtual void stop();
 
-    virtual void onConnect(BLEServer *pServer, ble_gap_conn_desc *desc);
-    virtual void onDisconnect(BLEServer *pServer);
-    virtual void onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc);
-    virtual uint32_t onPassKeyRequest();
-    virtual void onAuthenticationComplete(ble_gap_conn_desc *desc);
-    virtual bool onConfirmPIN(uint32_t pin);
+    // BLEServerCallbacks
+    virtual void onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) override;
+    virtual void onDisconnect(BLEServer *pServer, ble_gap_conn_desc *desc) override;
+    virtual void onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc) override;
+    virtual uint32_t onPassKeyRequest() override;
+    virtual void onAuthenticationComplete(ble_gap_conn_desc *desc) override;
+    virtual bool onConfirmPIN(uint32_t pin) override;
 
-    virtual void onRead(BLECharacteristic *c) {
+    // BLECharacteristicCallbacks
+    virtual void onRead(BLECharacteristic *c) override {
         log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
     }
 
-    virtual void onWrite(BLECharacteristic *c) {
+    virtual void onWrite(BLECharacteristic *c) override {
         log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
     }
 
-    virtual void onNotify(BLECharacteristic *c) {
+    virtual void onNotify(BLECharacteristic *c) override {
         // log_i("%d", c->getValue<int>());
     }
 
-    virtual void onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) {
+    virtual void onStatus(BLECharacteristic *c, Status s, int code) override {
+        // log_i("char: %s, status: %d, code: %d", c->getUUID().toString().c_str(), s, code);
+    }
+
+    virtual void onSubscribe(BLECharacteristic *c, ble_gap_conn_desc *desc, uint16_t subValue) override {
         log_i("client ID: %d Address: %s ...",
               desc->conn_handle,
               BLEAddress(desc->peer_ota_addr).toString().c_str());

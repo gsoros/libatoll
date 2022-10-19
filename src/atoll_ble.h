@@ -6,15 +6,17 @@
 
 #include "atoll_log.h"
 
-#ifndef BLE_SECURITY_IOCAP
-#define BLE_SECURITY_IOCAP BLE_HS_IO_DISPLAY_ONLY
+#ifndef ATOLL_BLE_SECURITY_IOCAP_DEFAULT
+#define ATOLL_BLE_SECURITY_IOCAP_DEFAULT BLE_HS_IO_DISPLAY_ONLY
 #endif
 
 namespace Atoll {
 
 class Ble {
    public:
-    static void init(const char *deviceName);
+    static void init(
+        const char *deviceName,
+        uint8_t securityIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT);
 
    protected:
     static bool initDone;

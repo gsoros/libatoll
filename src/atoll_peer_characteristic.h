@@ -21,19 +21,13 @@ class PeerCharacteristic {
     virtual ~PeerCharacteristic();  // virt dtor so we can safely delete
 
     virtual BLERemoteService* getRemoteService(BLEClient* client = nullptr);
-    virtual void unsetRemoteService();
     virtual BLERemoteCharacteristic* getRemoteChar(BLEClient* client = nullptr);
-    virtual void unsetRemoteChar();
 
     virtual bool subscribe(BLEClient* client);
-    virtual bool unsubscribe();
+    virtual bool unsubscribe(BLEClient* client);
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) = 0;
     virtual bool readOnSubscribe();
     virtual bool subscribeOnConnect();
-
-   private:
-    BLERemoteService* remoteService = nullptr;
-    BLERemoteCharacteristic* remoteChar = nullptr;
 };
 
 }  // namespace Atoll

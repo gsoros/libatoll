@@ -45,7 +45,6 @@ class Peer : public BLEClientCallbacks {
     char type[ATOLL_BLE_PEER_DEVICE_TYPE_LENGTH];
     char name[ATOLL_BLE_PEER_DEVICE_NAME_LENGTH];
     bool connecting = false;
-    bool connected = false;
     bool shouldConnect = true;
     bool markedForRemoval = false;
     static const uint8_t packedMaxLength = ATOLL_BLE_PEER_DEVICE_PACKED_LENGTH;  // for convenience
@@ -169,19 +168,6 @@ class Peer : public BLEClientCallbacks {
             return;
         }
         client->setClientCallbacks(this, false);
-
-        // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
-        // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
-        // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
-        // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
-        // scanInterval | The scan interval to use when attempting to connect in 0.625ms units.
-        // scanWindow   | The scan window to use when attempting to connect in 0.625ms units.
-        //      if (maxinterval * latency > timeout) {return invalidParams;)
-        // client->setConnectionParams(12, 12, 0, 51, 16, 16);
-        // client->setConnectionParams(6, 500, 1, 500, 16, 16);
-        // client->setConnectionParams(6, 300, 0, 3200);
-
-        client->setConnectTimeout(3);
     }
 
     virtual BLEClient* getClient() {
@@ -192,57 +178,44 @@ class Peer : public BLEClientCallbacks {
         client = nullptr;
     }
 
-    // virtual bool deleteClient() {
-    //     disconnect();
-    //     if (!hasClient()) return true;
-    //     while (client->isConnected()) {
-    //         log_i("waiting for disconnect");
-    //         delay(500);
-    //     }
-    //     log_i("calling BLEDevice::deleteClient(%d)", (int)client);
-    //     // TODO BLEDevice::deleteClient sometimes crashes with multi_heap_free multi_heap_poisoning.c:253 (head != NULL)
-    //     if (!BLEDevice::deleteClient(client)) {
-    //         log_i("could not delete client for %s", name);
-    //         return false;
-    //     }
-    //     log_i("client deleted for %s", name);
-    //     unsetClient();
-    //     return true;
-    // }
-
     virtual bool hasClient() {
         return client != nullptr;
     }
 
     virtual bool isConnected() {
-        return hasClient() && connected;
+        return hasClient() && getClient()->isConnected();
     }
 
     virtual void connect();
 
     virtual void disconnect() {
         if (!hasClient()) {
-            log_e("hasClient() is false");
+            log_e("%s no client", name);
             return;
         }
-        unsubscribeChars();
         shouldConnect = false;
-        if (isConnected())
+        if (isConnected()) {
+            unsubscribeChars(client);
             client->disconnect();
+        }
         while (isConnected()) {
-            log_i("waiting for disconnect...");
+            log_i("%s waiting for disconnect...", name);
             delay(500);
         }
     }
 
-    virtual void subscribeChars(bool onConnect = true);
-    virtual void unsubscribeChars();
+    virtual void subscribeChars(BLEClient* client);
+    virtual void unsubscribeChars(BLEClient* client);
     virtual int8_t charIndex(const char* label);
     virtual bool charExists(const char* label);
     virtual bool addChar(PeerCharacteristic* c);
     virtual PeerCharacteristic* getChar(const char* label);
     virtual bool removeCharAt(int8_t index);
     virtual uint8_t deleteChars(const char* label);
+
+    virtual bool isPowerMeter();
+    virtual bool isESPM();
+    virtual bool isHeartrateMonitor();
 
    protected:
     BLEClient* client = nullptr;                                           // our NimBLE client
@@ -303,6 +276,8 @@ class ESPM : public PowerMeter {
         PeerCharacteristicWeightscale* customWeightChar = nullptr);
 
     virtual void onConnect(BLEClient* pClient) override;
+
+    virtual bool sendApiCommand(const char* command);
 };
 
 class HeartrateMonitor : public Peer {

@@ -10,7 +10,6 @@ PeerCharacteristic::~PeerCharacteristic() {
 }
 
 BLERemoteService* PeerCharacteristic::getRemoteService(BLEClient* client) {
-    if (nullptr != remoteService) return remoteService;
     if (nullptr == client) {
         log_e("%s no client", label);
         return nullptr;
@@ -19,53 +18,51 @@ BLERemoteService* PeerCharacteristic::getRemoteService(BLEClient* client) {
         log_e("%s client not connected", label);
         return nullptr;
     }
-    remoteService = client->getService(serviceUuid);
-    if (nullptr == remoteService)
+    log_i("%s getting remote service for uuid %s", label, serviceUuid.toString().c_str());
+    BLERemoteService* rs = client->getService(serviceUuid);
+    if (nullptr == rs)
         log_e("%s could not get remote service", label);
-    else
+    else {
         log_i("%s got remote service", label);
-    return remoteService;
-}
-
-void PeerCharacteristic::unsetRemoteService() {
-    remoteService = nullptr;
+        // log_i("%s discovering chars", label);
+        // rs->getCharacteristics();
+    }
+    return rs;
 }
 
 BLERemoteCharacteristic* PeerCharacteristic::getRemoteChar(BLEClient* client) {
-    if (nullptr != remoteChar) return remoteChar;
-    if (nullptr == remoteService) {
-        if (nullptr == client)
-            log_e("%s no client", label);
-        else if (!client->isConnected())
-            log_e("%s client not connected", label);
-        else
-            remoteService = client->getService(serviceUuid);
-    }
-    if (nullptr == remoteService) {
+    BLERemoteService* rs = getRemoteService(client);
+    if (nullptr == rs) {
         log_e("%s could not get remote service", label);
         return nullptr;
     }
-    remoteChar = remoteService->getCharacteristic(charUuid);
-    if (nullptr == remoteChar)
+    BLEClient* c = rs->getClient();
+    if (nullptr == c) {
+        log_e("%s remote service has no client", label);
+        return nullptr;
+    }
+    if (!c->isConnected()) {
+        log_e("%s remote service client not connected", label);
+        return nullptr;
+    }
+    log_i("%s getting remote char for uuid %s", label, charUuid.toString().c_str());
+    BLERemoteCharacteristic* rc = rs->getCharacteristic(charUuid);
+    if (nullptr == rc)
         log_e("%s could not get remote char", label);
     else
         log_i("%s got remote char", label);
-    return remoteChar;
-}
-
-void PeerCharacteristic::unsetRemoteChar() {
-    remoteChar = nullptr;
+    return rc;
 }
 
 bool PeerCharacteristic::subscribe(BLEClient* client) {
-    if (!remoteChar) getRemoteChar(client);
-    if (!remoteChar) return false;
-    if (!remoteChar->canNotify() && !remoteChar->canIndicate()) {
+    BLERemoteCharacteristic* rc = getRemoteChar(client);
+    if (nullptr == rc) return false;
+    if (!rc->canNotify() && !rc->canIndicate()) {
         log_e("'%s' cannot notify or indicate", label);
         return false;
     }
-    if (!remoteChar->subscribe(
-            remoteChar->canNotify(),
+    if (!rc->subscribe(
+            rc->canNotify(),
             [this](
                 BLERemoteCharacteristic* c,
                 uint8_t* data,
@@ -81,13 +78,11 @@ bool PeerCharacteristic::subscribe(BLEClient* client) {
     return true;
 }
 
-bool PeerCharacteristic::unsubscribe() {
-    log_i("%s unsub: %schar", label, remoteChar ? "" : "no ");
-    if (!remoteChar) return false;
-    // remoteChar->unsubscribe(false);
-    // log_i("unsub: done");
-    // return true;
-    bool res = remoteChar->unsubscribe();
+bool PeerCharacteristic::unsubscribe(BLEClient* client) {
+    BLERemoteCharacteristic* rc = getRemoteChar(client);
+    log_i("%s unsub: %schar", label, rc ? "" : "no ");
+    if (nullptr == rc) return false;
+    bool res = rc->unsubscribe();
     log_i("%s unsub: %s", label, res ? "succ" : "fail");
     return res;
 }

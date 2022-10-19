@@ -13,8 +13,11 @@ PeerCharacteristicApiTX::PeerCharacteristicApiTX(const char* label,
 }
 
 String PeerCharacteristicApiTX::decode(const uint8_t* data, const size_t length) {
-    log_e("not implemented");
-    lastValue = String("TODO not implemented");
+    char value[length + 1];
+    strncpy(value, (char*)data, length);
+    value[length] = 0;
+    lastValue = String(value);
+    log_i("received length=%d '%s'", length, lastValue.c_str());
     return lastValue;
 }
 

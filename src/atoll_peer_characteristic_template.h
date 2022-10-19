@@ -20,15 +20,15 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
     virtual T decode(const uint8_t* data, const size_t length) = 0;
     virtual bool encode(const T value, uint8_t* data, size_t length) = 0;
 
-    virtual T read() {
-        BLERemoteCharacteristic* c = getRemoteChar();
-        if (!c) return lastValue;
-        if (!c->canRead()) {
+    virtual T read(BLEClient* client) {
+        BLERemoteCharacteristic* rc = getRemoteChar(client);
+        if (!rc) return lastValue;
+        if (!rc->canRead()) {
             log_e("%s not readable", label);
             return lastValue;
         }
-        // lastValue = c->readValue<T>();
-        snprintf(readBuffer, sizeof(readBuffer), "%s", c->readValue().c_str());
+        // lastValue = rc->readValue<T>();
+        snprintf(readBuffer, sizeof(readBuffer), "%s", rc->readValue().c_str());
         size_t len = strlen(readBuffer);
         log_i("readBuf len=%d", len);
         if (!len) return lastValue;
@@ -37,14 +37,14 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
         return lastValue;
     }
 
-    virtual bool write(T value, size_t length) {
-        BLERemoteCharacteristic* c = getRemoteChar();
-        if (!c) return false;
-        if (!c->canWrite()) {
+    virtual bool write(BLEClient* client, T value, size_t length) {
+        BLERemoteCharacteristic* rc = getRemoteChar(client);
+        if (!rc) return false;
+        if (!rc->canWrite()) {
             log_e("%s not writable", label);
             return false;
         }
-        return c->writeValue<T>(value, length);
+        return rc->writeValue<T>(value, length);
     }
 
     virtual void onNotify(
@@ -64,7 +64,7 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
     virtual bool subscribe(BLEClient* client) override {
         bool res = PeerCharacteristic::subscribe(client);
         if (res && readOnSubscribe()) {
-            read();
+            read(client);
             notify();
         }
         return res;

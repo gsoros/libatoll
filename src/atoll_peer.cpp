@@ -42,11 +42,25 @@ void Peer::connect() {
             goto end;
         }
         BLEClient* c = BLEDevice::createClient(BLEAddress(address, addressType));
-        // c->setConnectionParams(120, 120, 0, 60);
-        // c->setConnectionParams(32, 160, 0, 500);
-        // c->setConnectionParams(24, 48, 0, 60);
+        log_i("%s new client created, setting conn params", name);
+
+        // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
+        // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
+        // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
+        // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
+        // scanInterval | The scan interval to use when attempting to connect in 0.625ms units.
+        // scanWindow   | The scan window to use when attempting to connect in 0.625ms units.
+        //      if (maxinterval * latency > timeout) { return invalidParams; )
+        // c->setConnectionParams(12, 12, 0, 51, 16, 16);
+        // c->setConnectionParams(6, 500, 1, 500, 16, 16);
+        c->setConnectionParams(6, 12, 0, 42);
+        // c->setConnectionParams(48, 48, 3, 1000, 16, 16);
+
+        // Set the timeout to wait for connection attempt to complete. (seconds)
+        c->setConnectTimeout(5);
+
         setClient(c);
-        log_i("%s new client created", name);
+
         if (!connectClient()) {
             // log_i("%s failed to connect new client", name);
             goto end;
@@ -59,6 +73,12 @@ void Peer::connect() {
         }
     }
     log_i("%s connected", name);
+
+    // log_i("%s calling secureConnection()...", name);
+    // if (!client->secureConnection()) {
+    //     log_i("%s secureConnection() failed", name);
+    // }
+
     goto end;
 
 end:
@@ -66,12 +86,12 @@ end:
     connecting = false;
 }
 
-void Peer::subscribeChars(bool onConnect) {
+void Peer::subscribeChars(BLEClient* client) {
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
-            if (onConnect && !chars[i]->subscribeOnConnect()) {
+            if (!chars[i]->subscribeOnConnect()) {
                 log_i("%s not subscribing %s", name, chars[i]->label);
-                // chars[i]->getRemoteChar(client);  // get remote service and char
+                chars[i]->getRemoteChar(client);  // get remote service and char
                 continue;
             }
             log_i("%s subscribing %s", name, chars[i]->label);
@@ -79,13 +99,11 @@ void Peer::subscribeChars(bool onConnect) {
         }
 }
 
-void Peer::unsubscribeChars() {
+void Peer::unsubscribeChars(BLEClient* client) {
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
             log_i("%s unsubscribing %s", name, chars[i]->label);
-            chars[i]->unsubscribe();
-            chars[i]->unsetRemoteChar();
-            chars[i]->unsetRemoteService();
+            chars[i]->unsubscribe(client);
         }
 }
 
@@ -154,18 +172,41 @@ uint8_t Peer::deleteChars(const char* label) {
     return deleted;
 }
 
+bool Peer::isPowerMeter() {
+    return nullptr != strchr(type, 'P');
+}
+
+bool Peer::isESPM() {
+    return nullptr != strchr(type, 'E');
+}
+
+bool Peer::isHeartrateMonitor() {
+    return nullptr != strchr(type, 'H');
+}
+
 /**
  * @brief Called after client connects.
  * @param [in] device->client A pointer to the calling client object.
  */
 void Peer::onConnect(BLEClient* client) {
-    connected = true;
     log_i("%s connected", name);
-    // log_i("%s connected, requesting conn params...", name);
+
+    log_i("%s discovering attributes...", name);
+    client->discoverAttributes();
+
+    log_i("%s subscribing...", name);
+    subscribeChars(client);
+
+    // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
+    // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
+    // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
+    // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
+    //      if (maxinterval * latency > timeout) { return invalidParams; )
     // client->updateConnParams(120, 120, 0, 60);
     // client->updateConnParams(32, 160, 0, 500);
-    log_i("%s subscribing...", name);
-    subscribeChars();
+    // client->updateConnParams(120, 120, 3, 512);
+    log_i("%s requesting conn param update...", name);
+    client->updateConnParams(128, 128, 0, 42);
 }
 
 /**
@@ -173,9 +214,9 @@ void Peer::onConnect(BLEClient* client) {
  * @param [in] device->client A pointer to the calling client object.
  */
 void Peer::onDisconnect(BLEClient* client) {
-    connected = false;
     log_i("%s disconnected, unsubscribing", name);
-    unsubscribeChars();
+    unsubscribeChars(client);
+    unsetClient();
 }
 
 /**
@@ -201,8 +242,8 @@ bool Peer::onConnParamsUpdateRequest(BLEClient* client, const ble_gap_upd_params
  * @return The passkey to be sent to the server.
  */
 uint32_t Peer::onPassKeyRequest() {
-    log_e("%s TODO send saved passkey", name);
-    return 123;
+    log_w("%s sending 696669, TODO send saved passkey", name);
+    return 696669;
 }
 
 /*
@@ -216,7 +257,12 @@ bool Peer::onSecurityRequest() {}
  * This can be used to check the status of the connection encryption/pairing.
  */
 void Peer::onAuthenticationComplete(ble_gap_conn_desc* desc) {
-    log_i("%s TODO sext8: %d", name, desc->sec_state);
+    log_i("role: %s, encrypted: %d, authenticated: %d, bonded: %d, key size: %d",
+          desc->role == BLE_GAP_ROLE_SLAVE ? "slave" : "master",
+          desc->sec_state.encrypted,
+          desc->sec_state.authenticated,
+          desc->sec_state.bonded,
+          desc->sec_state.key_size);
 }
 
 /**
@@ -252,9 +298,9 @@ ESPM::ESPM(
           name,
           customPowerChar,
           customBattChar) {
-    // addChar(nullptr != customApiTxChar
-    //             ? customApiTxChar
-    //             : new PeerCharacteristicApiTX());
+    addChar(nullptr != customApiTxChar
+                ? customApiTxChar
+                : new PeerCharacteristicApiTX());
     addChar(nullptr != customApiRxChar
                 ? customApiRxChar
                 : new PeerCharacteristicApiRX());
@@ -268,4 +314,26 @@ void ESPM::onConnect(BLEClient* client) {
     // client->secureConnection();
     PowerMeter::onConnect(client);
 }
+
+bool ESPM::sendApiCommand(const char* command) {
+    PeerCharacteristicApiRX* apiRX = (PeerCharacteristicApiRX*)getChar("ApiRX");
+    if (nullptr == apiRX) {
+        log_e("api rx char is null");
+        return false;
+    }
+    BLEClient* client = getClient();
+    if (nullptr == client) {
+        log_e("client is null");
+        return false;
+    }
+    log_i("sending command '%s'", command);
+    auto sc = String(command);
+    if (!apiRX->write(client, sc, sc.length())) {
+        log_i("could not write char");
+        return false;
+    }
+    log_i("command sent");
+    return true;
+}
+
 #endif

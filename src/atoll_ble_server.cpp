@@ -19,7 +19,7 @@ void BleServer::setup(const char *deviceName) {
     }
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
     enabled = true;
-    Ble::init(deviceName);
+    init();
 
     server = BLEDevice::createServer();
     if (nullptr == server) {
@@ -28,9 +28,7 @@ void BleServer::setup(const char *deviceName) {
     }
     server->setCallbacks(this);
     advertising = server->getAdvertising();
-#ifdef BLE_APPEARANCE
-    advertising->setAppearance(BLE_APPEARANCE);
-#endif
+    advertising->setAppearance(getAppearance());
     // advertising->setManufacturerData("G");
     // advertising->setScanResponse(false);
     // advertising->setMinPreferred(0x0);
@@ -38,6 +36,14 @@ void BleServer::setup(const char *deviceName) {
     createDeviceInformationService();
 
     done = true;
+}
+
+void BleServer::init() {
+    Ble::init(deviceName);
+}
+
+uint16_t BleServer::getAppearance() {
+    return APPEARANCE_CYCLING_GENERIC;
 }
 
 bool BleServer::createDeviceInformationService() {
@@ -76,7 +82,7 @@ void BleServer::loop() {
 void BleServer::setSecurity(bool state, const uint32_t passkey) {
     log_i("state: %s, passkey: %d", state ? "true" : "false", passkey);
     if (state) {
-        BLEDevice::setSecurityAuth(true, true, true);
+        BLEDevice::setSecurityAuth(true, false, false);
         if (passkey) {
             BLEDevice::setSecurityPasskey(passkey);
         }
@@ -157,6 +163,10 @@ void BleServer::notify(
         return;
     }
     c->setValue(data, size);
+    if (!_clients.size()) {
+        log_i("no clients connected, not notifying");
+        return;
+    }
     c->notify();
 }
 
@@ -171,33 +181,51 @@ void BleServer::stop() {
 }
 
 void BleServer::onConnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
-    log_i("client %d connected, %s",
+    log_i("client %d connected, address: %s, interval: %d, latency: %d, timeout: %d, sec_state: %d",
           desc->conn_handle,
-          BLEAddress(desc->peer_ota_addr).toString().c_str());
+          BLEAddress(desc->peer_ota_addr).toString().c_str(),
+          desc->conn_itvl,
+          desc->conn_latency,
+          desc->supervision_timeout,
+          desc->sec_state);
     //  save client handle so we can gracefully disconnect them
-    bool savedClientHandle = false;
+    bool handleExists = false;
     for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++)
         if (_clients[i] == desc->conn_handle)
-            savedClientHandle = true;
-    if (!savedClientHandle)
+            handleExists = true;
+    if (!handleExists)
         _clients.push(desc->conn_handle);
 }
 
-void BleServer::onDisconnect(BLEServer *pServer) {
-    log_i("");
+void BleServer::onDisconnect(BLEServer *pServer, ble_gap_conn_desc *desc) {
+    log_i("client %d disconnected", desc->conn_handle);
+    uint16_t handle;
+    // remove saved handle
+    for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++) {
+        if (_clients.isEmpty()) break;
+        handle = _clients.shift();
+        if (handle != desc->conn_handle)
+            _clients.push(handle);
+    }
 }
 
 void BleServer::onMTUChange(uint16_t mtu, ble_gap_conn_desc *desc) {
-    log_i("%d", mtu);
+    log_i("MTU: %d interval: %d, latency: %d, timeout: %d",
+          mtu, desc->conn_itvl, desc->conn_latency, desc->supervision_timeout);
 }
 
 uint32_t BleServer::onPassKeyRequest() {
     log_e("not implemented");
-    return 1234;
+    return 696669;
 }
 
 void BleServer::onAuthenticationComplete(ble_gap_conn_desc *desc) {
-    log_e("not implemented");
+    log_i("role: %s, encrypted: %d, authenticated: %d, bonded: %d, key size: %d",
+          desc->role == BLE_GAP_ROLE_SLAVE ? "slave" : "master",
+          desc->sec_state.encrypted,
+          desc->sec_state.authenticated,
+          desc->sec_state.bonded,
+          desc->sec_state.key_size);
 }
 
 bool BleServer::onConfirmPIN(uint32_t pin) {
