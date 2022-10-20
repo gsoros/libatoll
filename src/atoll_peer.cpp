@@ -371,10 +371,10 @@ void Peer::onConnect(BLEClient* client) {
     log_i("%s discovering attributes...", name);
     client->discoverAttributes();
 
-    log_i("%s subscribing...", name);
+    // log_i("%s subscribing...", name);
     subscribeChars(client);
 
-    log_i("%s requesting conn param update...", name);
+    // log_i("%s requesting conn param update...", name);
     setConnectionParams(client, APCPP_ESTABLISHED);
 }
 
