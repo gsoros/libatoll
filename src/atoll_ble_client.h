@@ -44,6 +44,7 @@ class BleClient : public Task,
     virtual ~BleClient();
 
     virtual void setup(const char* deviceName, ::Preferences* p);
+    virtual void init();
     virtual void loop();
     virtual void stop();
 

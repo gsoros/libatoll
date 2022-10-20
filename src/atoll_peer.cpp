@@ -6,6 +6,116 @@
 
 using namespace Atoll;
 
+Peer::Peer(const char* address,
+           uint8_t addressType,
+           const char* type,
+           const char* name,
+           PeerCharacteristicBattery* customBattChar) {
+    if (strlen(address) < 1) {
+        log_e("empty address for %s %s", name, type);
+        snprintf(this->address, sizeof(this->address), "%s", "invalid");
+    } else
+        strncpy(this->address, address, sizeof(this->address));
+    this->addressType = addressType;
+    strncpy(this->type, type, sizeof(this->type));
+    strncpy(this->name, name, sizeof(this->name));
+    for (int8_t i = 0; i < charsMax; i++)
+        removeCharAt(i);  // initialize to nullptrs
+    addChar(nullptr != customBattChar
+                ? customBattChar
+                : new PeerCharacteristicBattery());
+}
+
+// format: address,addressType,type,name
+bool Peer::pack(char* packed, size_t len) {
+    char buf[packedMaxLength];
+    snprintf(buf, sizeof(buf), "%s,%d,%s,%s", address, addressType, type, name);
+    if (len < strlen(buf)) {
+        log_e("buffer too small");
+        return false;
+    }
+    strncpy(packed, buf, len);
+    return true;
+}
+
+// format: address,addressType,type,name
+bool Peer::unpack(
+    const char* packed,
+    char* address,
+    size_t addressLen,
+    uint8_t* addressType,
+    char* type,
+    size_t typeLen,
+    char* name,
+    size_t nameLen) {
+    // log_i("unpacking '%s'", packed);
+    size_t packedLen = strlen(packed);
+    // log_i("packedLen: %d", packedLen);
+    if (packedLen < sizeof(Peer::address) + 7) {
+        log_e("packed string too short (%d)", packedLen);
+        return false;
+    }
+    char* colon = strchr(packed, ',');
+    if (nullptr == colon) {
+        log_e("first colon not present");
+        return false;
+    }
+    char tAddress[sizeof(Peer::address)] = "";
+    size_t tAddressLen = colon - packed;
+    // log_i("tAddressLen: %d", tAddressLen);
+    if (addressLen < tAddressLen) {
+        log_e("address buffer too small");
+        return false;
+    }
+    strncpy(tAddress, packed, tAddressLen);
+
+    // rest of packed, without address and colon
+    char rest[packedLen - tAddressLen] = "";
+    strncpy(rest, colon + 1, sizeof(rest) - 1);
+    // log_i("rest: '%s' size: %d", rest, sizeof(rest) - 1);
+    colon = strchr(rest, ',');
+    if (nullptr == colon) {
+        log_e("second colon not present");
+        return false;
+    }
+    char tAddressTypeStr[3] = "";  // strlen(uint8_t)
+    strncpy(tAddressTypeStr, rest, colon - rest);
+    uint8_t tAddressTypeLen = strlen(tAddressTypeStr);
+    uint8_t tAddressType = atoi(tAddressTypeStr);
+    // log_i("tAddressType: %d", tAddressType);
+
+    colon = strrchr(packed, ',');
+    if (nullptr == colon) {
+        log_e("last colon not present");
+        return false;
+    }
+    char tType[sizeof(Peer::type)] = "";
+    size_t tTypeLen = colon - tAddressLen - tAddressTypeLen - 2 - packed;
+    // log_i("tTypeLen: %d", tTypeLen);
+    if (typeLen < tTypeLen) {
+        log_e("type buffer too small");
+        return false;
+    }
+    strncpy(tType, packed + tAddressTypeLen + tAddressLen + 2, tTypeLen);
+    char tName[sizeof(Peer::name)] = "";
+    size_t tNameLen = packedLen - tAddressLen - tAddressTypeLen - tTypeLen - 3;
+    // log_i("tNameLen: %d", tNameLen);
+    if (nameLen < tNameLen) {
+        log_e("name buffer too small");
+        return false;
+    }
+    strncpy(tName, packed + tAddressLen + tAddressTypeLen + tTypeLen + 3, tNameLen);
+    // log_i("tAddress: %s, tAddressType: %d, tType: %s, tName: %s",
+    //       tAddress, tAddressType, tType, tName);
+    strncpy(address, tAddress, addressLen);
+    *addressType = tAddressType;
+    strncpy(type, tType, typeLen);
+    strncpy(name, tName, nameLen);
+    // log_i("address: %s, addressType: %d, type: %s, name: %s",
+    //       address, *addressType, type, name);
+    return true;
+}
+
 Peer::~Peer() {
     disconnect();
     // log_i("calling deleteClient() for %s", name);
@@ -13,7 +123,7 @@ Peer::~Peer() {
     unsetClient();
 }
 
-void Peer::setConnectionParams(BLEClient* client, uint8_t profile, bool update) {
+void Peer::setConnectionParams(BLEClient* client, uint8_t profile) {
     // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
     // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
     // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
@@ -23,71 +133,66 @@ void Peer::setConnectionParams(BLEClient* client, uint8_t profile, bool update) 
     //      if (maxinterval * latency > timeout) { return invalidParams; )
     switch (profile) {
         case APCPP_ESTABLISHED:
-            log_i("setting established connection params");
-            if (update)
+            if (client->isConnected()) {
+                log_i("updating connection params to established profile");
                 client->updateConnParams(128, 128, 0, 42);
-            else
+            } else {
+                log_i("setting connection params to established profile");
                 client->setConnectionParams(128, 128, 0, 42);
+            }
             break;
         case APCPP_INITIAL:
         default:
-            log_i("setting initial connection params");
-            if (update)
+            if (client->isConnected()) {
+                log_i("updating connection params to initial profile");
                 client->updateConnParams(6, 12, 0, 42);
-            else
+            } else {
+                log_i("setting connection params to initial profile");
                 client->setConnectionParams(6, 12, 0, 42);
+            }
     }
 }
 
 void Peer::connect() {
-    // https://github.com/h2zero/NimBLE-Arduino/blob/master/examples/NimBLE_Client/NimBLE_Client.ino
     if (connecting) {
         log_i("%s already connecting", name);
         return;
     }
     connecting = true;
 
-    if (isConnected()) {
-        log_i("%s already connected", name);
-        goto end;
-    }
     log_i("%s connecting", name);
-    if (BLEDevice::getClientListSize()) {
-        setClient(BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType)));
-        if (hasClient()) {
-            setConnectionParams(getClient(), APCPP_INITIAL);
-            if (!connectClient(false)) {
-                // log_i("%s reconnect failed", name);
+
+    if (!hasClient()) {
+        BLEClient* c = BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType));
+        if (c)
+            log_i("%s got client by peer address", name);
+        else
+            c = BLEDevice::getDisconnectedClient();
+        if (c)
+            log_i("%s got disconnected client", name);
+        else {
+            if (BLEDevice::getClientListSize() >= NIMBLE_MAX_CONNECTIONS) {
+                log_e("%s max clients reached", name);
                 goto end;
             }
-            log_i("%s reconnected", name);
-        } else
-            setClient(BLEDevice::getDisconnectedClient());
-    }
-    if (!hasClient()) {
-        if (BLEDevice::getClientListSize() >= NIMBLE_MAX_CONNECTIONS) {
-            log_e("%s max clients reached", name);
+            c = BLEDevice::createClient(BLEAddress(address, addressType));
+            if (c)
+                log_i("%s created new client", name);
+        }
+        if (!c) {
+            log_e("%s could not create client", name);
             goto end;
         }
-        BLEClient* c = BLEDevice::createClient(BLEAddress(address, addressType));
-        log_i("%s new client created, setting conn params", name);
-
-        setConnectionParams(c, APCPP_INITIAL);
-        c->setConnectTimeout(2000);
-
         setClient(c);
+    }
 
-        if (!connectClient()) {
-            // log_i("%s failed to connect new client", name);
-            goto end;
-        }
+    setConnectionParams(client, APCPP_INITIAL);
+    client->setConnectTimeout(2000);
+    if (!connectClient()) {
+        log_i("%s failed to connect client", name);
+        goto end;
     }
-    if (!isConnected()) {
-        if (!connectClient()) {
-            // log_i("%s failed to connect", name);
-            goto end;
-        }
-    }
+
     log_i("%s connected", name);
 
     // log_i("%s calling secureConnection()...", name);
@@ -95,14 +200,53 @@ void Peer::connect() {
     //     log_i("%s secureConnection() failed", name);
     // }
 
-    goto end;
-
 end:
     // log_i("end");
     connecting = false;
 }
 
+void Peer::disconnect() {
+    shouldConnect = false;
+    if (isConnected()) {
+        unsubscribeChars(client);
+        client->disconnect();
+    }
+    while (isConnected()) {
+        log_i("%s waiting for disconnect...", name);
+        delay(500);
+    }
+}
+
+void Peer::setClient(BLEClient* client) {
+    if (nullptr == client) {
+        log_e("client is null");
+        return;
+    }
+    client->setClientCallbacks(this, false);
+    this->client = client;
+}
+
+void Peer::unsetClient() {
+    client = nullptr;
+}
+
+bool Peer::hasClient() {
+    return nullptr != client;
+}
+
+bool Peer::isConnected() {
+    return hasClient() && client->isConnected();
+}
+
+bool Peer::connectClient(bool deleteAttributes) {
+    return hasClient() && client->connect(BLEAddress(address, addressType), deleteAttributes);
+}
+
 void Peer::subscribeChars(BLEClient* client) {
+    if (!isConnected()) {
+        log_e("not connected");
+        return;
+    }
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
             if (!chars[i]->subscribeOnConnect()) {
@@ -116,6 +260,10 @@ void Peer::subscribeChars(BLEClient* client) {
 }
 
 void Peer::unsubscribeChars(BLEClient* client) {
+    if (!isConnected()) {
+        log_e("not connected");
+        return;
+    }
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
             log_i("%s unsubscribing %s", name, chars[i]->label);
@@ -214,7 +362,7 @@ void Peer::onConnect(BLEClient* client) {
     subscribeChars(client);
 
     log_i("%s requesting conn param update...", name);
-    setConnectionParams(client, APCPP_ESTABLISHED, true);
+    setConnectionParams(client, APCPP_ESTABLISHED);
 }
 
 /**
@@ -222,9 +370,13 @@ void Peer::onConnect(BLEClient* client) {
  * @param [in] device->client A pointer to the calling client object.
  */
 void Peer::onDisconnect(BLEClient* client, int reason) {
-    log_i("%s disconnected, reason %d, unsubscribing", name, reason);
-    unsubscribeChars(client);
-    unsetClient();
+    log_i("%s disconnected, reason %d", name, reason);
+
+    // log_i("%s unsubscribing", name);
+    // unsubscribeChars(client);
+
+    // log_i("%s unsetting client", name);
+    // unsetClient();
 }
 
 /**
@@ -285,6 +437,24 @@ void Peer::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bo
     log_i("%s uuid: %s, data: '%s', len: %d", name, c->getUUID().toString().c_str(), buf, length);
 }
 
+PowerMeter::PowerMeter(
+    const char* address,
+    uint8_t addressType,
+    const char* type,
+    const char* name,
+    PeerCharacteristicPower* customPowerChar,
+    PeerCharacteristicBattery* customBattChar)
+    : Peer(
+          address,
+          addressType,
+          type,
+          name,
+          customBattChar) {
+    addChar(nullptr != customPowerChar
+                ? customPowerChar
+                : new PeerCharacteristicPower());
+}
+
 ESPM::ESPM(
     const char* address,
     uint8_t addressType,
@@ -325,9 +495,8 @@ bool ESPM::sendApiCommand(const char* command) {
         log_e("api rx char is null");
         return false;
     }
-    BLEClient* client = getClient();
-    if (nullptr == client) {
-        log_e("client is null");
+    if (!hasClient()) {
+        log_e("no client");
         return false;
     }
     log_i("sending command '%s'", command);
@@ -340,4 +509,21 @@ bool ESPM::sendApiCommand(const char* command) {
     return true;
 }
 
+HeartrateMonitor::HeartrateMonitor(
+    const char* address,
+    uint8_t addressType,
+    const char* type,
+    const char* name,
+    PeerCharacteristicHeartrate* customHrChar,
+    PeerCharacteristicBattery* customBattChar)
+    : Peer(
+          address,
+          addressType,
+          type,
+          name,
+          customBattChar) {
+    addChar(nullptr != customHrChar
+                ? customHrChar
+                : new PeerCharacteristicHeartrate());
+}
 #endif

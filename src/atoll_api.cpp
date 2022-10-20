@@ -42,7 +42,7 @@ void Api::setup(
     addCommand(ApiCommand("system", Atoll::Api::systemProcessor));
 
     loadSettings();
-    printSettings();
+    // printSettings();
 
     if (nullptr != bleServer && nullptr != serviceUuid)
         addBleService();
@@ -140,7 +140,7 @@ bool Api::addCommand(ApiCommand newCommand) {
         log_e("error adding %d:%s", newCommand.code, newCommand.name);
         return false;
     }
-    log_i("Adding command %d:%s", newCommand.code, newCommand.name);
+    log_i("%2d:%s", newCommand.code, newCommand.name);
     commands[numCommands] = newCommand;
     numCommands++;
     return true;
@@ -195,7 +195,7 @@ bool Api::addResult(ApiResult newResult) {
         log_e("error adding %d:%s", newResult.code, newResult.name);
         return false;
     }
-    log_i("Adding result %d:%s", newResult.code, newResult.name);
+    log_i("%2d:%s", newResult.code, newResult.name);
     results[numResults] = newResult;
     numResults++;
     return true;
@@ -244,7 +244,7 @@ void Api::saveSettings() {
 }
 
 void Api::printSettings() {
-    log_i("SecureBle: %s Passkey: %d", secureBle ? "Yes" : "No", passkey);
+    log_i("secureBle: %s, passkey: %d", secureBle ? "yes" : "no", passkey);
 }
 
 bool Api::isAlNumStr(const char *str) {

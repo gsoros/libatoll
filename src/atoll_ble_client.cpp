@@ -21,12 +21,16 @@ void BleClient::setup(
     printSettings();
     enabled = true;
 
-    Ble::init(deviceName);
+    init();
 
     scan = BLEDevice::getScan();
     scan->setScanCallbacks(this);
 
     // client->start();
+}
+
+void BleClient::init() {
+    Ble::init(deviceName);
 }
 
 void BleClient::loop() {

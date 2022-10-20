@@ -6,6 +6,10 @@
 
 #include "atoll_log.h"
 
+#ifndef ATOLL_BLE_MTU_DEFAULT
+#define ATOLL_BLE_MTU_DEFAULT 79
+#endif
+
 #ifndef ATOLL_BLE_SECURITY_IOCAP_DEFAULT
 #define ATOLL_BLE_SECURITY_IOCAP_DEFAULT BLE_HS_IO_DISPLAY_ONLY
 #endif
@@ -16,6 +20,7 @@ class Ble {
    public:
     static void init(
         const char *deviceName,
+        uint16_t mtu = ATOLL_BLE_MTU_DEFAULT,
         uint8_t securityIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT);
 
     static String connInfoToStr(BLEConnInfo *info);

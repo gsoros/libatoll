@@ -18,12 +18,12 @@ BLERemoteService* PeerCharacteristic::getRemoteService(BLEClient* client) {
         log_e("%s client not connected", label);
         return nullptr;
     }
-    log_i("%s getting remote service for uuid %s", label, serviceUuid.toString().c_str());
+    // log_i("%s getting remote service for uuid %s", label, serviceUuid.toString().c_str());
     BLERemoteService* rs = client->getService(serviceUuid);
     if (nullptr == rs)
         log_e("%s could not get remote service", label);
     else {
-        log_i("%s got remote service", label);
+        // log_i("%s got remote service", label);
         // log_i("%s discovering chars", label);
         // rs->getCharacteristics();
     }
@@ -45,12 +45,13 @@ BLERemoteCharacteristic* PeerCharacteristic::getRemoteChar(BLEClient* client) {
         log_e("%s remote service client not connected", label);
         return nullptr;
     }
-    log_i("%s getting remote char for uuid %s", label, charUuid.toString().c_str());
+    // log_i("%s getting remote char for uuid %s", label, charUuid.toString().c_str());
     BLERemoteCharacteristic* rc = rs->getCharacteristic(charUuid);
-    if (nullptr == rc)
+    if (nullptr == rc) {
         log_e("%s could not get remote char", label);
-    else
-        log_i("%s got remote char", label);
+    } else {
+        // log_i("%s got remote char", label);
+    }
     return rc;
 }
 
@@ -58,7 +59,7 @@ bool PeerCharacteristic::subscribe(BLEClient* client) {
     BLERemoteCharacteristic* rc = getRemoteChar(client);
     if (nullptr == rc) return false;
     if (!rc->canNotify() && !rc->canIndicate()) {
-        log_e("'%s' cannot notify or indicate", label);
+        log_e("%s cannot notify or indicate", label);
         return false;
     }
     if (!rc->subscribe(
@@ -70,20 +71,25 @@ bool PeerCharacteristic::subscribe(BLEClient* client) {
                 bool isNotify) {
                 onNotify(c, data, length, isNotify);
             })) {
-        log_e("could not subscribe to '%s' remoteChar", label);
+        log_e("%s could not subscribe", label);
         return false;
     }
-    log_i("subscribed %s", label);
+    log_i("%s subscribed", label);
     return true;
 }
 
 bool PeerCharacteristic::unsubscribe(BLEClient* client) {
     BLERemoteCharacteristic* rc = getRemoteChar(client);
-    log_i("%s unsub: %schar", label, rc ? "" : "no ");
-    if (nullptr == rc) return false;
-    bool res = rc->unsubscribe();
-    log_i("%s unsub: %s", label, res ? "succ" : "fail");
-    return res;
+    if (nullptr == rc) {
+        log_e("%s no char", label);
+        return false;
+    }
+    if (!rc->unsubscribe()) {
+        log_e("%s unsubscribe failed", label);
+        return false;
+    }
+    log_i("%s unsubscribed", label);
+    return true;
 }
 
 bool PeerCharacteristic::readOnSubscribe() { return true; }

@@ -110,7 +110,6 @@ void Task::_taskSetFreqAndDelay(const float freq) {
         _taskDelay = (TickType_t)UINT32_MAX;
     } else
         _taskDelay = pdMS_TO_TICKS(1000 / _taskFreq);
-    //_taskAbortDelay();
     _taskSetDelay();
 }
 
