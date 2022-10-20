@@ -134,71 +134,84 @@ void Peer::setConnectionParams(BLEClient* client, uint8_t profile) {
     switch (profile) {
         case APCPP_ESTABLISHED:
             if (client->isConnected()) {
-                log_i("updating connection params to established profile");
-                client->updateConnParams(128, 128, 0, 42);
+                log_i("updating to established profile");
+                client->updateConnParams(128, 128, 2, 256);
             } else {
-                log_i("setting connection params to established profile");
-                client->setConnectionParams(128, 128, 0, 42);
+                // log_i("setting to established profile");
+                client->setConnectionParams(128, 128, 2, 256);
             }
             break;
         case APCPP_INITIAL:
         default:
             if (client->isConnected()) {
-                log_i("updating connection params to initial profile");
-                client->updateConnParams(6, 12, 0, 42);
+                log_i("updating to initial profile");
+                client->updateConnParams(6, 12, 2, 128);
             } else {
-                log_i("setting connection params to initial profile");
-                client->setConnectionParams(6, 12, 0, 42);
+                // log_i("setting to initial profile");
+                client->setConnectionParams(6, 12, 2, 128);
             }
     }
 }
 
 void Peer::connect() {
+    if (isConnected()) {
+        log_i("%s already connected", name);
+        return;
+    }
     if (connecting) {
         log_i("%s already connecting", name);
         return;
     }
     connecting = true;
 
-    log_i("%s connecting", name);
+    // log_i("%s connecting", name);
 
-    if (!hasClient()) {
-        BLEClient* c = BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType));
-        if (c)
-            log_i("%s got client by peer address", name);
-        else
-            c = BLEDevice::getDisconnectedClient();
-        if (c)
-            log_i("%s got disconnected client", name);
-        else {
-            if (BLEDevice::getClientListSize() >= NIMBLE_MAX_CONNECTIONS) {
-                log_e("%s max clients reached", name);
-                goto end;
-            }
-            c = BLEDevice::createClient(BLEAddress(address, addressType));
-            if (c)
-                log_i("%s created new client", name);
-        }
-        if (!c) {
-            log_e("%s could not create client", name);
-            goto end;
-        }
-        setClient(c);
+    BLEClient* c = nullptr;
+
+    if (hasClient()) {
+        // log_i("%s has client", name);
+        goto connect;
     }
 
+    c = BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType));
+    if (c) {
+        // log_i("%s got client by peer address", name);
+        goto set;
+    }
+    c = BLEDevice::getDisconnectedClient();
+    if (c) {
+        // log_i("%s got disconnected client", name);
+        goto set;
+    }
+    if (BLEDevice::getClientListSize() >= NIMBLE_MAX_CONNECTIONS) {
+        log_e("%s max clients reached", name);
+        goto fail;
+    }
+    c = BLEDevice::createClient(BLEAddress(address, addressType));
+    if (c) {
+        // log_i("%s created new client", name);
+        goto set;
+    }
+
+set:
+    if (!c) {
+        log_e("%s could not get client", name);
+        goto fail;
+    }
+    setClient(c);
+
+connect:
     setConnectionParams(client, APCPP_INITIAL);
     client->setConnectTimeout(2000);
     if (!connectClient()) {
-        log_i("%s failed to connect client", name);
-        goto end;
+        // log_i("%s failed to connect client", name);
+        goto fail;
     }
-
     log_i("%s connected", name);
+    goto end;
 
-    // log_i("%s calling secureConnection()...", name);
-    // if (!client->secureConnection()) {
-    //     log_i("%s secureConnection() failed", name);
-    // }
+fail:
+    unsetClient();
 
 end:
     // log_i("end");
