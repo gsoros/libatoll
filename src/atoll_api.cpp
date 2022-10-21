@@ -132,7 +132,7 @@ bool Api::addCommand(ApiCommand newCommand) {
     if (nullptr != existing) {
         for (uint8_t i = 0; i < numCommands; i++)
             if (0 == strcmp(commands[i].name, existing->name)) {
-                // log_i("Replacing command %d:%s", existing->code, existing->name);
+                log_d("replacing command %d:%s", existing->code, existing->name);
                 newCommand.code = existing->code;
                 commands[i] = newCommand;
                 return true;
@@ -262,7 +262,7 @@ size_t Api::write(const uint8_t *buffer, size_t size) {
     size_t i = 0;
     while (i < size) {
         const char c = buffer[i];
-        // log_i("%d", c);
+        log_d("%d", c);
         i++;
         switch (c) {
             case 10: {  // LF
@@ -274,10 +274,12 @@ size_t Api::write(const uint8_t *buffer, size_t size) {
                     bufLen++;
                 }
                 if (!strlen(buf)) continue;
-                // log_i("processing '%s'", buf);
+                log_d("processing '%s'", buf);
                 ApiMessage msg = process(buf);
+#ifdef FEATURE_SERIAL
                 Serial.printf("%s: %s%s%s\n", buf, msg.result->name,
                               strlen(msg.reply) ? ", " : "", msg.reply);
+#endif
                 continue;
             }
             case 4:   // EOT

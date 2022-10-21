@@ -447,7 +447,7 @@ bool Peer::onConfirmPIN(uint32_t pin) {
 void Peer::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) {
     char buf[length];
     strncpy(buf, (char*)data, length);
-    log_i("%s uuid: %s, data: '%s', len: %d", name, c->getUUID().toString().c_str(), buf, length);
+    log_d("%s uuid: %s, data: '%s', len: %d", name, c->getUUID().toString().c_str(), buf, length);
 }
 
 PowerMeter::PowerMeter(
@@ -497,9 +497,8 @@ ESPM::ESPM(
 }
 
 void ESPM::onConnect(BLEClient* client) {
-    // log_i("calling secureConnection()");
-    // client->secureConnection();
     PowerMeter::onConnect(client);
+    sendApiCommand("init");  // request init
 }
 
 bool ESPM::sendApiCommand(const char* command) {

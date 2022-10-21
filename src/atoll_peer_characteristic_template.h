@@ -22,18 +22,22 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
 
     virtual T read(BLEClient* client) {
         BLERemoteCharacteristic* rc = getRemoteChar(client);
-        if (!rc) return lastValue;
+        if (!rc) {
+            log_e("%s could not get char", label);
+            return lastValue;
+        }
         if (!rc->canRead()) {
             log_e("%s not readable", label);
             return lastValue;
         }
         // lastValue = rc->readValue<T>();
+        log_d("%s reading into buffer", label);
         snprintf(readBuffer, sizeof(readBuffer), "%s", rc->readValue().c_str());
         size_t len = strlen(readBuffer);
-        log_i("readBuf len=%d", len);
+        log_d("%s readBuf len=%d", label, len);
         if (!len) return lastValue;
         lastValue = decode((uint8_t*)readBuffer, len);
-        log_i("0x%x", lastValue);
+        log_d("%s 0x%x", label, lastValue);
         return lastValue;
     }
 
@@ -53,12 +57,12 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
         size_t length,
         bool isNotify) override {
         lastValue = decode(data, length);
-        // log_i("%x", lastValue);
+        log_d("%s 0x%x", label, lastValue);
         notify();
     }
 
     virtual void notify() {
-        // log_i("0x%x", lastValue);
+        log_d("%s 0x%x", label, lastValue);
     }
 
     virtual bool subscribe(BLEClient* client) override {

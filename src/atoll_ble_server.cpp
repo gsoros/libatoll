@@ -75,8 +75,11 @@ void BleServer::loop() {
         log_e("not started");
         return;
     }
-    if (nullptr != advertising && !advertising->isAdvertising())
+    // if (server->getConnectedCount() >= NIMBLE_MAX_CONNECTIONS) {
+    // }
+    if (nullptr != advertising && !advertising->isAdvertising()) {
         startAdvertising();
+    }
 }
 
 void BleServer::setSecurity(bool state, const uint32_t passkey) {
@@ -136,13 +139,16 @@ void BleServer::start() {
 
 void BleServer::startAdvertising() {
     if (!enabled) {
-        log_i("Not enabled, not starting advertising");
+        log_i("not enabled, not starting");
         return;
     }
     delay(300);
     if (!advertising->isAdvertising()) {
-        server->startAdvertising();
-        // log_i("Start advertising");
+        if (server->startAdvertising()) {
+            log_i("started");
+            return;
+        }
+        log_e("failed to start");
     }
 }
 
@@ -172,7 +178,7 @@ void BleServer::notify(
 
 // disconnect clients, stop advertising and shutdown AtollBle
 void BleServer::stop() {
-    log_i("stop");
+    log_i("stopping");
     server->stopAdvertising();
     while (!_clients.isEmpty())
         server->disconnect(_clients.shift());
@@ -234,11 +240,11 @@ void BleServer::onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) {
 }
 
 void BleServer::onNotify(BLECharacteristic *c) {
-    // log_i("%d", c->getValue<int>());
+    log_d("%d", c->getValue<int>());
 }
 
 void BleServer::onStatus(BLECharacteristic *c, int code) {
-    // log_i("char: %s, code: %d", c->getUUID().toString().c_str(), code);
+    log_d("char: %s, code: %d", c->getUUID().toString().c_str(), code);
 }
 
 void BleServer::onSubscribe(BLECharacteristic *c, BLEConnInfo &info, uint16_t subValue) {

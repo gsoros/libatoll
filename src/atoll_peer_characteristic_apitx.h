@@ -12,7 +12,9 @@ class PeerCharacteristicApiTX : public PeerCharacteristicTemplate<String> {
                             BLEUUID charUuid = BLEUUID(API_TX_CHAR_UUID));
     virtual String decode(const uint8_t* data, const size_t length) override;
     virtual bool encode(const String value, uint8_t* data, size_t length) override;
-    // virtual bool readOnSubscribe() override { return false; }
+    virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) override;
+    virtual void notify() override;
+    virtual bool readOnSubscribe() override;
 };
 
 }  // namespace Atoll

@@ -31,8 +31,8 @@ void ApiRxCallbacks::onWrite(BLECharacteristic *c, BLEConnInfo &info) {
             log_w("%s reply has been cropped from %d to %d bytes",
                   reply, prevLength, replyDataLength);
         }
-        // log_i("reply: '%s', msg.replyLength: %d, replyTextLength: %d, replyDataLength: %d",
-        //      reply, msg.replyLength, replyTextLength, replyDataLength);
+        log_d("reply: '%s', msg.replyLength: %d, replyTextLength: %d, replyDataLength: %d",
+              reply, msg.replyLength, replyTextLength, replyDataLength);
         // using memcpy to deal with binary data
         memcpy(reply + replyTextLength, msg.reply, replyDataLength);
         replyLength = replyTextLength + replyDataLength;

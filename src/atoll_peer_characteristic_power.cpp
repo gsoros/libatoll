@@ -8,12 +8,12 @@ PeerCharacteristicPower::PeerCharacteristicPower() {
     snprintf(label, sizeof(label), "%s", "Power");
     serviceUuid = BLEUUID(CYCLING_POWER_SERVICE_UUID);
     charUuid = BLEUUID(CYCLING_POWER_MEASUREMENT_CHAR_UUID);
-    // log_i("PeerCharacteristicPower construct, label: %s, char: %s", label, charUuid.toString().c_str());
+    log_d("PeerCharacteristicPower construct, label: %s, char: %s", label, charUuid.toString().c_str());
 }
 
 uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t length) {
     if (length < 8) {
-        log_e("power reading length < 8");
+        log_w("power reading length < 8");
         return 0;
     }
     /// https://github.com/sputnikdev/bluetooth-gatt-parser/blob/master/src/main/resources/gatt/characteristic/org.bluetooth.characteristic.cycling_power_measurement.xml
@@ -42,10 +42,10 @@ uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t lengt
     uint16_t flags = data[0] | (data[1] << 8);
     // TODO power should be int16_t
     uint16_t power = data[2] | (data[3] << 8);
-    // log_i("power: %d", power);
+    log_d("power: %d", power);
 
     bool crankRevDataPresent = 0b00100000 & flags;
-    // log_i("flags: 0x%02X%s", flags, crankRevDataPresent ? " (crank rev data present)" : "");
+    log_d("flags: 0x%02X%s", flags, crankRevDataPresent ? " (crank rev data present)" : "");
     if (!crankRevDataPresent) return power;
 
     uint8_t offset = 4;
@@ -57,9 +57,9 @@ uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t lengt
         return power;
     }
     uint16_t revsIn = data[offset] | (data[offset + 1] << 8);
-    // log_i("revsIn: %d", revsIn);
+    log_d("revsIn: %d", revsIn);
     uint16_t lceIn = data[offset + 2] | (data[offset + 3] << 8);
-    // log_i("last crank event: %d", lceIn);
+    log_d("last crank event: %d", lceIn);
 
     double dTime = 0.0;
     if (lastCrankEvent > 0) {
@@ -81,7 +81,7 @@ uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t lengt
     }
 
     if ((lastCadence != cadence && cadence > 0) || (lastCrankEventTime < t - 2000)) {
-        // log_i("TODO notify new cadence: %d", cadence);
+        log_d("TODO notify new cadence: %d", cadence);
     }
     lastCadence = cadence;
     revolutions = revsIn;
@@ -90,7 +90,7 @@ uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t lengt
 }
 
 bool PeerCharacteristicPower::encode(const uint16_t value, uint8_t* data, size_t length) {
-    log_i("not implemented");
+    log_d("not implemented");
     return true;
 }
 

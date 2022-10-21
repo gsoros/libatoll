@@ -5,6 +5,7 @@
 #include <NimBLEDevice.h>
 
 #include "atoll_ble_constants.h"
+#include "atoll_log.h"
 
 #ifndef SETTINGS_STR_LENGTH
 #define SETTINGS_STR_LENGTH 32

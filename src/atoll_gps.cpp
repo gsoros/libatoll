@@ -52,7 +52,7 @@ bool GPS::syncSystemTime() {
     if (!device.time.isValid() || !device.date.isValid() || device.date.year() < 2022)
         return false;
 
-    log_i("syncing system time to gps time %04d-%02d-%02d %02d:%02d:%02d",
+    log_i("gps time: %04d-%02d-%02d %02d:%02d:%02d",
           device.date.year(),
           device.date.month(),
           device.date.day(),

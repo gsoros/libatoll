@@ -24,6 +24,7 @@ void BleClient::setup(
     init();
 
     scan = BLEDevice::getScan();
+
     scan->setScanCallbacks(this);
 
     // client->start();
@@ -49,13 +50,13 @@ void BleClient::loop() {
     if (scan->isScanning()) return;
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
-        // log_i("checking peer %d %s isConn:%d shouldConn:%d conning:%d remov:%d",
-        //       i,
-        //       peers[i]->name,
-        //       peers[i]->isConnected(),
-        //       peers[i]->shouldConnect,
-        //       peers[i]->connecting,
-        //       peers[i]->markedForRemoval);
+        log_i("checking peer %d %s isConn:%d shouldConn:%d conning:%d remov:%d",
+              i,
+              peers[i]->name,
+              peers[i]->isConnected(),
+              peers[i]->shouldConnect,
+              peers[i]->connecting,
+              peers[i]->markedForRemoval);
         if (0 == strcmp(peers[i]->address, "")) {
             log_e("peer %d %s %s address is empty", i, peers[i]->name, peers[i]->type);
             continue;
@@ -66,8 +67,8 @@ void BleClient::loop() {
         } else if (peers[i]->shouldConnect &&
                    !peers[i]->isConnected() &&
                    !peers[i]->connecting) {
-            // log_i("connecting peer %s %s(%d)",
-            //       peers[i]->name, peers[i]->address, peers[i]->addressType);
+            log_i("connecting peer %s %s(%d)",
+                  peers[i]->name, peers[i]->address, peers[i]->addressType);
             peers[i]->connect();
             delay(100);
         } else if (!peers[i]->shouldConnect &&
