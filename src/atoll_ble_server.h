@@ -46,6 +46,7 @@ class BleServer : public Task,
     virtual void setup(const char *deviceName);
     virtual void init();
     virtual uint16_t getAppearance();
+    virtual void setupAdvertising();
     virtual bool createDeviceInformationService();
     virtual void loop();
 

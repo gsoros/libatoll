@@ -19,6 +19,7 @@ void BleServer::setup(const char *deviceName) {
     }
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
     enabled = true;
+
     init();
 
     server = BLEDevice::createServer();
@@ -27,11 +28,9 @@ void BleServer::setup(const char *deviceName) {
         return;
     }
     server->setCallbacks(this);
+
     advertising = server->getAdvertising();
-    advertising->setAppearance(getAppearance());
-    // advertising->setManufacturerData("G");
-    // advertising->setScanResponse(false);
-    // advertising->setMinPreferred(0x0);
+    setupAdvertising();
 
     createDeviceInformationService();
 
@@ -44,6 +43,17 @@ void BleServer::init() {
 
 uint16_t BleServer::getAppearance() {
     return APPEARANCE_CYCLING_GENERIC;
+}
+
+void BleServer::setupAdvertising() {
+    advertising->setScanResponse(true);
+    advertising->setAppearance(getAppearance());
+    advertising->setName(deviceName);
+    advertising->setMinInterval((uint16_t)(1000 / 0.625));  // 1 s
+    advertising->setMaxInterval((uint16_t)(3000 / 0.625));  //  3 s
+    // advertising->setManufacturerData("G");
+    // advertising->setScanResponse(false);
+    // advertising->setMinPreferred(0x0);
 }
 
 bool BleServer::createDeviceInformationService() {

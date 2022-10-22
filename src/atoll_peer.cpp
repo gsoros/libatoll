@@ -132,26 +132,31 @@ void Peer::setConnectionParams(BLEClient* client, uint8_t profile) {
     // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
     // scanInterval | The scan interval to use when attempting to connect in 0.625ms units.
     // scanWindow   | The scan window to use when attempting to connect in 0.625ms units.
-    //      if (maxinterval * latency > timeout) { return invalidParams; )
-    switch (profile) {
-        case APCPP_ESTABLISHED:
-            if (client->isConnected()) {
-                log_i("updating to established profile");
-                client->updateConnParams(128, 128, 2, 256);
-            } else {
-                // log_i("setting to established profile");
-                client->setConnectionParams(128, 128, 2, 256);
-            }
-            break;
-        case APCPP_INITIAL:
-        default:
-            if (client->isConnected()) {
-                log_i("updating to initial profile");
-                client->updateConnParams(6, 12, 2, 128);
-            } else {
-                // log_i("setting to initial profile");
-                client->setConnectionParams(6, 12, 2, 128);
-            }
+    //      if (maxinterval * (latency + 1) > timeout) { return invalidParams; )
+
+    // initial connection params
+    uint16_t minInterval = (uint16_t)(10 / 1.25);   // 10 ms
+    uint16_t maxInterval = (uint16_t)(100 / 1.25);  // 100 ms
+    uint16_t latency = 2;                           //
+    uint16_t timeout = (uint16_t)(1000 / 10);       // 1000 ms
+
+    if (profile == APCPP_ESTABLISHED) {
+        minInterval = (uint16_t)(400 / 1.25);  // 400 ms
+        maxInterval = (uint16_t)(600 / 1.25);  // 600 ms
+        latency = 2;                           //
+        timeout = (uint16_t)(4000 / 10);       // 4000 ms
+    }
+
+    log_d("%s %s: interval(%d-%d), latency %d, timeout %d",
+          name, profile == APCPP_ESTABLISHED ? "established" : "initial",
+          minInterval, maxInterval, latency, timeout);
+
+    if (client->isConnected()) {
+        log_d("updating ");
+        client->updateConnParams(minInterval, maxInterval, latency, timeout);
+    } else {
+        log_d("setting ");
+        client->setConnectionParams(minInterval, maxInterval, latency, timeout);
     }
 }
 
