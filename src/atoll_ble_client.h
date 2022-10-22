@@ -52,7 +52,7 @@ class BleClient : public Task,
     virtual void deleteClients();
 
     // duration is in milliseconds
-    virtual uint32_t startScan(uint32_t duration);
+    virtual bool startScan(uint32_t duration);
 
     virtual int8_t peerIndex(const char* address);
     virtual bool peerExists(const char* address);

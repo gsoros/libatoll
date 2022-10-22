@@ -1,6 +1,7 @@
 #if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
 
 #include "atoll_peer_characteristic.h"
+#include "atoll_peer.h"
 #include "atoll_ble_client.h"
 
 using namespace Atoll;
@@ -11,6 +12,9 @@ PeerCharacteristic::~PeerCharacteristic() {
 
 BLERemoteService* PeerCharacteristic::getRemoteService(BLEClient* client) {
     if (nullptr == client) {
+        client = getClient();
+    }
+    if (nullptr == client) {
         log_e("%s no client", label);
         return nullptr;
     }
@@ -18,40 +22,36 @@ BLERemoteService* PeerCharacteristic::getRemoteService(BLEClient* client) {
         log_e("%s client not connected", label);
         return nullptr;
     }
-    // log_i("%s getting remote service for uuid %s", label, serviceUuid.toString().c_str());
     BLERemoteService* rs = client->getService(serviceUuid);
     if (nullptr == rs)
         log_e("%s could not get remote service", label);
-    else {
-        // log_i("%s got remote service", label);
-        // log_i("%s discovering chars", label);
-        // rs->getCharacteristics();
-    }
     return rs;
 }
 
 BLERemoteCharacteristic* PeerCharacteristic::getRemoteChar(BLEClient* client) {
+    if (nullptr == client) {
+        client = getClient();
+    }
     BLERemoteService* rs = getRemoteService(client);
     if (nullptr == rs) {
         log_e("%s could not get remote service", label);
         return nullptr;
     }
-    BLEClient* c = rs->getClient();
-    if (nullptr == c) {
+    BLEClient* rsc = rs->getClient();
+    if (nullptr == rsc) {
         log_e("%s remote service has no client", label);
         return nullptr;
     }
-    if (!c->isConnected()) {
+    if (!rsc->isConnected()) {
         log_e("%s remote service client not connected", label);
         return nullptr;
     }
-    // log_i("%s getting remote char for uuid %s", label, charUuid.toString().c_str());
     BLERemoteCharacteristic* rc = rs->getCharacteristic(charUuid);
     if (nullptr == rc) {
         log_e("%s could not get remote char", label);
-    } else {
-        // log_i("%s got remote char", label);
+        return rc;
     }
+    // log_i("%s got remote char", label);
     return rc;
 }
 
@@ -95,5 +95,13 @@ bool PeerCharacteristic::unsubscribe(BLEClient* client) {
 bool PeerCharacteristic::readOnSubscribe() { return true; }
 
 bool PeerCharacteristic::subscribeOnConnect() { return true; }
+
+BLEClient* PeerCharacteristic::getClient() {
+    if (nullptr == peer) {
+        log_e("%s peer is null", label);
+        return nullptr;
+    }
+    return peer->getClient();
+}
 
 #endif

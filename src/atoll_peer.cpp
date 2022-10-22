@@ -20,11 +20,13 @@ Peer::Peer(const char* address,
     strncpy(this->type, type, sizeof(this->type));
     strncpy(this->name, name, sizeof(this->name));
     for (int8_t i = 0; i < charsMax; i++)
-        removeCharAt(i);  // initialize to nullptrs
+        chars[i] = nullptr;
     addChar(nullptr != customBattChar
                 ? customBattChar
                 : new PeerCharacteristicBattery());
 }
+
+void Peer::loop() {}
 
 // format: address,addressType,type,name
 bool Peer::pack(char* packed, size_t len) {
@@ -239,6 +241,10 @@ void Peer::setClient(BLEClient* client) {
     this->client = client;
 }
 
+BLEClient* Peer::getClient() {
+    return client;
+}
+
 void Peer::unsetClient() {
     client = nullptr;
 }
@@ -311,6 +317,10 @@ bool Peer::charExists(const char* label) {
 
 // add new characteristic
 bool Peer::addChar(PeerCharacteristic* c) {
+    if (nullptr != c->peer) {
+        log_e("%s %s already has a peer, not adding", name, c->label);
+        return false;
+    }
     int8_t index = charIndex(c->label);
     if (index < 0) index = charIndex("");
     if (index < 0) {
@@ -318,6 +328,7 @@ bool Peer::addChar(PeerCharacteristic* c) {
         return false;
     }
     // log_i("adding char label: '%s', uuid: '%s'", c->label, c->charUuid.toString().c_str());
+    c->peer = this;
     chars[index] = c;
     return true;
 }
@@ -333,6 +344,7 @@ PeerCharacteristic* Peer::getChar(const char* label) {
 // remove char at index
 bool Peer::removeCharAt(int8_t index) {
     if (charsMax <= index) return false;
+    if (nullptr != chars[index]) chars[index]->peer = nullptr;
     chars[index] = nullptr;
     return true;
 }
@@ -494,6 +506,16 @@ ESPM::ESPM(
     addChar(nullptr != customWeightChar
                 ? customWeightChar
                 : new PeerCharacteristicWeightscale());
+}
+
+void ESPM::loop() {
+    log_d("%s loop", name);
+    PeerCharacteristicApiTX* apiTx = (PeerCharacteristicApiTX*)getChar("ApiTX");
+    if (nullptr == apiTx) {
+        log_e("%s apiTx is null", name);
+        return;
+    }
+    apiTx->loop();
 }
 
 void ESPM::onConnect(BLEClient* client) {

@@ -28,7 +28,7 @@ bool PeerCharacteristicApiTX::encode(const String value, uint8_t* data, size_t l
 
 void PeerCharacteristicApiTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* data, size_t length, bool isNotify) {
     {
-        log_i("%s length: %d", label, length);
+        log_d("%s length: %d", label, length);
         BLERemoteService* rs = rc->getRemoteService();
         if (nullptr == rs) {
             log_e("%s service is null", label);
@@ -53,13 +53,19 @@ void PeerCharacteristicApiTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* dat
             log_d("%s length is %d, not reading", label, length);
             goto decode;
         }
-        log_e("%s cannot read full value from inside a callback, workaround: increase mtu", label);
-        goto decode;
-        // read full value;
-        // log_d("%s reading full value", label);
+        // log_e("%s cannot read full value from inside a callback, workaround: increase mtu (received %d, mtu is %d)", label, length, mtu);
+        /*
+        // goto decode;
+        log_d("%s reading full value (received %d, mtu is %d)", label, length, mtu);
         // read(client);
-        // log_e("TODO log_d %s full value(%d): %s", label, lastValue.length(), lastValue.c_str());
+        NimBLEAttValue av = rc->readValue();
+        log_d("%s readValue() done", label, length, mtu);
+        lastValue = av.getValue<String>();
+        log_d("%s full value(%d): %s", label, lastValue.length(), lastValue.c_str());
         notify();
+        */
+        log_d("%s marking dirty (received %d, mtu is %d)", label, length, mtu);
+        lastValueDirty = true;
         return;
     }
 decode:
@@ -73,6 +79,26 @@ void PeerCharacteristicApiTX::notify() {
 
 bool PeerCharacteristicApiTX::readOnSubscribe() {
     return false;
+}
+
+void PeerCharacteristicApiTX::loop() {
+    if (lastValueDirty) {
+        log_d("%s is dirty", label);
+        BLEClient* client = getClient();
+        if (nullptr == client) {
+            log_e("%s no client", label);
+            return;
+        }
+        if (!client->isConnected()) {
+            log_e("%s not connected", label);
+            return;
+        }
+        log_d("%s reading...", label);
+        read(client);
+        log_d("%s lastValue(%d): '%s'", label, lastValue.length(), lastValue.c_str());
+        lastValueDirty = false;
+        notify();
+    }
 }
 
 #endif

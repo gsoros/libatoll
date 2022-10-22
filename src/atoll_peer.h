@@ -62,6 +62,8 @@ class Peer : public BLEClientCallbacks {
          const char* name,
          PeerCharacteristicBattery* customBattChar = nullptr);
 
+    virtual void loop();
+
     // format: address,addressType,type,name
     virtual bool pack(char* packed, size_t len);
 
@@ -82,6 +84,7 @@ class Peer : public BLEClientCallbacks {
     virtual void disconnect();
 
     virtual void setClient(BLEClient* client);
+    virtual BLEClient* getClient();
     virtual void unsetClient();
     virtual bool hasClient();
     virtual bool isConnected();
@@ -143,6 +146,8 @@ class ESPM : public PowerMeter {
         PeerCharacteristicApiTX* customApiTxChar = nullptr,
         PeerCharacteristicApiRX* customApiRxChar = nullptr,
         PeerCharacteristicWeightscale* customWeightChar = nullptr);
+
+    virtual void loop() override;
 
     virtual void onConnect(BLEClient* pClient) override;
 

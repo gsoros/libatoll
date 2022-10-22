@@ -68,6 +68,7 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
     virtual bool subscribe(BLEClient* client) override {
         bool res = PeerCharacteristic::subscribe(client);
         if (res && readOnSubscribe()) {
+            log_d("%s readOnSubscribe, calling read", label);
             read(client);
             notify();
         }

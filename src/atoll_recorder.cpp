@@ -1093,7 +1093,7 @@ ApiResult *Recorder::recProcessor(ApiMessage *msg) {
             snprintf(msg->reply, sizeof(msg->reply),
                      "get:%s:%s;", name, offsetStr);
             size_t replyTextLen = strlen(msg->reply);
-            char buf[sizeof(msg->reply) - replyTextLen - 6];
+            char buf[sizeof(msg->reply) - replyTextLen - 9];
             size_t read = f.readBytes(buf, sizeof(buf));
             f.close();
             instance->device->releaseMutex();

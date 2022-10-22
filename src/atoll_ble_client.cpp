@@ -75,7 +75,10 @@ void BleClient::loop() {
                    peers[i]->isConnected()) {
             log_i("disconnecting peer %s", peers[i]->name);
             peers[i]->disconnect();
+            continue;
         }
+        if (peers[i]->isConnected())
+            peers[i]->loop();
     }
     // log_i("loop end");
 }
@@ -106,8 +109,8 @@ void BleClient::deleteClients() {
     }
 }
 
-uint32_t BleClient::startScan(uint32_t duration) {
-    if (scan->isScanning()) return 0;
+bool BleClient::startScan(uint32_t duration) {
+    if (scan->isScanning()) return false;
 
     // scan->setDuplicateFilter(false);
     scan->clearDuplicateCache();
@@ -120,9 +123,7 @@ uint32_t BleClient::startScan(uint32_t duration) {
     scan->setWindow(37);        // How long to scan during the interval; in milliseconds.
     scan->setMaxResults(0);     // do not store the scan results, use callback only.
 
-    if (scan->start(duration, false))
-        return duration;
-    return 0;
+    return scan->start(duration, false);
 }
 
 // get index of existing peer address

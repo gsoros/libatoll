@@ -13,11 +13,14 @@
 
 namespace Atoll {
 
+class Peer;
+
 class PeerCharacteristic {
    public:
     char label[SETTINGS_STR_LENGTH] = "unnamed characteristic";
     BLEUUID serviceUuid = BLEUUID((uint16_t)0);
     BLEUUID charUuid = BLEUUID((uint16_t)0);
+    Peer* peer = nullptr;
 
     virtual ~PeerCharacteristic();  // virt dtor so we can safely delete
 
@@ -29,6 +32,8 @@ class PeerCharacteristic {
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) = 0;
     virtual bool readOnSubscribe();
     virtual bool subscribeOnConnect();
+
+    virtual BLEClient* getClient();
 };
 
 }  // namespace Atoll

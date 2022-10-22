@@ -7,6 +7,8 @@ namespace Atoll {
 
 class PeerCharacteristicApiTX : public PeerCharacteristicTemplate<String> {
    public:
+    bool lastValueDirty = false;
+
     PeerCharacteristicApiTX(const char* label = "ApiTX",
                             BLEUUID serviceUuid = BLEUUID(ESPM_API_SERVICE_UUID),
                             BLEUUID charUuid = BLEUUID(API_TX_CHAR_UUID));
@@ -15,6 +17,8 @@ class PeerCharacteristicApiTX : public PeerCharacteristicTemplate<String> {
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) override;
     virtual void notify() override;
     virtual bool readOnSubscribe() override;
+
+    virtual void loop();
 };
 
 }  // namespace Atoll
