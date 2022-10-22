@@ -49,11 +49,11 @@ void BleServer::setupAdvertising() {
     advertising->setScanResponse(true);
     advertising->setAppearance(getAppearance());
     advertising->setName(deviceName);
-    advertising->setMinInterval((uint16_t)(1000 / 0.625));  // 1 s
-    advertising->setMaxInterval((uint16_t)(3000 / 0.625));  //  3 s
-    // advertising->setManufacturerData("G");
-    // advertising->setScanResponse(false);
-    // advertising->setMinPreferred(0x0);
+    // advertising->setMinInterval((uint16_t)(1000 / 0.625));  // 1 s
+    // advertising->setMaxInterval((uint16_t)(3000 / 0.625));  //  3 s
+    //  advertising->setManufacturerData("G");
+    //  advertising->setScanResponse(false);
+    //  advertising->setMinPreferred(0x0);
 }
 
 bool BleServer::createDeviceInformationService() {
