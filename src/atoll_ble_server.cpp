@@ -95,7 +95,7 @@ void BleServer::loop() {
 void BleServer::setSecurity(bool state, const uint32_t passkey) {
     log_i("state: %s, passkey: %d", state ? "true" : "false", passkey);
     if (state) {
-        BLEDevice::setSecurityAuth(true, false, false);
+        BLEDevice::setSecurityAuth(true, true, true);
         if (passkey) {
             BLEDevice::setSecurityPasskey(passkey);
         }

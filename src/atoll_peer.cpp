@@ -26,7 +26,13 @@ Peer::Peer(const char* address,
                 : new PeerCharacteristicBattery());
 }
 
-void Peer::loop() {}
+void Peer::loop() {
+    if (connParamsProfile != APCPP_ESTABLISHED && isConnected()) {
+        connParamsProfile = APCPP_ESTABLISHED;
+        log_d("%s setting conn params", name);
+        setConnectionParams(connParamsProfile);
+    }
+}
 
 // format: address,addressType,type,name
 bool Peer::pack(char* packed, size_t len) {
@@ -125,39 +131,42 @@ Peer::~Peer() {
     unsetClient();
 }
 
-void Peer::setConnectionParams(BLEClient* client, uint8_t profile) {
+void Peer::setConnectionParams(uint8_t profile) {
     // minInterval  | The minimum connection interval in 1.25ms units. (6 - 3200)
     // maxInterval  | The maximum connection interval in 1.25ms units. (6 - 3200)
     // latency      | The number of packets allowed to skip (extends max interval). (0 - 499)
     // timeout      | The timeout time in 10ms units before disconnecting. (10 - 3200)
-    // scanInterval | The scan interval to use when attempting to connect in 0.625ms units.
-    // scanWindow   | The scan window to use when attempting to connect in 0.625ms units.
-    //      if (maxinterval * (latency + 1) > timeout) { return invalidParams; )
+    //
+    //       2 * maxInterval_ms       * (1 + latency) < timeout_ms
+    //       2 * maxInterval * 1.25ms * (1 + latency) < timeout * 10ms
 
     // initial connection params
     uint16_t minInterval = (uint16_t)(10 / 1.25);   // 10 ms
     uint16_t maxInterval = (uint16_t)(100 / 1.25);  // 100 ms
-    uint16_t latency = 2;                           //
-    uint16_t timeout = (uint16_t)(1000 / 10);       // 1000 ms
+    uint16_t latency = 0;                           //
+    uint16_t timeout = (uint16_t)(500 / 10);        // 500 ms
 
     if (profile == APCPP_ESTABLISHED) {
-        minInterval = (uint16_t)(400 / 1.25);  // 400 ms
-        maxInterval = (uint16_t)(600 / 1.25);  // 600 ms
-        latency = 2;                           //
-        timeout = (uint16_t)(4000 / 10);       // 4000 ms
+        minInterval = (uint16_t)(500 / 1.25);   // 500 ms
+        maxInterval = (uint16_t)(1000 / 1.25);  // 1000 ms
+        latency = 1;                            //
+        timeout = (uint16_t)(5000 / 10);        // 5000 ms
     }
 
     log_d("%s %s: interval(%d-%d), latency %d, timeout %d",
           name, profile == APCPP_ESTABLISHED ? "established" : "initial",
           minInterval, maxInterval, latency, timeout);
 
-    if (client->isConnected()) {
-        log_d("updating ");
-        client->updateConnParams(minInterval, maxInterval, latency, timeout);
-    } else {
-        log_d("setting ");
-        client->setConnectionParams(minInterval, maxInterval, latency, timeout);
+    BLEClient* client = getClient();
+    if (nullptr == client) {
+        log_e("%s client is null");
+        return;
     }
+    if (client->isConnected()) {
+        client->updateConnParams(minInterval, maxInterval, latency, timeout);
+        return;
+    }
+    client->setConnectionParams(minInterval, maxInterval, latency, timeout);
 }
 
 void Peer::connect() {
@@ -208,7 +217,8 @@ set:
     setClient(c);
 
 connect:
-    setConnectionParams(client, APCPP_INITIAL);
+    connParamsProfile = APCPP_INITIAL;
+    setConnectionParams(connParamsProfile);
     client->setConnectTimeout(2000);
     if (!connectClient()) {
         // log_i("%s failed to connect client", name);
@@ -378,10 +388,6 @@ bool Peer::isHeartrateMonitor() {
     return nullptr != strchr(type, 'H');
 }
 
-/**
- * @brief Called after client connects.
- * @param [in] device->client A pointer to the calling client object.
- */
 void Peer::onConnect(BLEClient* client) {
     log_i("%s connected", name);
 
@@ -392,7 +398,7 @@ void Peer::onConnect(BLEClient* client) {
     subscribeChars(client);
 
     // log_i("%s requesting conn param update...", name);
-    setConnectionParams(client, APCPP_ESTABLISHED);
+    // setConnectionParams(client, APCPP_ESTABLISHED);
 }
 
 /**
@@ -514,18 +520,18 @@ ESPM::ESPM(
 }
 
 void ESPM::loop() {
-    log_d("%s loop", name);
     PeerCharacteristicApiTX* apiTx = (PeerCharacteristicApiTX*)getChar("ApiTX");
-    if (nullptr == apiTx) {
+    if (nullptr == apiTx)
         log_e("%s apiTx is null", name);
-        return;
-    }
-    apiTx->loop();
+    else
+        apiTx->loop();
+    PowerMeter::loop();
 }
 
 void ESPM::onConnect(BLEClient* client) {
     PowerMeter::onConnect(client);
-    sendApiCommand("init");  // request init
+    if (!sendApiCommand("init"))
+        log_e("%s could not send init request", name);
 }
 
 bool ESPM::sendApiCommand(const char* command) {
@@ -538,13 +544,13 @@ bool ESPM::sendApiCommand(const char* command) {
         log_e("no client");
         return false;
     }
-    log_i("sending command '%s'", command);
+    log_d("%s sending command '%s'", name, command);
     auto sc = String(command);
     if (!apiRX->write(client, sc, sc.length())) {
-        log_i("could not write char");
+        log_e("%s could not write char", name);
         return false;
     }
-    log_i("command sent");
+    log_d("%s command sent", name);
     return true;
 }
 

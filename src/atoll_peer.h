@@ -47,6 +47,7 @@ class Peer : public BLEClientCallbacks {
     bool connecting = false;
     bool shouldConnect = true;
     bool markedForRemoval = false;
+    uint8_t connParamsProfile = APCPP_INITIAL;
     static const uint8_t packedMaxLength = ATOLL_BLE_PEER_DEVICE_PACKED_LENGTH;  // for convenience
 
     enum ConnectionParamsProfile {
@@ -78,7 +79,7 @@ class Peer : public BLEClientCallbacks {
         char* name,
         size_t nameLen);
 
-    virtual void setConnectionParams(BLEClient* client, uint8_t profile);
+    virtual void setConnectionParams(uint8_t profile);
     virtual void connect();
 
     virtual void disconnect();

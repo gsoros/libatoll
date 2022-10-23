@@ -56,6 +56,7 @@ BLERemoteCharacteristic* PeerCharacteristic::getRemoteChar(BLEClient* client) {
 }
 
 bool PeerCharacteristic::subscribe(BLEClient* client) {
+    log_d("%s subscribing", label);
     BLERemoteCharacteristic* rc = getRemoteChar(client);
     if (nullptr == rc) return false;
     if (!rc->canNotify() && !rc->canIndicate()) {
@@ -74,7 +75,7 @@ bool PeerCharacteristic::subscribe(BLEClient* client) {
         log_e("%s could not subscribe", label);
         return false;
     }
-    log_i("%s subscribed", label);
+    log_d("%s subscribed", label);
     return true;
 }
 
