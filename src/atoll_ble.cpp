@@ -1,8 +1,9 @@
 #include "atoll_ble.h"
+#include "atoll_log.h"
 
 using namespace Atoll;
 
-void Ble::init(const char *deviceName, uint16_t mtu, uint8_t securityIOCap) {
+void Ble::init(const char *deviceName, uint16_t mtu, uint8_t iocap) {
     if (initDone) {
         // log_i("init already done");
         return;
@@ -18,16 +19,25 @@ void Ble::init(const char *deviceName, uint16_t mtu, uint8_t securityIOCap) {
 
     log_i("power: %d", BLEDevice::getPower());
 
-    log_i("setSecurityIOCap(%d)", securityIOCap);
-    BLEDevice::setSecurityIOCap(securityIOCap);
+    securityIOCap = iocap;
+    setSecurityIOCap(iocap);
 
     initDone = true;
 }
 
-String Ble::connInfoToStr(BLEConnInfo *info) {
+void Ble::setSecurityIOCap(uint8_t iocap) {
+    log_d("setSecurityIOCap(%d)", iocap);
+    BLEDevice::setSecurityIOCap(iocap);
+}
+
+void Ble::restoreSecurityIOCap() {
+    setSecurityIOCap(securityIOCap);
+}
+
+std::string Ble::connInfoToStr(BLEConnInfo *info) {
     uint8_t bufSize = 64;
     char buf[bufSize];
-    String s("connection ");
+    std::string s("connection ");
     snprintf(buf, bufSize, "#%d [", info->getConnHandle());
     s += buf;
     snprintf(buf, bufSize, "address: %s", info->getAddress().toString().c_str());
@@ -61,3 +71,4 @@ String Ble::connInfoToStr(BLEConnInfo *info) {
 }
 
 bool Ble::initDone = false;
+uint8_t Ble::securityIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT;

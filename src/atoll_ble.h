@@ -23,10 +23,14 @@ class Ble {
         uint16_t mtu = ATOLL_BLE_MTU_DEFAULT,
         uint8_t securityIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT);
 
-    static String connInfoToStr(BLEConnInfo *info);
+    static void setSecurityIOCap(uint8_t ioCap);
+    static void restoreSecurityIOCap();
+
+    static std::string connInfoToStr(BLEConnInfo *info);
 
    protected:
     static bool initDone;
+    static uint8_t securityIOCap;  // default io capabilty
 };
 
 }  // namespace Atoll

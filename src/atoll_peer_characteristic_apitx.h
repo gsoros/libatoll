@@ -1,11 +1,11 @@
 #ifndef __atoll_peer_characteristic_apitx_h
 #define __atoll_peer_characteristic_apitx_h
 
-#include "atoll_peer_characteristic_template.h"
+#include "atoll_peer_characteristic_api.h"
 
 namespace Atoll {
 
-class PeerCharacteristicApiTX : public PeerCharacteristicTemplate<String> {
+class PeerCharacteristicApiTX : public PeerCharacteristicApi {
    public:
     bool lastValueDirty = false;
 

@@ -63,15 +63,18 @@ bool PeerCharacteristic::subscribe(BLEClient* client) {
         log_e("%s cannot notify or indicate", label);
         return false;
     }
-    if (!rc->subscribe(
-            rc->canNotify(),
-            [this](
-                BLERemoteCharacteristic* c,
-                uint8_t* data,
-                size_t length,
-                bool isNotify) {
-                onNotify(c, data, length, isNotify);
-            })) {
+    remoteOpStart(client);
+    bool res = rc->subscribe(
+        rc->canNotify(),
+        [this](
+            BLERemoteCharacteristic* c,
+            uint8_t* data,
+            size_t length,
+            bool isNotify) {
+            onNotify(c, data, length, isNotify);
+        });
+    remoteOpEnd(client);
+    if (!res) {
         log_e("%s could not subscribe", label);
         return false;
     }
@@ -85,7 +88,10 @@ bool PeerCharacteristic::unsubscribe(BLEClient* client) {
         log_e("%s no char", label);
         return false;
     }
-    if (!rc->unsubscribe()) {
+    remoteOpStart(client);
+    bool res = rc->unsubscribe();
+    remoteOpEnd(client);
+    if (!res) {
         log_e("%s unsubscribe failed", label);
         return false;
     }
@@ -104,5 +110,9 @@ BLEClient* PeerCharacteristic::getClient() {
     }
     return peer->getClient();
 }
+
+void PeerCharacteristic::remoteOpStart(BLEClient* client) {}
+
+void PeerCharacteristic::remoteOpEnd(BLEClient* client) {}
 
 #endif

@@ -34,6 +34,9 @@ class PeerCharacteristic {
     virtual bool subscribeOnConnect();
 
     virtual BLEClient* getClient();
+
+    virtual void remoteOpStart(BLEClient* client);
+    virtual void remoteOpEnd(BLEClient* client);
 };
 
 }  // namespace Atoll

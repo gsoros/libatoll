@@ -9,8 +9,6 @@
 
 namespace Atoll {
 
-// TODO get rid of the template, it's useless as we manually do the conversions in decode() and encode() anyway
-
 template <class T>
 class PeerCharacteristicTemplate : public PeerCharacteristic {
    public:
@@ -30,9 +28,12 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
             log_e("%s not readable", label);
             return lastValue;
         }
+        remoteOpStart(client);
         // lastValue = rc->readValue<T>();
         log_d("%s reading into buffer", label);
-        snprintf(readBuffer, sizeof(readBuffer), "%s", rc->readValue().c_str());
+        NimBLEAttValue value = rc->readValue();
+        remoteOpEnd(client);
+        snprintf(readBuffer, sizeof(readBuffer), "%s", value.c_str());
         size_t len = strlen(readBuffer);
         log_d("%s readBuf len=%d", label, len);
         if (!len) return lastValue;
@@ -48,7 +49,10 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
             log_e("%s not writable", label);
             return false;
         }
-        return rc->writeValue<T>(value, length);
+        remoteOpStart(client);
+        bool res = rc->writeValue<T>(value, length);
+        remoteOpEnd(client);
+        return res;
     }
 
     virtual void onNotify(

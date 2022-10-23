@@ -1,11 +1,11 @@
 #ifndef __atoll_peer_characteristic_apirx_h
 #define __atoll_peer_characteristic_apirx_h
 
-#include "atoll_peer_characteristic_template.h"
+#include "atoll_peer_characteristic_api.h"
 
 namespace Atoll {
 
-class PeerCharacteristicApiRX : public PeerCharacteristicTemplate<String> {
+class PeerCharacteristicApiRX : public PeerCharacteristicApi {
    public:
     PeerCharacteristicApiRX(const char* label = "ApiRX",
                             BLEUUID serviceUuid = BLEUUID(ESPM_API_SERVICE_UUID),
