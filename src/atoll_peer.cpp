@@ -6,19 +6,17 @@
 
 using namespace Atoll;
 
-Peer::Peer(const char* address,
-           uint8_t addressType,
-           const char* type,
-           const char* name,
+Peer::Peer(Saved saved,
            PeerCharacteristicBattery* customBattChar) {
-    if (strlen(address) < 1) {
-        log_e("empty address for %s %s", name, type);
-        snprintf(this->address, sizeof(this->address), "%s", "invalid");
+    if (strlen(saved.address) < 1) {
+        log_e("empty address for %s %s", saved.name, saved.type);
+        snprintf(this->saved.address, sizeof(this->saved.address), "%s", "invalid");
     } else
-        strncpy(this->address, address, sizeof(this->address));
-    this->addressType = addressType;
-    strncpy(this->type, type, sizeof(this->type));
-    strncpy(this->name, name, sizeof(this->name));
+        strncpy(this->saved.address, saved.address, sizeof(this->saved.address));
+    this->saved.addressType = saved.addressType;
+    strncpy(this->saved.type, saved.type, sizeof(this->saved.type));
+    strncpy(this->saved.name, saved.name, sizeof(this->saved.name));
+    this->saved.passkey = saved.passkey;
     for (int8_t i = 0; i < charsMax; i++)
         chars[i] = nullptr;
     addChar(nullptr != customBattChar
@@ -34,11 +32,21 @@ void Peer::loop() {
     }
 }
 
-// format: address,addressType,type,name
+// format: address,addressType,type,name,passkey
 bool Peer::pack(char* packed, size_t len) {
     char buf[packedMaxLength];
-    snprintf(buf, sizeof(buf), "%s,%d,%s,%s", address, addressType, type, name);
-    if (len < strlen(buf)) {
+    snprintf(buf, sizeof(buf), "%s,%d,%s,%s,%d",
+             saved.address,
+             saved.addressType,
+             saved.type,
+             saved.name,
+             saved.passkey);
+    size_t s = strlen(buf);
+    if (packedMaxLength < s) {
+        log_e("packed longer than allowed");
+        return false;
+    }
+    if (len < s) {
         log_e("buffer too small");
         return false;
     }
@@ -46,81 +54,117 @@ bool Peer::pack(char* packed, size_t len) {
     return true;
 }
 
-// format: address,addressType,type,name
+// format: address,addressType,type,name,passkey
 bool Peer::unpack(
     const char* packed,
-    char* address,
-    size_t addressLen,
-    uint8_t* addressType,
-    char* type,
-    size_t typeLen,
-    char* name,
-    size_t nameLen) {
-    // log_i("unpacking '%s'", packed);
-    size_t packedLen = strlen(packed);
-    // log_i("packedLen: %d", packedLen);
-    if (packedLen < sizeof(Peer::address) + 7) {
-        log_e("packed string too short (%d)", packedLen);
-        return false;
-    }
-    char* colon = strchr(packed, ',');
-    if (nullptr == colon) {
-        log_e("first colon not present");
-        return false;
-    }
-    char tAddress[sizeof(Peer::address)] = "";
-    size_t tAddressLen = colon - packed;
-    // log_i("tAddressLen: %d", tAddressLen);
-    if (addressLen < tAddressLen) {
-        log_e("address buffer too small");
-        return false;
-    }
-    strncpy(tAddress, packed, tAddressLen);
+    Saved* saved) {
+    size_t packedLen = strnlen(packed, packedMaxLength);
+    log_d("unpacking '%s'(%d)", packed, packedLen);
 
-    // rest of packed, without address and colon
-    char rest[packedLen - tAddressLen] = "";
-    strncpy(rest, colon + 1, sizeof(rest) - 1);
-    // log_i("rest: '%s' size: %d", rest, sizeof(rest) - 1);
-    colon = strchr(rest, ',');
-    if (nullptr == colon) {
-        log_e("second colon not present");
-        return false;
-    }
-    char tAddressTypeStr[3] = "";  // strlen(uint8_t)
-    strncpy(tAddressTypeStr, rest, colon - rest);
-    uint8_t tAddressTypeLen = strlen(tAddressTypeStr);
-    uint8_t tAddressType = atoi(tAddressTypeStr);
-    // log_i("tAddressType: %d", tAddressType);
+    Saved temp;
+    bool addressFound = false;
+    char tAddressTypeStr[4] = "";  // strlen(itoa(UINT8_MAX)) + 1
+    bool addressTypeFound = false;
+    bool typeFound = false;
+    bool nameFound = false;
+    char tPasskeyStr[7] = "";
 
-    colon = strrchr(packed, ',');
-    if (nullptr == colon) {
-        log_e("last colon not present");
+    for (const char* cur = &packed[0]; cur < packed + packedLen; cur++) {
+        log_d("processing '%c'", *cur);
+        if (*cur == ',') {
+            if (!addressFound) {
+                addressFound = true;
+                continue;
+            }
+            if (!addressTypeFound) {
+                addressTypeFound = true;
+                continue;
+            }
+            if (!typeFound) {
+                typeFound = true;
+                continue;
+            }
+            if (!nameFound) {
+                nameFound = true;
+                continue;
+            }
+            log_e("too many colons");
+            return false;
+        }
+        if (!addressFound) {
+            if (sizeof(temp.address) <= strlen(temp.address) + 1) {
+                log_e("address too long");
+                return false;
+            }
+            strncat(temp.address, cur, 1);
+            continue;
+        }
+        if (!addressTypeFound) {
+            if (sizeof(tAddressTypeStr) <= strlen(tAddressTypeStr) + 1) {
+                log_e("address type too long");
+                return false;
+            }
+            strncat(tAddressTypeStr, cur, 1);
+            continue;
+        }
+        if (!typeFound) {
+            if (sizeof(temp.type) <= strlen(temp.type) + 1) {
+                log_e("type too long");
+                return false;
+            }
+            strncat(temp.type, cur, 1);
+            continue;
+        }
+        if (!nameFound) {
+            if (sizeof(temp.name) <= strlen(temp.name) + 1) {
+                log_e("name too long");
+                return false;
+            }
+            strncat(temp.name, cur, 1);
+            continue;
+        }
+        if (sizeof(tPasskeyStr) <= strlen(tPasskeyStr) + 1) {
+            log_e("passkey too long");
+            return false;
+        }
+        strncat(tPasskeyStr, cur, 1);
+    }
+
+    if (strlen(temp.address) < 1) {
+        log_e("address too short");
         return false;
     }
-    char tType[sizeof(Peer::type)] = "";
-    size_t tTypeLen = colon - tAddressLen - tAddressTypeLen - 2 - packed;
-    // log_i("tTypeLen: %d", tTypeLen);
-    if (typeLen < tTypeLen) {
-        log_e("type buffer too small");
+    if (strlen(tAddressTypeStr) < 1) {
+        log_e("address type too short");
         return false;
     }
-    strncpy(tType, packed + tAddressTypeLen + tAddressLen + 2, tTypeLen);
-    char tName[sizeof(Peer::name)] = "";
-    size_t tNameLen = packedLen - tAddressLen - tAddressTypeLen - tTypeLen - 3;
-    // log_i("tNameLen: %d", tNameLen);
-    if (nameLen < tNameLen) {
-        log_e("name buffer too small");
+    int tAddressTypeInt = atoi(tAddressTypeStr);
+    if (tAddressTypeInt < 0 || UINT8_MAX < tAddressTypeInt) {
+        log_e("address type out of range");
         return false;
     }
-    strncpy(tName, packed + tAddressLen + tAddressTypeLen + tTypeLen + 3, tNameLen);
-    // log_i("tAddress: %s, tAddressType: %d, tType: %s, tName: %s",
-    //       tAddress, tAddressType, tType, tName);
-    strncpy(address, tAddress, addressLen);
-    *addressType = tAddressType;
-    strncpy(type, tType, typeLen);
-    strncpy(name, tName, nameLen);
-    // log_i("address: %s, addressType: %d, type: %s, name: %s",
-    //       address, *addressType, type, name);
+    if (strlen(temp.type) < 1) {
+        log_e("type too short");
+        return false;
+    }
+    if (strlen(temp.name) < 1) {
+        log_e("name too short");
+        return false;
+    }
+    int tPasskeyInt = atoi(tPasskeyStr);
+    if (tPasskeyInt < 0 || 999999 < tPasskeyInt) {
+        log_e("passkey out of range");
+        return false;
+    }
+
+    strncpy(saved->address, temp.address, sizeof(saved->address));
+    saved->addressType = (uint8_t)tAddressTypeInt;
+    strncpy(saved->type, temp.type, sizeof(saved->type));
+    strncpy(saved->name, temp.name, sizeof(saved->name));
+    saved->passkey = (uint32_t)tPasskeyInt;
+
+    log_d("address: %s, addressType: %d, type: %s, name: %s, passkey: %d",
+          saved->address, saved->addressType, saved->type, saved->name, saved->passkey);
     return true;
 }
 
@@ -171,47 +215,47 @@ void Peer::setConnectionParams(uint8_t profile) {
 
 void Peer::connect() {
     if (isConnected()) {
-        log_i("%s already connected", name);
+        log_d("%s already connected", name);
         return;
     }
     if (connecting) {
-        log_i("%s already connecting", name);
+        log_d("%s already connecting", name);
         return;
     }
     connecting = true;
 
-    // log_i("%s connecting", name);
+    log_d("%s connecting", name);
 
     BLEClient* c = nullptr;
 
     if (hasClient()) {
-        // log_i("%s has client", name);
+        log_d("%s has client", name);
         goto connect;
     }
 
-    c = BLEDevice::getClientByPeerAddress(BLEAddress(address, addressType));
+    c = BLEDevice::getClientByPeerAddress(BLEAddress(saved.address, saved.addressType));
     if (c) {
-        // log_i("%s got client by peer address", name);
+        log_d("%s got client by peer address", name);
         goto set;
     }
     c = BLEDevice::getDisconnectedClient();
     if (c) {
-        // log_i("%s got disconnected client", name);
+        log_d("%s got disconnected client", name);
         goto set;
     }
     if (BLEDevice::getClientListSize() >= NIMBLE_MAX_CONNECTIONS) {
-        log_e("%s max clients reached", name);
+        log_e("%s max clients reached", saved.name);
         goto fail;
     }
-    c = BLEDevice::createClient(BLEAddress(address, addressType));
+    c = BLEDevice::createClient(BLEAddress(saved.address, saved.addressType));
     if (c) {
-        // log_i("%s created new client", name);
+        log_d("%s created new client", name);
         goto set;
     }
 
 set:
     if (!c) {
-        log_e("%s could not get client", name);
+        log_e("%s could not get client", saved.name);
         goto fail;
     }
     setClient(c);
@@ -221,7 +265,7 @@ connect:
     setConnectionParams(connParamsProfile);
     client->setConnectTimeout(2000);
     if (!connectClient()) {
-        // log_i("%s failed to connect client", name);
+        log_d("%s failed to connect client", name);
         goto fail;
     }
     log_i("%s connected", name);
@@ -231,7 +275,7 @@ fail:
     unsetClient();
 
 end:
-    // log_i("end");
+    log_d("end");
     connecting = false;
 }
 
@@ -273,7 +317,7 @@ bool Peer::isConnected() {
 }
 
 bool Peer::connectClient(bool deleteAttributes) {
-    return hasClient() && client->connect(BLEAddress(address, addressType), deleteAttributes);
+    return hasClient() && client->connect(BLEAddress(saved.address, saved.addressType), deleteAttributes);
 }
 
 void Peer::subscribeChars(BLEClient* client) {
@@ -333,7 +377,7 @@ bool Peer::charExists(const char* label) {
 // add new characteristic
 bool Peer::addChar(PeerCharacteristic* c) {
     if (nullptr != c->peer) {
-        log_e("%s %s already has a peer, not adding", name, c->label);
+        log_e("%s %s already has a peer, not adding", saved.name, c->label);
         return false;
     }
     int8_t index = charIndex(c->label);
@@ -377,19 +421,19 @@ uint8_t Peer::deleteChars(const char* label) {
 }
 
 bool Peer::isPowerMeter() {
-    return nullptr != strchr(type, 'P');
+    return nullptr != strchr(saved.type, 'P');
 }
 
 bool Peer::isESPM() {
-    return nullptr != strchr(type, 'E');
+    return nullptr != strchr(saved.type, 'E');
 }
 
 bool Peer::isHeartrateMonitor() {
-    return nullptr != strchr(type, 'H');
+    return nullptr != strchr(saved.type, 'H');
 }
 
 void Peer::onConnect(BLEClient* client) {
-    log_i("%s connected", name);
+    log_i("%s connected", saved.name);
 
     log_i("%s discovering attributes...", name);
     client->discoverAttributes();
@@ -474,17 +518,11 @@ void Peer::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bo
 }
 
 PowerMeter::PowerMeter(
-    const char* address,
-    uint8_t addressType,
-    const char* type,
-    const char* name,
+    Saved saved,
     PeerCharacteristicPower* customPowerChar,
     PeerCharacteristicBattery* customBattChar)
     : Peer(
-          address,
-          addressType,
-          type,
-          name,
+          saved,
           customBattChar) {
     addChar(nullptr != customPowerChar
                 ? customPowerChar
@@ -492,20 +530,14 @@ PowerMeter::PowerMeter(
 }
 
 ESPM::ESPM(
-    const char* address,
-    uint8_t addressType,
-    const char* type,
-    const char* name,
+    Saved saved,
     PeerCharacteristicPower* customPowerChar,
     PeerCharacteristicBattery* customBattChar,
     PeerCharacteristicApiTX* customApiTxChar,
     PeerCharacteristicApiRX* customApiRxChar,
     PeerCharacteristicWeightscale* customWeightChar)
     : PowerMeter(
-          address,
-          addressType,
-          type,
-          name,
+          saved,
           customPowerChar,
           customBattChar) {
     addChar(nullptr != customApiTxChar
@@ -522,7 +554,7 @@ ESPM::ESPM(
 void ESPM::loop() {
     PeerCharacteristicApiTX* apiTx = (PeerCharacteristicApiTX*)getChar("ApiTX");
     if (nullptr == apiTx)
-        log_e("%s apiTx is null", name);
+        log_e("%s apiTx is null", saved.name);
     else
         apiTx->loop();
     PowerMeter::loop();
@@ -531,7 +563,7 @@ void ESPM::loop() {
 void ESPM::onConnect(BLEClient* client) {
     PowerMeter::onConnect(client);
     if (!sendApiCommand("init"))
-        log_e("%s could not send init request", name);
+        log_e("%s could not send init request", saved.name);
 }
 
 bool ESPM::sendApiCommand(const char* command) {
@@ -544,28 +576,22 @@ bool ESPM::sendApiCommand(const char* command) {
         log_e("no client");
         return false;
     }
-    log_d("%s sending command '%s'", name, command);
+    log_d("%s sending command '%s'", saved.name, command);
     auto sc = String(command);
     if (!apiRX->write(client, sc, sc.length())) {
-        log_e("%s could not write char", name);
+        log_e("%s could not write char", saved.name);
         return false;
     }
-    log_d("%s command sent", name);
+    log_d("%s command sent", saved.name);
     return true;
 }
 
 HeartrateMonitor::HeartrateMonitor(
-    const char* address,
-    uint8_t addressType,
-    const char* type,
-    const char* name,
+    Saved saved,
     PeerCharacteristicHeartrate* customHrChar,
     PeerCharacteristicBattery* customBattChar)
     : Peer(
-          address,
-          addressType,
-          type,
-          name,
+          saved,
           customBattChar) {
     addChar(nullptr != customHrChar
                 ? customHrChar

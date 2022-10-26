@@ -33,17 +33,21 @@
 #define ATOLL_BLE_PEER_DEVICE_NAME_LENGTH SETTINGS_STR_LENGTH
 #endif
 
-// ="address,addressType,type,name"
-#define ATOLL_BLE_PEER_DEVICE_PACKED_LENGTH (ATOLL_BLE_PEER_DEVICE_ADDRESS_LENGTH + ATOLL_BLE_PEER_DEVICE_TYPE_LENGTH + ATOLL_BLE_PEER_DEVICE_NAME_LENGTH + 6)
+// ="address,addressType,type,name,passkey"
+#define ATOLL_BLE_PEER_DEVICE_PACKED_LENGTH (ATOLL_BLE_PEER_DEVICE_ADDRESS_LENGTH + ATOLL_BLE_PEER_DEVICE_TYPE_LENGTH + ATOLL_BLE_PEER_DEVICE_NAME_LENGTH + 19)
 
 namespace Atoll {
 
 class Peer : public BLEClientCallbacks {
    public:
-    char address[ATOLL_BLE_PEER_DEVICE_ADDRESS_LENGTH];
-    uint8_t addressType;
-    char type[ATOLL_BLE_PEER_DEVICE_TYPE_LENGTH];
-    char name[ATOLL_BLE_PEER_DEVICE_NAME_LENGTH];
+    struct Saved {
+        char address[ATOLL_BLE_PEER_DEVICE_ADDRESS_LENGTH] = "";
+        uint8_t addressType = 0;
+        char type[ATOLL_BLE_PEER_DEVICE_TYPE_LENGTH] = "";
+        char name[ATOLL_BLE_PEER_DEVICE_NAME_LENGTH] = "";
+        uint32_t passkey = 0;
+    } saved;
+
     bool connecting = false;
     bool shouldConnect = true;
     bool markedForRemoval = false;
@@ -57,27 +61,18 @@ class Peer : public BLEClientCallbacks {
 
     virtual ~Peer();
 
-    Peer(const char* address,
-         uint8_t addressType,
-         const char* type,
-         const char* name,
+    Peer(Saved saved,
          PeerCharacteristicBattery* customBattChar = nullptr);
 
     virtual void loop();
 
-    // format: address,addressType,type,name
+    // format: address,addressType,type,name,passkey
     virtual bool pack(char* packed, size_t len);
 
-    // format: address,addressType,type,name
+    // format: address,addressType,type,name,passkey
     static bool unpack(
         const char* packed,
-        char* address,
-        size_t addressLen,
-        uint8_t* addressType,
-        char* type,
-        size_t typeLen,
-        char* name,
-        size_t nameLen);
+        Saved* saved);
 
     virtual void setConnectionParams(uint8_t profile);
     virtual void connect();
@@ -127,10 +122,7 @@ class Peer : public BLEClientCallbacks {
 class PowerMeter : public Peer {
    public:
     PowerMeter(
-        const char* address,
-        uint8_t addressType,
-        const char* type,
-        const char* name,
+        Saved saved,
         PeerCharacteristicPower* customPowerChar = nullptr,
         PeerCharacteristicBattery* customBattChar = nullptr);
 };
@@ -138,10 +130,7 @@ class PowerMeter : public Peer {
 class ESPM : public PowerMeter {
    public:
     ESPM(
-        const char* address,
-        uint8_t addressType,
-        const char* type,
-        const char* name,
+        Saved saved,
         PeerCharacteristicPower* customPowerChar = nullptr,
         PeerCharacteristicBattery* customBattChar = nullptr,
         PeerCharacteristicApiTX* customApiTxChar = nullptr,
@@ -158,10 +147,7 @@ class ESPM : public PowerMeter {
 class HeartrateMonitor : public Peer {
    public:
     HeartrateMonitor(
-        const char* address,
-        uint8_t addressType,
-        const char* type,
-        const char* name,
+        Saved saved,
         PeerCharacteristicHeartrate* customHrChar = nullptr,
         PeerCharacteristicBattery* customBattChar = nullptr);
 };
