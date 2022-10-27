@@ -17,7 +17,7 @@ String PeerCharacteristicApiTX::decode(const uint8_t* data, const size_t length)
     strncpy(value, (char*)data, length);
     value[length] = 0;
     lastValue = String(value);
-    log_d("%s length=%d '%s'", length, lastValue.c_str(), label);
+    log_d("%s length=%d '%s'", label, length, lastValue.c_str());
     return lastValue;
 }
 
