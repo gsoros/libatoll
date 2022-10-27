@@ -62,22 +62,29 @@ void BleClient::loop() {
             continue;
         }
         if (peers[i]->markedForRemoval) {
+            if (peers[i]->isConnected()) {
+                log_i("disconnecting peer %s", peers[i]->saved.name);
+                peers[i]->disconnect();
+                while (peers[i]->isConnected()) {
+                    log_d("waiting for disconnect...");
+                    delay(333);
+                }
+            }
             log_i("removing peer %s", peers[i]->saved.name);
             removePeer(peers[i], false);
+            continue;
         } else if (peers[i]->shouldConnect &&
                    !peers[i]->isConnected() &&
                    !peers[i]->connecting) {
             log_i("connecting peer %s %s(%d)",
                   peers[i]->saved.name, peers[i]->saved.address, peers[i]->saved.addressType);
             peers[i]->connect();
-            delay(100);
         } else if (!peers[i]->shouldConnect &&
                    peers[i]->isConnected()) {
             log_i("disconnecting peer %s", peers[i]->saved.name);
             peers[i]->disconnect();
             continue;
-        }
-        if (peers[i]->isConnected())
+        } else if (peers[i]->isConnected())
             peers[i]->loop();
     }
     // log_i("loop end");

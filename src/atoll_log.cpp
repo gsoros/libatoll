@@ -11,7 +11,7 @@ SemaphoreHandle_t Log::mutex = xSemaphoreCreateMutex();
 
 void Log::write(uint8_t level, const char *format, ...) {
 #if defined(FEATURE_SERIAL) && 0 != ATOLL_LOG_LEVEL
-    if (level < Log::level) return;
+    if (Log::level < level) return;
     if (!xSemaphoreTake(Log::mutex, portMAX_DELAY) == pdTRUE) return;
     va_list arg;
     va_start(arg, format);

@@ -32,15 +32,22 @@ void Peer::loop() {
     }
 }
 
-// format: address,addressType,type,name,passkey
-bool Peer::pack(char* packed, size_t len) {
+// format: address,addressType,type,name[,passkey]
+bool Peer::pack(char* packed, size_t len, bool includePasskey) {
     char buf[packedMaxLength];
-    snprintf(buf, sizeof(buf), "%s,%d,%s,%s,%d",
-             saved.address,
-             saved.addressType,
-             saved.type,
-             saved.name,
-             saved.passkey);
+    if (includePasskey)
+        snprintf(buf, sizeof(buf), "%s,%d,%s,%s,%d",
+                 saved.address,
+                 saved.addressType,
+                 saved.type,
+                 saved.name,
+                 saved.passkey);
+    else
+        snprintf(buf, sizeof(buf), "%s,%d,%s,%s",
+                 saved.address,
+                 saved.addressType,
+                 saved.type,
+                 saved.name);
     size_t s = strlen(buf);
     if (packedMaxLength < s) {
         log_e("packed longer than allowed");
@@ -70,7 +77,7 @@ bool Peer::unpack(
     char tPasskeyStr[7] = "";
 
     for (const char* cur = &packed[0]; cur < packed + packedLen; cur++) {
-        log_d("processing '%c'", *cur);
+        // log_d("processing '%c'", *cur);
         if (*cur == ',') {
             if (!addressFound) {
                 addressFound = true;
@@ -282,22 +289,24 @@ end:
 void Peer::disconnect() {
     shouldConnect = false;
     if (isConnected()) {
-        unsubscribeChars(client);
+        // setConnectionParams(APCPP_INITIAL);  // speed up unsub // E NimBLEDevice: ble_gap_security_initiate: rc=19 HCI request timed out; controller unresponsive.
+        // unsubscribeChars(client);
         client->disconnect();
     }
-    while (isConnected()) {
-        log_i("%s waiting for disconnect...", saved.name);
-        delay(500);
-    }
+    // while (isConnected()) {
+    //     log_i("%s waiting for disconnect...", saved.name);
+    //     delay(500);
+    // }
 }
 
-void Peer::setClient(BLEClient* client) {
+bool Peer::setClient(BLEClient* client) {
     if (nullptr == client) {
         log_e("client is null");
-        return;
+        return false;
     }
-    client->setClientCallbacks(this, false);
     this->client = client;
+    client->setClientCallbacks(this, false);
+    return true;
 }
 
 BLEClient* Peer::getClient() {
@@ -451,12 +460,6 @@ void Peer::onConnect(BLEClient* client) {
  */
 void Peer::onDisconnect(BLEClient* client, int reason) {
     log_i("%s disconnected, reason %d", saved.name, reason);
-
-    // log_i("%s unsubscribing", name);
-    // unsubscribeChars(client);
-
-    // log_i("%s unsetting client", name);
-    // unsetClient();
 }
 
 /**
@@ -483,8 +486,10 @@ bool Peer::onConnParamsUpdateRequest(BLEClient* client, const ble_gap_upd_params
  * @return The passkey to be sent to the server.
  */
 uint32_t Peer::onPassKeyRequest() {
-    log_w("%s sending 696669, TODO send saved passkey", saved.name);
-    return 696669;
+    // log_w("%s sending 696669 instead of saved %d, TODO send saved passkey", saved.name, saved.passkey);
+    // return 696669;
+    log_d("%s sending saved %d", saved.name, saved.passkey);
+    return saved.passkey;
 }
 
 /*

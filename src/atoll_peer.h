@@ -66,8 +66,8 @@ class Peer : public BLEClientCallbacks {
 
     virtual void loop();
 
-    // format: address,addressType,type,name,passkey
-    virtual bool pack(char* packed, size_t len);
+    // format: address,addressType,type,name[,passkey]
+    virtual bool pack(char* packed, size_t len, bool includePasskey = true);
 
     // format: address,addressType,type,name,passkey
     static bool unpack(
@@ -79,7 +79,7 @@ class Peer : public BLEClientCallbacks {
 
     virtual void disconnect();
 
-    virtual void setClient(BLEClient* client);
+    virtual bool setClient(BLEClient* client);
     virtual BLEClient* getClient();
     virtual void unsetClient();
     virtual bool hasClient();

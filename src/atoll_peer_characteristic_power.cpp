@@ -42,10 +42,10 @@ uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t lengt
     uint16_t flags = data[0] | (data[1] << 8);
     // TODO power should be int16_t
     uint16_t power = data[2] | (data[3] << 8);
-    log_d("power: %d", power);
+    // log_d("power: %d", power);
 
     bool crankRevDataPresent = 0b00100000 & flags;
-    log_d("flags: 0x%02X%s", flags, crankRevDataPresent ? " (crank rev data present)" : "");
+    // log_d("flags: 0x%02X%s", flags, crankRevDataPresent ? " (crank rev data present)" : "");
     if (!crankRevDataPresent) return power;
 
     uint8_t offset = 4;
@@ -57,9 +57,9 @@ uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t lengt
         return power;
     }
     uint16_t revsIn = data[offset] | (data[offset + 1] << 8);
-    log_d("revsIn: %d", revsIn);
+    // log_d("revsIn: %d", revsIn);
     uint16_t lceIn = data[offset + 2] | (data[offset + 3] << 8);
-    log_d("last crank event: %d", lceIn);
+    // log_d("last crank event: %d", lceIn);
 
     double dTime = 0.0;
     if (lastCrankEvent > 0) {
@@ -80,9 +80,9 @@ uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t lengt
         lastCrankEventTime = t;
     }
 
-    if ((lastCadence != cadence && cadence > 0) || (lastCrankEventTime < t - 2000)) {
-        log_d("TODO notify new cadence: %d", cadence);
-    }
+    // if ((lastCadence != cadence && cadence > 0) || (lastCrankEventTime < t - 2000)) {
+    //     log_d("TODO notify new cadence: %d", cadence);
+    // }
     lastCadence = cadence;
     revolutions = revsIn;
 

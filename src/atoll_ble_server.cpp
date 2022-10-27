@@ -250,11 +250,11 @@ void BleServer::onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) {
 }
 
 void BleServer::onNotify(BLECharacteristic *c) {
-    log_d("%d", c->getValue<int>());
+    // log_d("%d", c->getValue<int>());
 }
 
 void BleServer::onStatus(BLECharacteristic *c, int code) {
-    log_d("char: %s, code: %d", c->getUUID().toString().c_str(), code);
+    // log_d("char: %s, code: %d", c->getUUID().toString().c_str(), code);
 }
 
 void BleServer::onSubscribe(BLECharacteristic *c, BLEConnInfo &info, uint16_t subValue) {
