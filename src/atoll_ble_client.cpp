@@ -52,28 +52,28 @@ void BleClient::loop() {
         if (nullptr == peers[i]) continue;
         log_i("checking peer %d %s isConn:%d shouldConn:%d conning:%d remov:%d",
               i,
-              peers[i]->name,
+              peers[i]->saved.name,
               peers[i]->isConnected(),
               peers[i]->shouldConnect,
               peers[i]->connecting,
               peers[i]->markedForRemoval);
-        if (0 == strcmp(peers[i]->address, "")) {
-            log_e("peer %d %s %s address is empty", i, peers[i]->name, peers[i]->type);
+        if (0 == strcmp(peers[i]->saved.address, "")) {
+            log_e("peer %d %s %s address is empty", i, peers[i]->saved.name, peers[i]->saved.type);
             continue;
         }
         if (peers[i]->markedForRemoval) {
-            log_i("removing peer %s", peers[i]->name);
+            log_i("removing peer %s", peers[i]->saved.name);
             removePeer(peers[i], false);
         } else if (peers[i]->shouldConnect &&
                    !peers[i]->isConnected() &&
                    !peers[i]->connecting) {
             log_i("connecting peer %s %s(%d)",
-                  peers[i]->name, peers[i]->address, peers[i]->addressType);
+                  peers[i]->saved.name, peers[i]->saved.address, peers[i]->saved.addressType);
             peers[i]->connect();
             delay(100);
         } else if (!peers[i]->shouldConnect &&
                    peers[i]->isConnected()) {
-            log_i("disconnecting peer %s", peers[i]->name);
+            log_i("disconnecting peer %s", peers[i]->saved.name);
             peers[i]->disconnect();
             continue;
         }
@@ -136,7 +136,7 @@ int8_t BleClient::peerIndex(const char* address) {
             // log_i("found unused index %d for empty address", i);
             return i;
         }
-        if (nullptr != peers[i] && 0 == strcmp(peers[i]->address, address)) {
+        if (nullptr != peers[i] && 0 == strcmp(peers[i]->saved.address, address)) {
             // log_i("found index %d of address '%s'", i, address);
             return i;
         }
@@ -156,22 +156,22 @@ bool BleClient::addPeer(Peer* peer) {
         log_e("peer is null");
         return false;
     }
-    if (strlen(peer->address) < sizeof(Peer::address) - 1) {
-        log_e("not adding peer, address too short (%d)", strlen(peer->address));
+    if (strlen(peer->saved.address) < sizeof(Peer::Saved::address) - 1) {
+        log_e("not adding peer, address too short (%d)", strlen(peer->saved.address));
         return false;
     }
-    if (strlen(peer->type) < 1) {
+    if (strlen(peer->saved.type) < 1) {
         log_e("not adding peer with empty type");
         return false;
     }
-    if (strlen(peer->name) < 1) {
+    if (strlen(peer->saved.name) < 1) {
         log_e("not adding peer with empty name");
         return false;
     }
-    int8_t index = peerIndex(peer->address);
+    int8_t index = peerIndex(peer->saved.address);
     if (index < 0) index = peerIndex("");
     if (index < 0) {
-        log_e("cannot add peer %s", peer->name);
+        log_e("cannot add peer %s", peer->saved.name);
         return false;
     }
     // log_i("adding peer %s %s(%d)", peer->name, peer->address, peer->addressType);
@@ -184,13 +184,13 @@ uint8_t BleClient::removePeer(const char* address, bool markOnly) {
     uint8_t removed = 0;
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
-        log_i("comparing '%s' to '%s'", peers[i]->address, address);
-        if (0 == strcmp(peers[i]->address, address)) {
+        log_d("comparing '%s' to '%s'", peers[i]->saved.address, address);
+        if (0 == strcmp(peers[i]->saved.address, address)) {
             if (markOnly) {
                 peers[i]->markedForRemoval = true;
-                log_i("peer marked for removal: %s", peers[i]->name);
+                log_d("peer marked for removal: %s", peers[i]->saved.name);
             } else {
-                log_i("deleting peer %s", peers[i]->name);
+                log_d("deleting peer %s", peers[i]->saved.name);
                 delete peers[i];  // delete nullptr should be safe!
                 peers[i] = nullptr;
             }
@@ -202,7 +202,7 @@ uint8_t BleClient::removePeer(const char* address, bool markOnly) {
 
 uint8_t BleClient::removePeer(Peer* peer, bool markOnly) {
     if (nullptr == peer) return 0;
-    return removePeer(peer->address, markOnly);
+    return removePeer(peer->saved.address, markOnly);
 }
 
 void BleClient::onNotify(BLECharacteristic* pCharacteristic) {

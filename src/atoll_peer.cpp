@@ -27,7 +27,7 @@ Peer::Peer(Saved saved,
 void Peer::loop() {
     if (connParamsProfile != APCPP_ESTABLISHED && isConnected()) {
         connParamsProfile = APCPP_ESTABLISHED;
-        log_d("%s setting conn params", name);
+        log_d("%s setting conn params", saved.name);
         setConnectionParams(connParamsProfile);
     }
 }
@@ -198,12 +198,12 @@ void Peer::setConnectionParams(uint8_t profile) {
     }
 
     log_d("%s %s: interval(%d-%d), latency %d, timeout %d",
-          name, profile == APCPP_ESTABLISHED ? "established" : "initial",
+          saved.name, profile == APCPP_ESTABLISHED ? "established" : "initial",
           minInterval, maxInterval, latency, timeout);
 
     BLEClient* client = getClient();
     if (nullptr == client) {
-        log_e("%s client is null");
+        log_e("%s client is null", saved.name);
         return;
     }
     if (client->isConnected()) {
@@ -215,32 +215,32 @@ void Peer::setConnectionParams(uint8_t profile) {
 
 void Peer::connect() {
     if (isConnected()) {
-        log_d("%s already connected", name);
+        log_d("%s already connected", saved.name);
         return;
     }
     if (connecting) {
-        log_d("%s already connecting", name);
+        log_d("%s already connecting", saved.name);
         return;
     }
     connecting = true;
 
-    log_d("%s connecting", name);
+    log_d("%s connecting", saved.name);
 
     BLEClient* c = nullptr;
 
     if (hasClient()) {
-        log_d("%s has client", name);
+        log_d("%s has client", saved.name);
         goto connect;
     }
 
     c = BLEDevice::getClientByPeerAddress(BLEAddress(saved.address, saved.addressType));
     if (c) {
-        log_d("%s got client by peer address", name);
+        log_d("%s got client by peer address", saved.name);
         goto set;
     }
     c = BLEDevice::getDisconnectedClient();
     if (c) {
-        log_d("%s got disconnected client", name);
+        log_d("%s got disconnected client", saved.name);
         goto set;
     }
     if (BLEDevice::getClientListSize() >= NIMBLE_MAX_CONNECTIONS) {
@@ -249,7 +249,7 @@ void Peer::connect() {
     }
     c = BLEDevice::createClient(BLEAddress(saved.address, saved.addressType));
     if (c) {
-        log_d("%s created new client", name);
+        log_d("%s created new client", saved.name);
         goto set;
     }
 
@@ -265,10 +265,10 @@ connect:
     setConnectionParams(connParamsProfile);
     client->setConnectTimeout(2000);
     if (!connectClient()) {
-        log_d("%s failed to connect client", name);
+        log_d("%s failed to connect client", saved.name);
         goto fail;
     }
-    log_i("%s connected", name);
+    log_i("%s connected", saved.name);
     goto end;
 
 fail:
@@ -286,7 +286,7 @@ void Peer::disconnect() {
         client->disconnect();
     }
     while (isConnected()) {
-        log_i("%s waiting for disconnect...", name);
+        log_i("%s waiting for disconnect...", saved.name);
         delay(500);
     }
 }
@@ -328,11 +328,11 @@ void Peer::subscribeChars(BLEClient* client) {
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
             if (!chars[i]->subscribeOnConnect()) {
-                log_i("%s not subscribing %s", name, chars[i]->label);
+                log_i("%s not subscribing %s", saved.name, chars[i]->label);
                 chars[i]->getRemoteChar(client);  // get remote service and char
                 continue;
             }
-            log_i("%s subscribing %s", name, chars[i]->label);
+            log_i("%s subscribing %s", saved.name, chars[i]->label);
             chars[i]->subscribe(client);
         }
 }
@@ -344,7 +344,7 @@ void Peer::unsubscribeChars(BLEClient* client) {
     }
     for (int8_t i = 0; i < charsMax; i++)
         if (nullptr != chars[i]) {
-            log_i("%s unsubscribing %s", name, chars[i]->label);
+            log_i("%s unsubscribing %s", saved.name, chars[i]->label);
             chars[i]->unsubscribe(client);
         }
 }
@@ -433,15 +433,15 @@ bool Peer::isHeartrateMonitor() {
 }
 
 void Peer::onConnect(BLEClient* client) {
-    log_i("%s connected", saved.name);
+    log_d("%s connected", saved.name);
 
-    log_i("%s discovering attributes...", name);
+    log_d("%s discovering attributes...", saved.name);
     client->discoverAttributes();
 
-    // log_i("%s subscribing...", name);
+    // log_d("%s subscribing...", name);
     subscribeChars(client);
 
-    // log_i("%s requesting conn param update...", name);
+    // log_d("%s requesting conn param update...", saved.name);
     // setConnectionParams(client, APCPP_ESTABLISHED);
 }
 
@@ -450,7 +450,7 @@ void Peer::onConnect(BLEClient* client) {
  * @param [in] device->client A pointer to the calling client object.
  */
 void Peer::onDisconnect(BLEClient* client, int reason) {
-    log_i("%s disconnected, reason %d", name, reason);
+    log_i("%s disconnected, reason %d", saved.name, reason);
 
     // log_i("%s unsubscribing", name);
     // unsubscribeChars(client);
@@ -467,14 +467,14 @@ void Peer::onDisconnect(BLEClient* client, int reason) {
  */
 bool Peer::onConnParamsUpdateRequest(BLEClient* client, const ble_gap_upd_params* params) {
     log_i("%s requested: interval: %d-%d, latency: %d, ce: %d-%d, timeout: %d",
-          name,
+          saved.name,
           params->itvl_min,
           params->itvl_max,
           params->latency,
           params->min_ce_len,
           params->max_ce_len,
           params->supervision_timeout);
-    log_i("%s accepting request", name);
+    log_i("%s accepting request", saved.name);
     return true;
 }
 
@@ -483,7 +483,7 @@ bool Peer::onConnParamsUpdateRequest(BLEClient* client, const ble_gap_upd_params
  * @return The passkey to be sent to the server.
  */
 uint32_t Peer::onPassKeyRequest() {
-    log_w("%s sending 696669, TODO send saved passkey", name);
+    log_w("%s sending 696669, TODO send saved passkey", saved.name);
     return 696669;
 }
 
@@ -507,14 +507,14 @@ void Peer::onAuthenticationComplete(NimBLEConnInfo& info) {
  * @return True to accept the pin.
  */
 bool Peer::onConfirmPIN(uint32_t pin) {
-    log_i("%s TODO", name);
+    log_i("%s TODO", saved.name);
     return true;
 }
 
 void Peer::onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) {
     char buf[length];
     strncpy(buf, (char*)data, length);
-    log_d("%s uuid: %s, data: '%s', len: %d", name, c->getUUID().toString().c_str(), buf, length);
+    log_d("%s uuid: %s, data: '%s', len: %d", saved.name, c->getUUID().toString().c_str(), buf, length);
 }
 
 PowerMeter::PowerMeter(
