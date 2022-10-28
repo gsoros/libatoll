@@ -25,6 +25,8 @@ class Ble {
 
     static void setSecurityIOCap(uint8_t ioCap);
     static void restoreSecurityIOCap();
+    // address = "*" to delete all bonds
+    static bool deleteBond(const char *address);
 
     static std::string connInfoToStr(BLEConnInfo *info);
 

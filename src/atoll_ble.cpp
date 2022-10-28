@@ -34,6 +34,14 @@ void Ble::restoreSecurityIOCap() {
     setSecurityIOCap(securityIOCap);
 }
 
+bool Ble::deleteBond(const char *address) {
+    if (0 == strcmp(address, "*")) {
+        BLEDevice::deleteAllBonds();
+        return true;
+    }
+    return BLEDevice::deleteBond(BLEAddress(address));
+}
+
 std::string Ble::connInfoToStr(BLEConnInfo *info) {
     uint8_t bufSize = 64;
     char buf[bufSize];

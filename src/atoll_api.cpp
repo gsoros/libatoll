@@ -1,4 +1,5 @@
 #include "atoll_api.h"
+#include "atoll_ble.h"
 
 using namespace Atoll;
 
@@ -56,8 +57,10 @@ bool Api::addBleService() {
         log_e("bleServer is null");
         return false;
     }
-    if (secureBle)
+    if (secureBle) {
+        log_i("setting BleServer security with passkey %d", passkey);
         bleServer->setSecurity(true, passkey);
+    }
 
     BLEService *s = bleServer->createService(serviceUuid);
     if (nullptr == s) {
@@ -262,7 +265,7 @@ size_t Api::write(const uint8_t *buffer, size_t size) {
     size_t i = 0;
     while (i < size) {
         const char c = buffer[i];
-        log_d("%d", c);
+        // log_d("%d", c);
         i++;
         switch (c) {
             case 10: {  // LF
@@ -468,12 +471,12 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
             size_t sArg = strlen(arg);
             if (sStr < sArg) {
                 // set secureApi
-                if (':' != arg[sStr]) return result("argInvalid");
+                if (':' != arg[sStr]) goto argInvalid;
                 arg += sStr + 1;
                 sArg = strlen(arg);
-                if (sArg != 1) return result("argInvalid");
+                if (sArg != 1) goto argInvalid;
                 int i = atoi(arg);
-                if (i < 0 || 1 < i) return result("argInvalid");
+                if (i < 0 || 1 < i) goto argInvalid;
                 secureBle = (bool)i;
                 saveSettings();
             }
@@ -490,12 +493,12 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
             size_t sArg = strlen(arg);
             if (sStr < sArg) {
                 // set passkey
-                if (':' != arg[sStr]) return result("argInvalid");
+                if (':' != arg[sStr]) goto argInvalid;
                 arg += sStr + 1;
                 sArg = strlen(arg);
-                if (6 < sArg) return result("argInvalid");
+                if (6 < sArg) goto argInvalid;
                 int i = atoi(arg);
-                if (i < 1 || 999999 < i) return result("argInvalid");
+                if (i < 1 || 999999 < i) goto argInvalid;
                 passkey = (uint32_t)i;
                 saveSettings();
             }
@@ -504,7 +507,24 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
             return success();
         }
     }
+    {
+        const char *str = "deleteBond";
+        uint8_t sStr = strlen(str);
+        if (sStr == strspn(msg->arg, str)) {
+            char *arg = msg->arg;
+            size_t sArg = strlen(arg);
+            if (sArg <= sStr) goto argInvalid;
+            if (':' != arg[sStr]) goto argInvalid;
+            arg += sStr + 1;
+            if (Ble::deleteBond(arg)) {
+                snprintf(msg->reply, msgReplyLength, "deleteBond:%s", arg);
+                return success();
+            }
+            goto argInvalid;
+        }
+    }
+argInvalid:
     msg->replyAppend("|", true);
-    msg->replyAppend("build|reboot|secureApi[:0|1]|passkey[:1..999999]");
+    msg->replyAppend("build|reboot|secureApi[:0|1]|passkey[:1..999999]|deleteBond:[address|*]");
     return result("argInvalid");
 }

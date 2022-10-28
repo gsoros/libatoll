@@ -226,7 +226,7 @@ void BleServer::onMTUChange(uint16_t mtu, BLEConnInfo &info) {
 }
 
 uint32_t BleServer::onPassKeyRequest() {
-    log_e("not implemented");
+    log_e("TODO not implemented, returning 696669");
     return 696669;
 }
 
@@ -235,7 +235,7 @@ void BleServer::onAuthenticationComplete(BLEConnInfo &info) {
 }
 
 bool BleServer::onConfirmPIN(uint32_t pin) {
-    log_i("%d", pin);
+    log_e("TODO not implemented, PIN: %d, returning true", pin);
     return true;
 }
 
