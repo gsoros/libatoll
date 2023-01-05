@@ -124,4 +124,20 @@
 #define HALL_CHAR_UUID "e43fb4d4-1dc7-4ecd-9409-fb9d65dc7187"
 #define HALL_DESC_UUID ((uint16_t)0x2901)
 
+/*
+  https://github.com/vedderb/vesc_tool/blob/c229f9b92d10c89a91c6b817b929b8bca6e45bfb/bleuart.cpp#L36
+*/
+
+#ifndef VESC_SERVICE_UUID
+#define VESC_SERVICE_UUID "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+#endif
+
+#ifndef VESC_RX_CHAR_UUID
+#define VESC_RX_CHAR_UUID "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+#endif
+
+#ifndef VESC_TX_CHAR_UUID
+#define VESC_TX_CHAR_UUID "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+#endif
+
 #endif

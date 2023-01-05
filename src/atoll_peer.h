@@ -10,8 +10,10 @@
 #include "atoll_peer_characteristic_power.h"
 #include "atoll_peer_characteristic_heartrate.h"
 #include "atoll_peer_characteristic_weightscale.h"
-#include "atoll_peer_characteristic_apitx.h"
-#include "atoll_peer_characteristic_apirx.h"
+#include "atoll_peer_characteristic_api_rx.h"
+#include "atoll_peer_characteristic_api_tx.h"
+#include "atoll_peer_characteristic_vesc_rx.h"
+#include "atoll_peer_characteristic_vesc_tx.h"
 
 #ifndef SETTINGS_STR_LENGTH
 #define SETTINGS_STR_LENGTH 32
@@ -150,6 +152,13 @@ class HeartrateMonitor : public Peer {
         Saved saved,
         PeerCharacteristicHeartrate* customHrChar = nullptr,
         PeerCharacteristicBattery* customBattChar = nullptr);
+};
+
+class Vesc : public Peer {
+   public:
+    Vesc(Saved saved,
+         PeerCharacteristicVescRX* customVescRX = nullptr,
+         PeerCharacteristicVescTX* customVescTX = nullptr);
 };
 
 }  // namespace Atoll

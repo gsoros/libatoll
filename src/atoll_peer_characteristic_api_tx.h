@@ -1,5 +1,5 @@
-#ifndef __atoll_peer_characteristic_apitx_h
-#define __atoll_peer_characteristic_apitx_h
+#ifndef __atoll_peer_characteristic_api_tx_h
+#define __atoll_peer_characteristic_api_tx_h
 
 #include "atoll_peer_characteristic_api.h"
 

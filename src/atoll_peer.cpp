@@ -602,4 +602,17 @@ HeartrateMonitor::HeartrateMonitor(
                 ? customHrChar
                 : new PeerCharacteristicHeartrate());
 }
+
+Vesc::Vesc(Saved saved,
+           PeerCharacteristicVescRX* customVescRX,
+           PeerCharacteristicVescTX* customVescTX)
+    : Peer(saved) {
+    addChar(nullptr != customVescRX
+                ? customVescRX
+                : new PeerCharacteristicVescRX());
+    addChar(nullptr != customVescTX
+                ? customVescTX
+                : new PeerCharacteristicVescTX());
+}
+
 #endif

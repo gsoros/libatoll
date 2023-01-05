@@ -1,6 +1,6 @@
 #if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
 
-#include "atoll_peer_characteristic_apirx.h"
+#include "atoll_peer_characteristic_api_rx.h"
 
 using namespace Atoll;
 
