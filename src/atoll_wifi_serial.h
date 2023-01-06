@@ -35,12 +35,14 @@ class WifiSerial : public Task, public Stream {
     void start();
     void stop();
     void disconnect();
-    size_t write(uint8_t c);
-    size_t write(const uint8_t *buf, size_t size);
 
-    int available();
-    int read();
-    int peek();
+    size_t write(uint8_t c) override;
+    size_t write(const uint8_t *buf, size_t size) override;
+
+    int available() override;
+    int read() override;
+    int peek() override;
+
     void flush();
 
    private:

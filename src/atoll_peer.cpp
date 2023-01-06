@@ -441,6 +441,10 @@ bool Peer::isHeartrateMonitor() {
     return nullptr != strchr(saved.type, 'H');
 }
 
+bool Peer::isVesc() {
+    return nullptr != strchr(saved.type, 'V');
+}
+
 void Peer::onConnect(BLEClient* client) {
     log_d("%s connected", saved.name);
 
@@ -601,18 +605,6 @@ HeartrateMonitor::HeartrateMonitor(
     addChar(nullptr != customHrChar
                 ? customHrChar
                 : new PeerCharacteristicHeartrate());
-}
-
-Vesc::Vesc(Saved saved,
-           PeerCharacteristicVescRX* customVescRX,
-           PeerCharacteristicVescTX* customVescTX)
-    : Peer(saved) {
-    addChar(nullptr != customVescRX
-                ? customVescRX
-                : new PeerCharacteristicVescRX());
-    addChar(nullptr != customVescTX
-                ? customVescTX
-                : new PeerCharacteristicVescTX());
 }
 
 #endif

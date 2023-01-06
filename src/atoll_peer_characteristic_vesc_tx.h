@@ -2,6 +2,7 @@
 #define __atoll_peer_characteristic_vesc_tx_h
 
 #include "atoll_peer_characteristic_template.h"
+#include "atoll_vesc.h"
 
 namespace Atoll {
 
@@ -15,6 +16,8 @@ class PeerCharacteristicVescTX : public PeerCharacteristicTemplate<String> {
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) override;
     virtual void notify() override;
     virtual bool readOnSubscribe() override;
+
+    VescUartBleStream* stream = nullptr;
 };
 
 }  // namespace Atoll

@@ -99,6 +99,7 @@ class Peer : public BLEClientCallbacks {
     virtual bool isPowerMeter();
     virtual bool isESPM();
     virtual bool isHeartrateMonitor();
+    virtual bool isVesc();
 
    protected:
     BLEClient* client = nullptr;                                           // our NimBLE client
@@ -152,13 +153,6 @@ class HeartrateMonitor : public Peer {
         Saved saved,
         PeerCharacteristicHeartrate* customHrChar = nullptr,
         PeerCharacteristicBattery* customBattChar = nullptr);
-};
-
-class Vesc : public Peer {
-   public:
-    Vesc(Saved saved,
-         PeerCharacteristicVescRX* customVescRX = nullptr,
-         PeerCharacteristicVescTX* customVescTX = nullptr);
 };
 
 }  // namespace Atoll
