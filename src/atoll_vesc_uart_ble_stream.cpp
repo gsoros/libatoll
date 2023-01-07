@@ -1,40 +1,27 @@
-#include "atoll_vesc.h"
+#include "atoll_peer.h"
 
 using namespace Atoll;
 
-Vesc::Vesc(Saved saved,
-           PeerCharacteristicVescRX* customVescRX,
-           PeerCharacteristicVescTX* customVescTX)
-    : Peer(saved) {
-    addChar(nullptr != customVescRX
-                ? customVescRX
-                : new PeerCharacteristicVescRX());
-    PeerCharacteristicVescTX* vescTX = nullptr != customVescTX
-                                           ? customVescTX
-                                           : new PeerCharacteristicVescTX();
-    vescTX->stream = &bleStream;
-    addChar(vescTX);
-    bleStream.vesc = this;
+VescUartBleStream::VescUartBleStream() {
+    rxBuf.clear();
 }
 
 int VescUartBleStream::available() {
-    log_e("not implemented");
-    return 0;
+    return rxBuf.size();
 }
 
 int VescUartBleStream::read() {
-    log_e("not implemented");
+    if (rxBuf.size()) return (int)rxBuf.shift();
     return 0;
 }
 
 int VescUartBleStream::peek() {
-    log_e("not implemented");
+    if (rxBuf.size()) return (int)rxBuf.first();
     return 0;
 }
 
-size_t VescUartBleStream::write(uint8_t) {
-    log_e("not implemented");
-    return 0;
+size_t VescUartBleStream::write(uint8_t value) {
+    return write(&value, 1);
 }
 
 size_t VescUartBleStream::write(const uint8_t* buffer, size_t size) {

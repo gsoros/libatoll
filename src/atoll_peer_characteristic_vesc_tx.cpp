@@ -32,9 +32,11 @@ void PeerCharacteristicVescTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* da
 }
 
 void PeerCharacteristicVescTX::notify() {
-    log_d("%s received '%s'", label, lastValue.c_str());
+    log_d("%s received %dB", label, lastValue.length());
     if (nullptr == stream) return;
-    stream->write((uint8_t*)lastValue.c_str(), (size_t)lastValue.length());
+    // stream->write((uint8_t*)lastValue.c_str(), (size_t)lastValue.length());
+    for (unsigned int i = 0; i < lastValue.length(); i++)
+        stream->rxBuf.push(lastValue.charAt(i));
 }
 
 bool PeerCharacteristicVescTX::readOnSubscribe() {

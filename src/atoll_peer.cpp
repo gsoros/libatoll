@@ -599,12 +599,72 @@ HeartrateMonitor::HeartrateMonitor(
     Saved saved,
     PeerCharacteristicHeartrate* customHrChar,
     PeerCharacteristicBattery* customBattChar)
-    : Peer(
-          saved,
-          customBattChar) {
+    : Peer(saved,
+           customBattChar) {
     addChar(nullptr != customHrChar
                 ? customHrChar
                 : new PeerCharacteristicHeartrate());
+}
+
+Vesc::Vesc(Saved saved,
+           PeerCharacteristicVescRX* customVescRX,
+           PeerCharacteristicVescTX* customVescTX)
+    : Peer(saved) {
+    deleteChars("Battery");
+    addChar(nullptr != customVescRX
+                ? customVescRX
+                : new PeerCharacteristicVescRX());
+    PeerCharacteristicVescTX* vescTX = nullptr != customVescTX
+                                           ? customVescTX
+                                           : new PeerCharacteristicVescTX();
+    vescTX->stream = uartBleStream;
+    addChar(vescTX);
+    uart = new VescUart();
+    uartBleStream = new VescUartBleStream();
+    uart->setSerialPort(uartBleStream);
+    uartBleStream->vesc = this;
+}
+
+void Vesc::loop() {
+    Peer::loop();
+    log_i("%s %02fV %dW", saved.name, getVoltage(), getPower());
+}
+
+bool Vesc::requestUpdate() {
+    return uart->getVescValues();
+}
+
+float Vesc::getVoltage() {
+    requestUpdate();
+    return uart->data.inpVoltage;
+}
+
+uint16_t Vesc::getPower() {
+    requestUpdate();
+    float power = getVoltage() * uart->data.avgInputCurrent;
+    if (power < 0)
+        power = 0;
+    else if (UINT16_MAX < power)
+        power = UINT16_MAX;
+    return (uint16_t)power;
+}
+
+void Vesc::setPower(uint16_t power) {
+    uint16_t maxPower = 250;
+    float maxCurrent = 5.0;
+
+    if (maxPower < power) power = maxPower;
+    float voltage = getVoltage();
+    if (voltage <= (float)0.0) {
+        log_e("voltage is 0");
+        return;
+    }
+    float current = (float)(power / voltage);
+    if (current < 0)
+        current = 0;
+    else if (maxCurrent < current)
+        current = maxCurrent;
+    uart->setCurrent(current);
 }
 
 #endif

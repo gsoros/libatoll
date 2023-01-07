@@ -15,6 +15,8 @@
 #include "atoll_peer_characteristic_vesc_rx.h"
 #include "atoll_peer_characteristic_vesc_tx.h"
 
+#include "VescUart.h"
+
 #ifndef SETTINGS_STR_LENGTH
 #define SETTINGS_STR_LENGTH 32
 #endif
@@ -153,6 +155,25 @@ class HeartrateMonitor : public Peer {
         Saved saved,
         PeerCharacteristicHeartrate* customHrChar = nullptr,
         PeerCharacteristicBattery* customBattChar = nullptr);
+};
+
+class PeerCharacteristicVescTX;
+class VescUartBleStream;
+class Vesc : public Peer {
+   public:
+    Vesc(Saved saved,
+         PeerCharacteristicVescRX* customVescRX = nullptr,
+         PeerCharacteristicVescTX* customVescTX = nullptr);
+
+    virtual void loop() override;
+
+    VescUartBleStream* uartBleStream;
+    VescUart* uart;
+
+    bool requestUpdate();
+    float getVoltage();
+    uint16_t getPower();
+    void setPower(uint16_t power);
 };
 
 }  // namespace Atoll

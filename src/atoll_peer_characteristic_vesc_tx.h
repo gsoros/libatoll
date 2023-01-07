@@ -2,7 +2,7 @@
 #define __atoll_peer_characteristic_vesc_tx_h
 
 #include "atoll_peer_characteristic_template.h"
-#include "atoll_vesc.h"
+#include "atoll_vesc_uart_ble_stream.h"
 
 namespace Atoll {
 

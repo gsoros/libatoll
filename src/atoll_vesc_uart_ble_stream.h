@@ -1,23 +1,18 @@
-#ifndef __atoll_vesc_h
-#define __atoll_vesc_h
+#ifndef __atoll_vesc_uart_ble_stream_h
+#define __atoll_vesc_uart_ble_stream_h
+
+#include <CircularBuffer.h>
 
 #include "atoll_peer.h"
 #include "VescUart.h"
 
 namespace Atoll {
 
-class Vesc : public Peer {
-   public:
-    Vesc(Saved saved,
-         PeerCharacteristicVescRX* customVescRX = nullptr,
-         PeerCharacteristicVescTX* customVescTX = nullptr);
-
-    VescUartBleStream bleStream;
-    VescUart vescUart;
-};
+class Vesc;
 
 class VescUartBleStream : public Stream {
    public:
+    VescUartBleStream();
     virtual int available() override;
     virtual int read() override;
     virtual int peek() override;
@@ -25,6 +20,8 @@ class VescUartBleStream : public Stream {
     virtual size_t write(const uint8_t* buffer, size_t size) override;
 
     Vesc* vesc = nullptr;
+
+    CircularBuffer<uint8_t, 512> rxBuf;
 };
 
 }  // namespace Atoll
