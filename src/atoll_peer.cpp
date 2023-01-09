@@ -635,7 +635,7 @@ void Vesc::setConnectionParams(uint8_t profile) {
 
 void Vesc::loop() {
     Peer::loop();
-    log_i("%s %02fV %dW", saved.name, getVoltage(), getPower());
+    log_i("%s %2.2fV %dW", saved.name, getVoltage(), getPower());
 }
 
 bool Vesc::requestUpdate() {
@@ -651,12 +651,17 @@ bool Vesc::requestUpdate() {
 
 float Vesc::getVoltage() {
     requestUpdate();
-    return uart->data.inpVoltage;
+    return 0.0f < uart->data.inpVoltage && uart->data.inpVoltage < 100.0f ? uart->data.inpVoltage : 0.0f;
 }
 
 uint16_t Vesc::getPower() {
     requestUpdate();
-    float power = getVoltage() * uart->data.avgInputCurrent;
+    float voltage = getVoltage();
+    if (voltage <= 0.01f) {
+        log_e("voltage is 0");
+        return 0;
+    }
+    float power = voltage * uart->data.avgInputCurrent;
     if (power < 0)
         power = 0;
     else if (UINT16_MAX < power)
@@ -666,17 +671,18 @@ uint16_t Vesc::getPower() {
 
 void Vesc::setPower(uint16_t power) {
     uint16_t maxPower = 250;
-    float maxCurrent = 5.0;
+    float minCurrent = 1.0f;
+    float maxCurrent = 5.0f;
 
     if (maxPower < power) power = maxPower;
     float voltage = getVoltage();
-    if (voltage <= (float)0.01) {
+    if (voltage <= 0.01f) {
         log_e("voltage is 0");
         return;
     }
     float current = (float)(power / voltage);
-    if (current < 0)
-        current = 0;
+    if (current < minCurrent)
+        current = minCurrent;
     else if (maxCurrent < current)
         current = maxCurrent;
     log_i("setting %2.2fA %dW", current, power);
