@@ -13,6 +13,7 @@ PeerCharacteristicVescTX::PeerCharacteristicVescTX(const char* label,
 }
 
 String PeerCharacteristicVescTX::decode(const uint8_t* data, const size_t length) {
+    log_d("%s decoding %dB", label, length);
     char value[length + 1];
     strncpy(value, (char*)data, length);
     value[length] = 0;
@@ -27,6 +28,7 @@ bool PeerCharacteristicVescTX::encode(const String value, uint8_t* data, size_t 
 }
 
 void PeerCharacteristicVescTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* data, size_t length, bool isNotify) {
+    log_d("%s received %dB", label, length);
     lastValue = decode(data, length);
     notify();
 }

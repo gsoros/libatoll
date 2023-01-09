@@ -63,6 +63,7 @@ bool PeerCharacteristic::subscribe(BLEClient* client) {
         log_e("%s cannot notify or indicate", label);
         return false;
     }
+    // log_i("%s can notify: %d, can indicate: %d", label, rc->canNotify(), rc->canIndicate());
     remoteOpStart(client);
     bool res = rc->subscribe(
         rc->canNotify(),

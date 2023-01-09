@@ -165,6 +165,7 @@ class Vesc : public Peer {
          PeerCharacteristicVescRX* customVescRX = nullptr,
          PeerCharacteristicVescTX* customVescTX = nullptr);
 
+    virtual void setConnectionParams(uint8_t profile) override;
     virtual void loop() override;
 
     VescUartBleStream* uartBleStream;

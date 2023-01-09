@@ -619,10 +619,18 @@ Vesc::Vesc(Saved saved,
                                            : new PeerCharacteristicVescTX();
     vescTX->stream = uartBleStream;
     addChar(vescTX);
-    uart = new VescUart();
+    uart = new VescUart(1000);
     uartBleStream = new VescUartBleStream();
     uart->setSerialPort(uartBleStream);
     uartBleStream->vesc = this;
+}
+
+void Vesc::setConnectionParams(uint8_t profile) {
+    if (APCPP_ESTABLISHED == profile) {
+        log_i("%s not setting established profile", saved.name);
+        return;
+    }
+    Peer::setConnectionParams(profile);
 }
 
 void Vesc::loop() {
@@ -631,7 +639,14 @@ void Vesc::loop() {
 }
 
 bool Vesc::requestUpdate() {
-    return uart->getVescValues();
+    static ulong lastUpdate = millis();
+    if (millis() - 500 < lastUpdate) {
+        log_i("%s skipping update", saved.name);
+        return true;
+    }
+    bool res = uart->getVescValues();
+    lastUpdate = millis();
+    return res;
 }
 
 float Vesc::getVoltage() {
@@ -655,7 +670,7 @@ void Vesc::setPower(uint16_t power) {
 
     if (maxPower < power) power = maxPower;
     float voltage = getVoltage();
-    if (voltage <= (float)0.0) {
+    if (voltage <= (float)0.01) {
         log_e("voltage is 0");
         return;
     }
@@ -664,6 +679,7 @@ void Vesc::setPower(uint16_t power) {
         current = 0;
     else if (maxCurrent < current)
         current = maxCurrent;
+    log_i("setting %2.2fA %dW", current, power);
     uart->setCurrent(current);
 }
 
