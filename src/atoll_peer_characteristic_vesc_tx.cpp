@@ -12,33 +12,31 @@ PeerCharacteristicVescTX::PeerCharacteristicVescTX(const char* label,
     this->charUuid = charUuid;
 }
 
-String PeerCharacteristicVescTX::decode(const uint8_t* data, const size_t length) {
+uint8_t PeerCharacteristicVescTX::decode(const uint8_t* data, const size_t length) {
     log_d("%s decoding %dB", label, length);
-    char value[length + 1];
-    strncpy(value, (char*)data, length);
-    value[length] = 0;
-    lastValue = String(value);
-    log_d("%s length=%d '%s'", label, length, lastValue.c_str());
-    return lastValue;
+    if (nullptr == stream) {
+        log_e("%s stream is null", label);
+        return 0;
+    }
+    for (size_t i = 0; i < length; i++) {
+        log_d("%s pushing %d: %d into RX buffer", label, i, data[i]);
+        stream->rxBuf.push(data[i]);
+    }
+    return 0;
 }
 
-bool PeerCharacteristicVescTX::encode(const String value, uint8_t* data, size_t length) {
+bool PeerCharacteristicVescTX::encode(const uint8_t value, uint8_t* data, size_t length) {
     log_e("not implemented");
     return true;
 }
 
 void PeerCharacteristicVescTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* data, size_t length, bool isNotify) {
     log_d("%s received %dB", label, length);
-    lastValue = decode(data, length);
-    notify();
+    decode(data, length);
 }
 
 void PeerCharacteristicVescTX::notify() {
-    log_d("%s received %dB", label, lastValue.length());
-    if (nullptr == stream) return;
-    // stream->write((uint8_t*)lastValue.c_str(), (size_t)lastValue.length());
-    for (unsigned int i = 0; i < lastValue.length(); i++)
-        stream->rxBuf.push(lastValue.charAt(i));
+    log_e("not implemented");
 }
 
 bool PeerCharacteristicVescTX::readOnSubscribe() {

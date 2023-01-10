@@ -34,7 +34,7 @@ bool PeerCharacteristicVescRX::write(BLEClient* client, const uint8_t* value, si
         return false;
     }
     remoteOpStart(client);
-    bool res = rc->writeValue<const uint8_t*>(value, length);
+    bool res = rc->writeValue(value, length);
     remoteOpEnd(client);
     return res;
 }
