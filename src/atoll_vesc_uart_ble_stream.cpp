@@ -42,8 +42,8 @@ size_t VescUartBleStream::write(const uint8_t* buffer, size_t size) {
         log_e("%s could not write RX char", vesc->saved.name);
         return 0;
     }
-    log_d("%d bytes sent to %s RX", size, vesc->saved.name);
+    // log_d("%d bytes sent to %s RX", size, vesc->saved.name);
     rxBuf.clear();
-    log_d("%s RX buffer cleared", vesc->saved.name);
+    // log_d("%s RX buffer cleared", vesc->saved.name);
     return size;
 }

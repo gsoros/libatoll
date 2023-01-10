@@ -13,13 +13,13 @@ PeerCharacteristicVescTX::PeerCharacteristicVescTX(const char* label,
 }
 
 uint8_t PeerCharacteristicVescTX::decode(const uint8_t* data, const size_t length) {
-    log_d("%s decoding %dB", label, length);
+    // log_d("%s decoding %dB", label, length);
     if (nullptr == stream) {
         log_e("%s stream is null", label);
         return 0;
     }
     for (size_t i = 0; i < length; i++) {
-        log_d("%s pushing %d: %d into RX buffer", label, i, data[i]);
+        // log_d("%s pushing %d: %d into RX buffer", label, i, data[i]);
         stream->rxBuf.push(data[i]);
     }
     return 0;
@@ -31,7 +31,7 @@ bool PeerCharacteristicVescTX::encode(const uint8_t value, uint8_t* data, size_t
 }
 
 void PeerCharacteristicVescTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* data, size_t length, bool isNotify) {
-    log_d("%s received %dB", label, length);
+    // log_d("%s received %dB", label, length);
     decode(data, length);
 }
 

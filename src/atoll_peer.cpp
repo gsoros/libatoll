@@ -617,10 +617,10 @@ Vesc::Vesc(Saved saved,
     PeerCharacteristicVescTX* vescTX = nullptr != customVescTX
                                            ? customVescTX
                                            : new PeerCharacteristicVescTX();
+    uart = new VescUart(250);  // 250 ms timeout on waiting for reply
+    uartBleStream = new VescUartBleStream();
     vescTX->stream = uartBleStream;
     addChar(vescTX);
-    uart = new VescUart(1000);
-    uartBleStream = new VescUartBleStream();
     uart->setSerialPort(uartBleStream);
     uartBleStream->vesc = this;
 }
@@ -639,9 +639,9 @@ void Vesc::loop() {
 }
 
 bool Vesc::requestUpdate() {
-    static ulong lastUpdate = millis();
-    if (millis() - 500 < lastUpdate) {
-        log_i("%s skipping update", saved.name);
+    static ulong lastUpdate = 0;
+    if (millis() < lastUpdate + 500) {
+        // log_i("%s skipping update", saved.name);
         return true;
     }
     bool res = uart->getVescValues();
@@ -681,7 +681,9 @@ void Vesc::setPower(uint16_t power) {
         return;
     }
     float current = (float)(power / voltage);
-    if (current < minCurrent)
+    if (power <= 10)
+        current = 0.0f;
+    else if (current < minCurrent)
         current = minCurrent;
     else if (maxCurrent < current)
         current = maxCurrent;
