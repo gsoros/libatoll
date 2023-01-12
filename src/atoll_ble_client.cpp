@@ -50,13 +50,13 @@ void BleClient::loop() {
     if (scan->isScanning()) return;
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
-        log_i("checking peer %d %s isConn:%d shouldConn:%d conning:%d remov:%d",
-              i,
-              peers[i]->saved.name,
-              peers[i]->isConnected(),
-              peers[i]->shouldConnect,
-              peers[i]->connecting,
-              peers[i]->markedForRemoval);
+        // log_d("checking peer %d %s isConn:%d shouldConn:%d conning:%d remov:%d",
+        //       i,
+        //       peers[i]->saved.name,
+        //       peers[i]->isConnected(),
+        //       peers[i]->shouldConnect,
+        //       peers[i]->connecting,
+        //       peers[i]->markedForRemoval);
         if (0 == strcmp(peers[i]->saved.address, "")) {
             log_e("peer %d %s %s address is empty", i, peers[i]->saved.name, peers[i]->saved.type);
             continue;

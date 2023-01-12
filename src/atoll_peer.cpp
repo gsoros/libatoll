@@ -635,37 +635,44 @@ void Vesc::setConnectionParams(uint8_t profile) {
 
 void Vesc::loop() {
     Peer::loop();
+    requestUpdate();
     log_i("%s %2.2fV %dW", saved.name, getVoltage(), getPower());
 }
 
 bool Vesc::requestUpdate() {
     static ulong lastUpdate = 0;
-    if (millis() < lastUpdate + 500) {
-        // log_i("%s skipping update", saved.name);
+    ulong start = millis();
+    if (start < lastUpdate + 500) {
+        log_i("%s skipping update", saved.name);
         return true;
     }
     bool res = uart->getVescValues();
-    lastUpdate = millis();
+    ulong end = millis();
+    if (res) lastUpdate = end;
+    log_d("update took %d ms", end - start);
     return res;
 }
 
 float Vesc::getVoltage() {
-    requestUpdate();
     return 0.0f < uart->data.inpVoltage && uart->data.inpVoltage < 100.0f ? uart->data.inpVoltage : 0.0f;
 }
 
 uint16_t Vesc::getPower() {
-    requestUpdate();
     float voltage = getVoltage();
     if (voltage <= 0.01f) {
         log_e("voltage is 0");
         return 0;
     }
-    float power = voltage * uart->data.avgInputCurrent;
-    if (power < 0)
-        power = 0;
+    float current = uart->data.avgInputCurrent;
+    if (current <= 0.01f)
+        current = 0.0f;
+    else if (20.0f < current)
+        current = 20.0f;
+    float power = voltage * current;
+    if (power < 0.0f)
+        power = 0.0f;
     else if (UINT16_MAX < power)
-        power = UINT16_MAX;
+        power = (float)UINT16_MAX;
     return (uint16_t)power;
 }
 
