@@ -677,9 +677,9 @@ uint16_t Vesc::getPower() {
 }
 
 void Vesc::setPower(uint16_t power) {
-    uint16_t maxPower = 250;
+    uint16_t maxPower = 800;  // TODO get these from settings
     float minCurrent = 1.0f;
-    float maxCurrent = 5.0f;
+    float maxCurrent = 15.0f;
 
     if (maxPower < power) power = maxPower;
     float voltage = getVoltage();
