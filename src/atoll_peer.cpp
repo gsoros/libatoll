@@ -644,7 +644,7 @@ bool Vesc::requestUpdate() {
     ulong start = millis();
     if (start < lastUpdate + 500) {
         log_i("%s skipping update", saved.name);
-        return true;
+        return false;
     }
     bool res = uart->getVescValues();
     ulong end = millis();

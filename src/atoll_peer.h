@@ -65,8 +65,7 @@ class Peer : public BLEClientCallbacks {
 
     virtual ~Peer();
 
-    Peer(Saved saved,
-         PeerCharacteristicBattery* customBattChar = nullptr);
+    Peer(Saved saved, PeerCharacteristicBattery* customBattChar = nullptr);
 
     virtual void loop();
 
