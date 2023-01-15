@@ -1,5 +1,6 @@
-#if defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL)
 #include "atoll_vesc_uart_ble_stream.h"
+
+#if defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL)
 
 using namespace Atoll;
 

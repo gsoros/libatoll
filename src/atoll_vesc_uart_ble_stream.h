@@ -1,6 +1,7 @@
 #ifndef __atoll_vesc_uart_ble_stream_h
 #define __atoll_vesc_uart_ble_stream_h
 
+#include <NimBLEDevice.h>
 #include <CircularBuffer.h>
 
 #include "atoll_peer.h"
