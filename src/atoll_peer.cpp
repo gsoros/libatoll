@@ -268,6 +268,7 @@ set:
     setClient(c);
 
 connect:
+    lastConnectionAttempt = millis();
     connParamsProfile = APCPP_INITIAL;
     setConnectionParams(connParamsProfile);
     client->setConnectTimeout(2000);
@@ -677,9 +678,9 @@ uint16_t Vesc::getPower() {
 }
 
 void Vesc::setPower(uint16_t power) {
-    uint16_t maxPower = 800;  // TODO get these from settings
+    uint16_t maxPower = 1500;  // TODO get these from settings
     float minCurrent = 1.0f;
-    float maxCurrent = 15.0f;
+    float maxCurrent = 50.0f;
 
     if (maxPower < power) power = maxPower;
     float voltage = getVoltage();

@@ -6,6 +6,8 @@
 
 namespace Atoll {
 
+class VescUartBleStream;
+
 class PeerCharacteristicVescTX : public PeerCharacteristicTemplate<uint8_t> {
    public:
     PeerCharacteristicVescTX(const char* label = "VescTX",

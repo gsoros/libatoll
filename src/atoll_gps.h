@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <HardwareSerial.h>
-#include <TinyGPS++.h>
+#include <TinyGPSPlus.h>
 
 #include "atoll_task.h"
 #include "atoll_touch.h"

@@ -53,6 +53,7 @@ class Peer : public BLEClientCallbacks {
     } saved;
 
     bool connecting = false;
+    ulong lastConnectionAttempt = 0;
     bool shouldConnect = true;
     bool markedForRemoval = false;
     uint8_t connParamsProfile = APCPP_INITIAL;

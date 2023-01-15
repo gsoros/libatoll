@@ -1,4 +1,5 @@
-#include "atoll_peer.h"
+#if defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL)
+#include "atoll_vesc_uart_ble_stream.h"
 
 using namespace Atoll;
 
@@ -47,3 +48,4 @@ size_t VescUartBleStream::write(const uint8_t* buffer, size_t size) {
     // log_d("%s RX buffer cleared", vesc->saved.name);
     return size;
 }
+#endif

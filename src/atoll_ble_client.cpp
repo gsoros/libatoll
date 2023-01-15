@@ -48,6 +48,7 @@ void BleClient::loop() {
         return;
     }
     if (scan->isScanning()) return;
+    ulong t = millis();
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
         // log_d("checking peer %d %s isConn:%d shouldConn:%d conning:%d remov:%d",
@@ -75,7 +76,8 @@ void BleClient::loop() {
             continue;
         } else if (peers[i]->shouldConnect &&
                    !peers[i]->isConnected() &&
-                   !peers[i]->connecting) {
+                   !peers[i]->connecting &&
+                   (30000 < t && peers[i]->lastConnectionAttempt < t - 30000)) {
             log_i("connecting peer %s %s(%d)",
                   peers[i]->saved.name, peers[i]->saved.address, peers[i]->saved.addressType);
             peers[i]->connect();

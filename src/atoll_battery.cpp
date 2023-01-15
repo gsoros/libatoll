@@ -140,24 +140,26 @@ uint8_t Battery::calculateLevel(float voltage, uint8_t series) {
     if (series < 1) series = 1;
     if (1 < series) voltage = voltage / series;
 
-    // assume linear relationship between voltage and charge level
-    // level = map(voltage * 1000,
-    //             ATOLL_BATTERY_EMPTY * 1000,
-    //             ATOLL_BATTERY_FULL * 1000,
-    //             0,
-    //             100000) /
-    //         1000;
+    // assume linear relationship between voltage and soc
+    uint8_t level = map(voltage * 1000,
+                        ATOLL_BATTERY_EMPTY * 1000,
+                        ATOLL_BATTERY_FULL * 1000,
+                        0,
+                        100000) /
+                    1000;
 
-    // polynomial approximation of the typical lipo discharge curve
-    // based on https://github.com/G6EJD/LiPo_Battery_Capacity_Estimator
-    double v = (double)voltage;
-    uint8_t level = (uint8_t)(2808.3808 * pow(v, 4) -
-                              43560.9157 * pow(v, 3) +
-                              252848.5888 * pow(v, 2) -
-                              650767.4615 * v +
-                              626532.5703);
-    log_d("%.2fV %ds = %d%", voltage, series, level);
+    // // polynomial approximation of the typical lipo discharge curve
+    // // based on https://github.com/G6EJD/LiPo_Battery_Capacity_Estimator
+    // double v = (double)voltage;
+    // uint8_t level = (uint8_t)(2808.3808 * pow(v, 4) -
+    //                           43560.9157 * pow(v, 3) +
+    //                           252848.5888 * pow(v, 2) -
+    //                           650767.4615 * v +
+    //                           626532.5703);
+
+    // log_d("%.2fV %ds = %d%%", voltage, series, level);
     // if (100 < level) level = 100;
+
     return level;
 }
 
