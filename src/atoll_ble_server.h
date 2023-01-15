@@ -60,6 +60,7 @@ class BleServer : public Task,
 
     virtual void start();
     virtual void startAdvertising();
+    virtual void stopAdvertising();
 
     virtual void notify(const BLEUUID &serviceUuid,
                         const BLEUUID &charUuid,
@@ -88,6 +89,7 @@ class BleServer : public Task,
     CircularBuffer<uint16_t, 8> _clients;   //
     BLEServer *server = nullptr;            // pointer to the ble server
     BLEAdvertising *advertising = nullptr;  // pointer to advertising object
+    ulong advertisingTimeoutMs = 60000;     // stop advertising after this time after boot TODO get from settings
 };
 
 }  // namespace Atoll

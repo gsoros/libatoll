@@ -87,8 +87,12 @@ void BleServer::loop() {
     }
     // if (server->getConnectedCount() >= NIMBLE_MAX_CONNECTIONS) {
     // }
-    if (nullptr != advertising && !advertising->isAdvertising()) {
-        startAdvertising();
+    if (nullptr != advertising) {
+        if (millis() < advertisingTimeoutMs) {
+            if (!advertising->isAdvertising())
+                startAdvertising();
+        } else if (advertising->isAdvertising())
+            stopAdvertising();
     }
 }
 
@@ -149,16 +153,29 @@ void BleServer::start() {
 
 void BleServer::startAdvertising() {
     if (!enabled) {
-        log_i("not enabled, not starting");
+        log_d("not enabled");
         return;
     }
-    delay(300);
     if (!advertising->isAdvertising()) {
         if (server->startAdvertising()) {
             log_i("started");
             return;
         }
         log_e("failed to start");
+    }
+}
+
+void BleServer::stopAdvertising() {
+    if (!enabled) {
+        log_d("not enabled");
+        return;
+    }
+    if (advertising->isAdvertising()) {
+        if (server->stopAdvertising()) {
+            log_i("stopped");
+            return;
+        }
+        log_e("failed to stop");
     }
 }
 
