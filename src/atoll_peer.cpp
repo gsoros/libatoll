@@ -679,7 +679,7 @@ uint16_t Vesc::getPower() {
 
 void Vesc::setPower(uint16_t power) {
     const uint16_t maxPower = 2500;  // TODO get these from settings
-    const float minCurrent = 1.0f;
+    const float minCurrent = 1.1f;
     const float maxCurrent = 50.0f;
     const bool rampUp = true;
     const bool rampDown = true;

@@ -171,10 +171,10 @@ class Vesc : public Peer {
     VescUartBleStream* uartBleStream;
     VescUart* uart;
 
-    bool requestUpdate();
-    float getVoltage();
-    uint16_t getPower();
-    void setPower(uint16_t power);
+    virtual bool requestUpdate();
+    virtual float getVoltage();
+    virtual uint16_t getPower();
+    virtual void setPower(uint16_t power);
 };
 
 }  // namespace Atoll
