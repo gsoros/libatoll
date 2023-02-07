@@ -283,7 +283,7 @@ fail:
     unsetClient();
 
 end:
-    log_d("end");
+    // log_d("end");
     connecting = false;
 }
 
