@@ -205,6 +205,8 @@ class Api : public Preferences {
     static ApiResult *initProcessor(ApiMessage *msg);
     static ApiResult *systemProcessor(ApiMessage *msg);
 
+    static void onLogWrite(const char *buf, size_t size);
+
    private:
 };
 

@@ -685,6 +685,7 @@ void Vesc::setPower(uint16_t power) {
     const bool rampDown = true;
     const uint8_t rampNumSteps = 3;
     const uint16_t rampTime = 500;
+    const uint32_t rampDelay = rampTime / rampNumSteps;
 
     static float prevCurrent = 0.0f;
 
@@ -710,7 +711,6 @@ void Vesc::setPower(uint16_t power) {
             if (prevCurrent < minCurrent)
                 prevCurrent = minCurrent;
             float rampUnit = (current - prevCurrent) / rampNumSteps;
-            uint32_t rampDelay = rampTime / rampNumSteps;
             for (uint8_t i = 0; i < rampNumSteps; i++) {
                 float rampCurrent = prevCurrent + rampUnit * i;
                 log_d("setting ramp up current #%d: %2.2fA", i, rampCurrent);
@@ -719,7 +719,6 @@ void Vesc::setPower(uint16_t power) {
             }
         } else if (rampDown && current < prevCurrent) {
             float rampUnit = (prevCurrent - current) / rampNumSteps;
-            uint32_t rampDelay = rampTime / rampNumSteps;
             for (uint8_t i = rampNumSteps; 0 < i; i--) {
                 float rampCurrent = current + rampUnit * i;
                 log_d("setting ramp down current #%d: %2.2fA", i, rampCurrent);

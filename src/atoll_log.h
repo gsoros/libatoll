@@ -55,15 +55,20 @@
 namespace Atoll {
 
 class Log {
+    // typedef void (*writeCallback_t)(const char *buf, size_t size);
+    typedef std::function<void(const char *buf, size_t size)> writeCallback_t;
+
    public:
     static void write(uint8_t level, const char *format, ...);
     static void setLevel(uint8_t level);
+    static void setWriteCallback(writeCallback_t callback);
 
    protected:
     static uint8_t level;
 #if 0 != ATOLL_LOG_LEVEL
     static char buffer[ATOLL_LOG_BUFFER_SIZE];
     static SemaphoreHandle_t mutex;
+    static writeCallback_t writeCallback;
 #endif
 };
 

@@ -119,6 +119,7 @@
 #endif
 #define API_RX_CHAR_UUID "da34811a-03c0-4efe-a266-ed014e181b65"
 #define API_TX_CHAR_UUID "422ecb2a-be77-43f2-bf79-f0a62d31fab7"
+#define API_LOG_CHAR_UUID "f6c66fde-3719-457e-bc38-08aa24ca931c"
 #define API_DESC_UUID ((uint16_t)0x2901)
 
 #define HALL_CHAR_UUID "e43fb4d4-1dc7-4ecd-9409-fb9d65dc7187"

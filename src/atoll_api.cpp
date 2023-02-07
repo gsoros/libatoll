@@ -92,6 +92,23 @@ bool Api::addBleService() {
         return false;
     }
     tx->setValue((uint8_t *)str, strlen(str));
+
+#ifdef FEATURE_BLELOG
+    strncpy(str, "Log start", sizeof(str));
+    properties = NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::INDICATE | NIMBLE_PROPERTY::NOTIFY;
+    if (secureBle)
+        properties |= NIMBLE_PROPERTY::READ_ENC | NIMBLE_PROPERTY::READ_AUTHEN;
+    BLECharacteristic *log = s->createCharacteristic(
+        BLEUUID(API_LOG_CHAR_UUID),
+        properties);
+    if (nullptr == log) {
+        log_e("could not create char");
+        return false;
+    }
+    log->setValue((uint8_t *)str, strlen(str));
+    Log::setWriteCallback([](const char *buf, size_t size) { Api::onLogWrite(buf, size); });
+#endif
+
     snprintf(str, sizeof(str), "%s API v0.1", bleServer->deviceName);
     BLEDescriptor *d = rx->createDescriptor(
         BLEUUID(API_DESC_UUID),
@@ -527,4 +544,19 @@ argInvalid:
     msg->replyAppend("|", true);
     msg->replyAppend("build|reboot|secureApi[:0|1]|passkey[:1..999999]|deleteBond:[address|*]");
     return result("argInvalid");
+}
+
+void Api::onLogWrite(const char *buf, size_t size) {
+#ifndef FEATURE_BLELOG
+    return;
+#endif
+    BLECharacteristic *logChar = bleServer->getChar(BLEUUID(API_SERVICE_UUID), BLEUUID(API_LOG_CHAR_UUID));
+    if (nullptr == logChar) {
+#ifdef FEATURE_SERIAL
+        Serial.print("[Api::onLogWrite] Error: could not get char\n");
+#endif
+        return;
+    }
+    logChar->setValue((uint8_t *)buf, size);
+    logChar->notify();
 }
