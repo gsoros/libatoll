@@ -89,7 +89,7 @@ class BleServer : public Task,
     CircularBuffer<uint16_t, 8> _clients;   //
     BLEServer *server = nullptr;            // pointer to the ble server
     BLEAdvertising *advertising = nullptr;  // pointer to advertising object
-    ulong advertisingTimeoutMs = 600000;    // stop advertising after this time after boot TODO get from settings
+    ulong advertisingTimeoutMs = 0;         // stop advertising after this time after boot, 0 = never,  TODO get from settings
 };
 
 }  // namespace Atoll

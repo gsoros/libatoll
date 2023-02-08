@@ -88,11 +88,11 @@ void BleServer::loop() {
     // if (server->getConnectedCount() >= NIMBLE_MAX_CONNECTIONS) {
     // }
     if (nullptr != advertising) {
-        if (millis() < advertisingTimeoutMs) {
-            if (!advertising->isAdvertising())
-                startAdvertising();
-        } else if (advertising->isAdvertising())
+        if (advertising->isAdvertising() && 0 < advertisingTimeoutMs && millis() < advertisingTimeoutMs) {
             stopAdvertising();
+        } else if (!advertising->isAdvertising()) {
+            startAdvertising();
+        }
     }
 }
 
