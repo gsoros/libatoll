@@ -667,8 +667,8 @@ uint16_t Vesc::getPower() {
     float current = uart->data.avgInputCurrent;
     if (current <= 0.01f)
         current = 0.0f;
-    else if (20.0f < current)
-        current = 20.0f;
+    else if (50.0f < current)
+        current = 50.0f;
     float power = voltage * current;
     if (power < 0.0f)
         power = 0.0f;
@@ -683,6 +683,7 @@ void Vesc::setPower(uint16_t power) {
     const float maxCurrent = 50.0f;
     const bool rampUp = true;
     const bool rampDown = true;
+    const float rampMinCurrentDiff = 1.0f;
     const uint8_t rampNumSteps = 3;
     const uint16_t rampTime = 500;
     const uint32_t rampDelay = rampTime / rampNumSteps;
@@ -706,7 +707,7 @@ void Vesc::setPower(uint16_t power) {
         current = minCurrent;
     else if (maxCurrent < current)
         current = maxCurrent;
-    if (0 < current && 0 < rampNumSteps) {
+    if (0.0f < current && 0 < rampNumSteps && rampMinCurrentDiff <= abs(current - prevCurrent)) {
         if (rampUp && prevCurrent < current) {
             if (prevCurrent < minCurrent)
                 prevCurrent = minCurrent;
@@ -727,7 +728,7 @@ void Vesc::setPower(uint16_t power) {
             }
         }
     }
-    log_d("setting current: %2.2fA %dW", current, power);
+    log_d("setting current: %2.2fA (%dW)", current, power);
     uart->setCurrent(current);
     prevCurrent = current;
 }
