@@ -18,14 +18,14 @@ void Log::write(uint8_t level, const char *format, ...) {
     va_start(arg, format);
     vsnprintf(Log::buffer, sizeof(Log::buffer), format, arg);
     va_end(arg);
-#if defined(FEATURE_SERIAL)
+#ifdef FEATURE_SERIAL
     Serial.print(Log::buffer);
 #endif
     if (nullptr != Log::writeCallback) {
         size_t len = strlen(Log::buffer);
-#if defined(FEATURE_SERIAL)
-    if (3 < len) Serial.printf("%d %d %d", Log::buffer[len-3], Log::buffer[len-2], Log::buffer[len-1]);
-#endif
+        // #ifdef FEATURE_SERIAL
+        //    if (3 < len) Serial.printf("%d %d %d", Log::buffer[len-3], Log::buffer[len-2], Log::buffer[len-1]);
+        // #endif
         if (2 < len && '\r' == Log::buffer[len-2] && '\n' == Log::buffer[len-1]) len -= 2;  // strip last crnl
         Log::writeCallback(Log::buffer, len);
     }

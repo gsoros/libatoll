@@ -678,59 +678,7 @@ uint16_t Vesc::getPower() {
 }
 
 void Vesc::setPower(uint16_t power) {
-    const uint16_t maxPower = 2500;  // TODO get these from settings
-    const float minCurrent = 1.1f;
-    const float maxCurrent = 50.0f;
-    const bool rampUp = true;
-    const bool rampDown = true;
-    const float rampMinCurrentDiff = 1.0f;
-    const uint8_t rampNumSteps = 3;
-    const uint16_t rampTime = 500;
-    const uint32_t rampDelay = rampTime / rampNumSteps;
-
-    static float prevCurrent = 0.0f;
-
-    if (maxPower < power) power = maxPower;
-    float voltage = getVoltage();
-    if (voltage <= 0.01f) {
-        log_e("voltage is 0");
-        return;
-    }
-    if (1000.0f < voltage) {
-        log_e("voltage too high");
-        return;
-    }
-    float current = (float)(power / voltage);
-    if (power <= 10)
-        current = 0.0f;
-    else if (current < minCurrent)
-        current = minCurrent;
-    else if (maxCurrent < current)
-        current = maxCurrent;
-    if (0.0f < current && 0 < rampNumSteps && rampMinCurrentDiff <= abs(current - prevCurrent)) {
-        if (rampUp && prevCurrent < current) {
-            if (prevCurrent < minCurrent)
-                prevCurrent = minCurrent;
-            float rampUnit = (current - prevCurrent) / rampNumSteps;
-            for (uint8_t i = 0; i < rampNumSteps; i++) {
-                float rampCurrent = prevCurrent + rampUnit * i;
-                log_d("setting ramp up current #%d: %2.2fA", i, rampCurrent);
-                uart->setCurrent(rampCurrent);
-                delay(rampDelay);
-            }
-        } else if (rampDown && current < prevCurrent) {
-            float rampUnit = (prevCurrent - current) / rampNumSteps;
-            for (uint8_t i = rampNumSteps; 0 < i; i--) {
-                float rampCurrent = current + rampUnit * i;
-                log_d("setting ramp down current #%d: %2.2fA", i, rampCurrent);
-                uart->setCurrent(rampCurrent);
-                delay(rampDelay);
-            }
-        }
-    }
-    log_d("setting current: %2.2fA (%dW)", current, power);
-    uart->setCurrent(current);
-    prevCurrent = current;
+    log_d("not implemented");
 }
 
 #endif
