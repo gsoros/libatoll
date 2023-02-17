@@ -642,15 +642,22 @@ void Vesc::loop() {
 
 bool Vesc::requestUpdate() {
     static ulong lastUpdate = 0;
+    static bool pending = false;
+    if (pending) {
+        log_e("already pending");
+        return false;
+    }
     ulong start = millis();
     if (start < lastUpdate + 2000) {
         log_i("%s skipping update", saved.name);
         return false;
     }
+    pending = true;
     bool res = uart->getVescValues();
     ulong end = millis();
     if (res) lastUpdate = end;
     log_d("update took %d ms", end - start);
+    pending = false;
     return res;
 }
 
