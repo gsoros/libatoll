@@ -295,5 +295,8 @@ void BleServer::onSubscribe(BLECharacteristic *c, BLEConnInfo &info, uint16_t su
         default:
             log_i("%s did something to %s", remote, c->getUUID().toString().c_str());
     }
+    if (c->getUUID() == BLEUUID(API_LOG_CHAR_UUID) && 0 < subValue) {
+        Atoll::Log::dumpBootLog();
+    }
 }
 #endif

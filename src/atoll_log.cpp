@@ -3,31 +3,44 @@
 using namespace Atoll;
 
 uint8_t Log::level = ATOLL_LOG_LEVEL;
-Log::writeCallback_t Log::writeCallback = nullptr;
 
 #if 0 != ATOLL_LOG_LEVEL
 char Log::buffer[ATOLL_LOG_BUFFER_SIZE];
 SemaphoreHandle_t Log::mutex = xSemaphoreCreateMutex();
+Log::writeCallback_t Log::writeCallback = nullptr;
+char *Log::bootLog = nullptr;
+bool Log::bootLogIsFull = false;
 #endif
 
 void Log::write(uint8_t level, const char *format, ...) {
 #if 0 != ATOLL_LOG_LEVEL
     if (Log::level < level) return;
-    if (!xSemaphoreTake(Log::mutex, portMAX_DELAY) == pdTRUE) return;
+    if (!xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE) return;
     va_list arg;
     va_start(arg, format);
-    vsnprintf(Log::buffer, sizeof(Log::buffer), format, arg);
+    vsnprintf(buffer, sizeof(buffer), format, arg);
     va_end(arg);
+    if (!bootLogIsFull) {
+        if (nullptr == bootLog) {
+            bootLog = (char *)malloc(sizeof(char) * ATOLL_BOOTLOG_SIZE);
+            bootLog[0] = '\0';
+        }
+        size_t len = strlen(bootLog);
+        if (ATOLL_BOOTLOG_SIZE <= len + strlen(buffer)) {
+            bootLogIsFull = true;
+        }
+        strncat(bootLog, buffer, ATOLL_BOOTLOG_SIZE - len);
+    }
 #ifdef FEATURE_SERIAL
-    Serial.print(Log::buffer);
+    Serial.print(buffer);
 #endif
-    if (nullptr != Log::writeCallback) {
-        size_t len = strlen(Log::buffer);
+    if (nullptr != writeCallback) {
+        size_t len = strlen(buffer);
         // #ifdef FEATURE_SERIAL
-        //    if (3 < len) Serial.printf("%d %d %d", Log::buffer[len-3], Log::buffer[len-2], Log::buffer[len-1]);
+        //    if (3 < len) Serial.printf("%d %d %d", buffer[len-3], buffer[len-2], buffer[len-1]);
         // #endif
-        if (2 < len && '\r' == Log::buffer[len-2] && '\n' == Log::buffer[len-1]) len -= 2;  // strip last crnl
-        Log::writeCallback(Log::buffer, len);
+        if (2 < len && '\r' == buffer[len-2] && '\n' == buffer[len-1]) len -= 2;  // strip last crnl
+        writeCallback(buffer, len);
     }
     xSemaphoreGive(Log::mutex);
 #endif
@@ -38,5 +51,20 @@ void Log::setLevel(uint8_t level) {
 }
 
 void Log::setWriteCallback(Log::writeCallback_t callback) {
-    Log::writeCallback = callback;
+#if 0 != ATOLL_LOG_LEVEL
+    writeCallback = callback;
+#endif
+}
+
+void Log::dumpBootLog() {
+#if 0 != ATOLL_LOG_LEVEL
+    if (nullptr == bootLog) return;
+    size_t len = strlen(bootLog);
+    for (int i = 0; i < len; i += ATOLL_LOG_BUFFER_SIZE - 16) {
+        if (0 < i) delay(250);
+        write(1, "[BOOT %i] %s", bootLog + i);
+    }
+    free(bootLog);
+    bootLog = nullptr;
+#endif
 }

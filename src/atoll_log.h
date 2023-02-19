@@ -16,6 +16,10 @@
 #endif
 #endif
 
+#ifndef ATOLL_BOOTLOG_SIZE
+#define ATOLL_BOOTLOG_SIZE 1024
+#endif
+
 #ifdef log_e
 #undef log_e
 #endif
@@ -62,13 +66,16 @@ class Log {
     static void write(uint8_t level, const char *format, ...);
     static void setLevel(uint8_t level);
     static void setWriteCallback(writeCallback_t callback);
+    static void dumpBootLog();
 
    protected:
     static uint8_t level;
-    static writeCallback_t writeCallback;
 #if 0 != ATOLL_LOG_LEVEL
     static char buffer[ATOLL_LOG_BUFFER_SIZE];
     static SemaphoreHandle_t mutex;
+    static writeCallback_t writeCallback;
+    static char *bootLog;
+    static bool bootLogIsFull;
 #endif
 };
 
