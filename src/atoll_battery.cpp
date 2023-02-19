@@ -136,17 +136,37 @@ uint8_t Battery::calculateLevel() {
     return level;
 }
 
-uint8_t Battery::calculateLevel(float voltage, uint8_t series) {
-    if (series < 1) series = 1;
-    if (1 < series) voltage = voltage / series;
+uint8_t Battery::calculateLevel(float voltage, uint8_t cellCount) {
+    if (cellCount < 1) cellCount = 1;
+    if (1 < cellCount) voltage = voltage / cellCount;
 
-    // assume linear relationship between voltage and soc
-    uint8_t level = map(voltage * 1000,
-                        ATOLL_BATTERY_EMPTY * 1000,
-                        ATOLL_BATTERY_FULL * 1000,
-                        0,
-                        100000) /
-                    1000;
+    // based on https://lygte-info.dk/review/batteries2012/Samsung%20INR18650-29E%202900mAh%20%28Blue%29%20UK.html
+    // index: 3.2 + i / 100
+    const uint8_t lookupTable[] = {
+        /* 3.20 ... 3.29 */ 0, 1, 1, 2, 2, 3, 3, 4, 4, 5,
+        /* 3.30 ... 3.39 */ 5, 6, 6, 7, 8, 9, 10, 11, 12, 13,
+        /* 3.40 ... 3.49 */ 14, 15, 16, 17, 18, 20, 22, 24, 26, 28,
+        /* 3.50 ... 3.59 */ 29, 30, 31, 33, 35, 37, 39, 41, 43, 45,
+        /* 3.60 ... 3.69 */ 47, 48, 50, 51, 52, 54, 55, 56, 57, 58,
+        /* 3.70 ... 3.79 */ 59, 61, 62, 64, 65, 67, 68, 69, 70, 71,
+        /* 3.80 ... 3.89 */ 72, 73, 74, 75, 76, 77, 78, 79, 80, 81,
+        /* 3.90 ... 3.99 */ 82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
+        /* 4.00 ... 4.09 */ 92, 93, 94, 95, 96, 97, 98, 99, 99, 99,
+        /* 4.10 ... 4.19 */ 99, 99, 99, 100, 100, 100, 100, 100, 100, 100};
+    int i = (int)((voltage - ATOLL_BATTERY_EMPTY) / 100.0f);
+    if (i < 0)
+        i = 0;
+    else if (99 < i)
+        i = 99;
+    uint8_t level = lookupTable[i];
+
+    // // assume linear relationship between voltage and soc
+    // uint8_t level = map(voltage * 1000,
+    //                     ATOLL_BATTERY_EMPTY * 1000,
+    //                     ATOLL_BATTERY_FULL * 1000,
+    //                     0,
+    //                     100000) /
+    //                 1000;
 
     // // polynomial approximation of the typical lipo discharge curve
     // // based on https://github.com/G6EJD/LiPo_Battery_Capacity_Estimator
@@ -157,7 +177,7 @@ uint8_t Battery::calculateLevel(float voltage, uint8_t series) {
     //                           650767.4615 * v +
     //                           626532.5703);
 
-    // log_d("%.2fV %ds = %d%%", voltage, series, level);
+    // log_d("%.2fV %ds = %d%%", voltage, cellCount, level);
     // if (100 < level) level = 100;
 
     return level;

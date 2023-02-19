@@ -65,10 +65,10 @@ class Log {
 
    protected:
     static uint8_t level;
+    static writeCallback_t writeCallback;
 #if 0 != ATOLL_LOG_LEVEL
     static char buffer[ATOLL_LOG_BUFFER_SIZE];
     static SemaphoreHandle_t mutex;
-    static writeCallback_t writeCallback;
 #endif
 };
 
