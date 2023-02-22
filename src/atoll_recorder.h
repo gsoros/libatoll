@@ -46,7 +46,7 @@
 #define ATOLL_RECORDER_PATH_LENGTH 32
 #endif
 
-//#define ATOLL_RECORDER_DATAPOINT_SIZE 29
+// #define ATOLL_RECORDER_DATAPOINT_SIZE 29
 
 namespace Atoll {
 
@@ -125,8 +125,8 @@ class Recorder : public Task {
     Stats stats;                                              // current recording stats
     bool isRecording = false;                                 //
     GPS *gps = nullptr;                                       //
-    Atoll::Fs *device = nullptr;                              //
-    FS *fs = nullptr;                                         //
+    Atoll::Fs *device = nullptr;                              // the recording device
+    FS *fs = nullptr;                                         // the filesystem on the recording device
     Api *api = nullptr;                                       //
     static Recorder *instance;                                // instance pointer for static access
     const char *basePath = ATOLL_RECORDER_BASE_PATH;          // base path to the recordings

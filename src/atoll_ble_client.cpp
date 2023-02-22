@@ -78,8 +78,8 @@ void BleClient::loop() {
                    !peers[i]->isConnected() &&
                    !peers[i]->connecting &&
                    (30000 < t && peers[i]->lastConnectionAttempt < t - 30000)) {
-            log_i("connecting peer %s %s(%d)",
-                  peers[i]->saved.name, peers[i]->saved.address, peers[i]->saved.addressType);
+            // log_d("connecting peer %s %s(%d)",
+            //       peers[i]->saved.name, peers[i]->saved.address, peers[i]->saved.addressType);
             peers[i]->connect();
         } else if (!peers[i]->shouldConnect &&
                    peers[i]->isConnected()) {

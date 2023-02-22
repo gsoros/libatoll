@@ -27,7 +27,7 @@ void Recorder::setup(GPS *gps,
     }
     this->device = device;
     if (!device->mounted) {
-        log_e("device fs not mounted");
+        log_e("device not mounted");
         return;
     }
     this->fs = device->pFs();

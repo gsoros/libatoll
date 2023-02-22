@@ -60,12 +60,22 @@ void Log::dumpBootLog() {
 #if 0 != ATOLL_LOG_LEVEL && defined(ATOLL_BOOTLOG_SIZE) && 0 < ATOLL_BOOTLOG_SIZE
     if (nullptr == bootLog) return;
     size_t len = strlen(bootLog);
+    char *from = bootLog;
+    char out[ATOLL_LOG_BUFFER_SIZE - 32] = "";
+    char *to = out;
     int count = 0;
-    for (int i = 0; i < len; i += ATOLL_LOG_BUFFER_SIZE - 11) {
-        if (0 < i) delay(1000);
-        write(1, "\n[BOOT %d] %s\n\n", count, (char *)(bootLog + i));
-        // log_d("\n[BOOT %d] %s\n\n", count, (char *)(bootLog + i));
-        count++;
+
+    while (from < bootLog + len) {
+        strncpy(to, from, 1);
+        if ('\n' == *to || from == bootLog + len - 1 || out + sizeof(out) - 1 <= to) {
+            if ('\n' != *to) *to = '\n';
+            *(to + 1) = '\0';
+            if (count) delay(100);
+            write(1, "[BOOT %d] %s", count, out);
+            to = out;
+            count++;
+        } else to++;
+        from++;
     }
 #endif
 }
