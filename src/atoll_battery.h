@@ -61,7 +61,11 @@ class Battery : public Task, public Preferences {
     void loop();
     void detectChargingEvent(float oldVoltage);
     uint8_t calculateLevel();
-    static uint8_t calculateLevel(float voltage, uint8_t cellCount = 1);
+    static uint8_t calculateLevel(
+        float voltage,
+        uint8_t cellCount = 1,
+        float cellEmpty = ATOLL_BATTERY_EMPTY,
+        float cellFull = ATOLL_BATTERY_FULL);
     float voltageAvg();
     float measureVoltage(bool useCorrection = true);
     void loadSettings();

@@ -8,7 +8,7 @@ PeerCharacteristicPower::PeerCharacteristicPower() {
     snprintf(label, sizeof(label), "%s", "Power");
     serviceUuid = BLEUUID(CYCLING_POWER_SERVICE_UUID);
     charUuid = BLEUUID(CYCLING_POWER_MEASUREMENT_CHAR_UUID);
-    log_d("PeerCharacteristicPower construct, label: %s, char: %s", label, charUuid.toString().c_str());
+    // log_d("PeerCharacteristicPower construct, label: %s, char: %s", label, charUuid.toString().c_str());
 }
 
 uint16_t PeerCharacteristicPower::decode(const uint8_t* data, const size_t length) {

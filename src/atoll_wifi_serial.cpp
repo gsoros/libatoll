@@ -14,11 +14,11 @@ void WifiSerial::setup(
     if (0.0 < taskFreq) taskSetFreq(taskFreq);
     if (0 < taskStack) _taskStack = taskStack;
     _server = WiFiServer(_port, _maxClients);
-    log_i("setup: %s:%d, max %d client%s",
-          WiFi.localIP().toString().c_str(),
-          _port,
-          _maxClients,
-          1 < _maxClients ? "s" : "");
+    // log_d("setup: %s:%d, max %d client%s",
+    //       WiFi.localIP().toString().c_str(),
+    //       _port,
+    //       _maxClients,
+    //       1 < _maxClients ? "s" : "");
     _rxBuf.clear();
     _txBuf.clear();
 }

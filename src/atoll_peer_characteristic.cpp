@@ -7,7 +7,7 @@
 using namespace Atoll;
 
 PeerCharacteristic::~PeerCharacteristic() {
-    log_i("destructing %s", label);
+    // log_d("destructing %s", label);
 }
 
 BLERemoteService* PeerCharacteristic::getRemoteService(BLEClient* client) {

@@ -18,7 +18,7 @@ void BleClient::setup(
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
     preferencesSetup(p, "BleClient");
     loadSettings();
-    printSettings();
+    // printSettings();
     enabled = true;
 
     init();

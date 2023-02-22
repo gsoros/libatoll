@@ -8,29 +8,29 @@ uint8_t Log::level = ATOLL_LOG_LEVEL;
 char Log::buffer[ATOLL_LOG_BUFFER_SIZE];
 SemaphoreHandle_t Log::mutex = xSemaphoreCreateMutex();
 Log::writeCallback_t Log::writeCallback = nullptr;
-char *Log::bootLog = nullptr;
+#if defined(ATOLL_BOOTLOG_SIZE) && 0 < ATOLL_BOOTLOG_SIZE
+char Log::bootLog[ATOLL_BOOTLOG_SIZE] = "";
 bool Log::bootLogIsFull = false;
+#endif
 #endif
 
 void Log::write(uint8_t level, const char *format, ...) {
 #if 0 != ATOLL_LOG_LEVEL
     if (Log::level < level) return;
-    if (!xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE) return;
+    if (!xSemaphoreTake(mutex, (TickType_t)100) == pdTRUE) return;
     va_list arg;
     va_start(arg, format);
     vsnprintf(buffer, sizeof(buffer), format, arg);
     va_end(arg);
+#if defined(ATOLL_BOOTLOG_SIZE) && 0 < ATOLL_BOOTLOG_SIZE
     if (!bootLogIsFull) {
-        if (nullptr == bootLog) {
-            bootLog = (char *)malloc(sizeof(char) * ATOLL_BOOTLOG_SIZE);
-            bootLog[0] = '\0';
-        }
         size_t len = strlen(bootLog);
         if (ATOLL_BOOTLOG_SIZE <= len + strlen(buffer)) {
             bootLogIsFull = true;
         }
         strncat(bootLog, buffer, ATOLL_BOOTLOG_SIZE - len);
     }
+#endif
 #ifdef FEATURE_SERIAL
     Serial.print(buffer);
 #endif
@@ -57,14 +57,15 @@ void Log::setWriteCallback(Log::writeCallback_t callback) {
 }
 
 void Log::dumpBootLog() {
-#if 0 != ATOLL_LOG_LEVEL
+#if 0 != ATOLL_LOG_LEVEL && defined(ATOLL_BOOTLOG_SIZE) && 0 < ATOLL_BOOTLOG_SIZE
     if (nullptr == bootLog) return;
     size_t len = strlen(bootLog);
-    for (int i = 0; i < len; i += ATOLL_LOG_BUFFER_SIZE - 16) {
-        if (0 < i) delay(250);
-        write(1, "[BOOT %i] %s", bootLog + i);
+    int count = 0;
+    for (int i = 0; i < len; i += ATOLL_LOG_BUFFER_SIZE - 11) {
+        if (0 < i) delay(1000);
+        write(1, "\n[BOOT %d] %s\n\n", count, (char *)(bootLog + i));
+        // log_d("\n[BOOT %d] %s\n\n", count, (char *)(bootLog + i));
+        count++;
     }
-    free(bootLog);
-    bootLog = nullptr;
 #endif
 }

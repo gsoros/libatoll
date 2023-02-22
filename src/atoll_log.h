@@ -74,8 +74,10 @@ class Log {
     static char buffer[ATOLL_LOG_BUFFER_SIZE];
     static SemaphoreHandle_t mutex;
     static writeCallback_t writeCallback;
-    static char *bootLog;
+#if defined(ATOLL_BOOTLOG_SIZE) && 0 < ATOLL_BOOTLOG_SIZE
+    static char bootLog[ATOLL_BOOTLOG_SIZE];
     static bool bootLogIsFull;
+#endif
 #endif
 };
 

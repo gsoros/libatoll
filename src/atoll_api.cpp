@@ -52,13 +52,17 @@ void Api::setup(
 }
 
 bool Api::addBleService() {
-    log_i("adding API service to BleServer");
+    // log_d("adding API service to BleServer");
     if (!bleServer) {
-        log_e("bleServer is null");
+        log_e("no bleServer");
+        return false;
+    }
+    if (!instance) {
+        log_e("no instance");
         return false;
     }
     if (secureBle) {
-        log_i("setting BleServer security with passkey %d", passkey);
+        // log_d("setting BleServer security with passkey %d", passkey);
         bleServer->setSecurity(true, passkey);
     }
 
@@ -77,7 +81,7 @@ bool Api::addBleService() {
         log_e("could not create char");
         return false;
     }
-    rx->setCallbacks(new ApiRxCallbacks);
+    rx->setCallbacks(instance);
 
     char str[SETTINGS_STR_LENGTH] = "";
     strncpy(str, "Ready", sizeof(str));
@@ -91,6 +95,7 @@ bool Api::addBleService() {
         log_e("could not create char");
         return false;
     }
+    tx->setCallbacks(instance);
     tx->setValue((uint8_t *)str, strlen(str));
 
 #ifdef FEATURE_BLELOG
@@ -105,6 +110,7 @@ bool Api::addBleService() {
         log_e("could not create char");
         return false;
     }
+    // log->setCallbacks(instance);
     log->setValue((uint8_t *)str, strlen(str));
     Log::setWriteCallback([](const char *buf, size_t size) { Api::onLogWrite(buf, size); });
 #endif
@@ -119,15 +125,14 @@ bool Api::addBleService() {
     }
     d->setValue((uint8_t *)str, strlen(str));
 
-    if (instance)
-        instance->beforeBleServiceStart(s);
+    instance->beforeBleServiceStart(s);
 
     if (!s->start()) {
         log_e("could not start service");
         return false;
     }
     bleServer->advertiseService(serviceUuid, 1);
-    log_i("added ble service");
+    // log_d("added ble service");
     return true;
 }
 
@@ -152,7 +157,7 @@ bool Api::addCommand(ApiCommand newCommand) {
     if (nullptr != existing) {
         for (uint8_t i = 0; i < numCommands; i++)
             if (0 == strcmp(commands[i].name, existing->name)) {
-                log_d("replacing command %d:%s", existing->code, existing->name);
+                // log_d("replacing command %d:%s", existing->code, existing->name);
                 newCommand.code = existing->code;
                 commands[i] = newCommand;
                 return true;
@@ -160,7 +165,7 @@ bool Api::addCommand(ApiCommand newCommand) {
         log_e("error adding %d:%s", newCommand.code, newCommand.name);
         return false;
     }
-    log_i("%2d:%s", newCommand.code, newCommand.name);
+    // log_d("%2d:%s", newCommand.code, newCommand.name);
     commands[numCommands] = newCommand;
     numCommands++;
     return true;
@@ -215,7 +220,7 @@ bool Api::addResult(ApiResult newResult) {
         log_e("error adding %d:%s", newResult.code, newResult.name);
         return false;
     }
-    log_i("%2d:%s", newResult.code, newResult.name);
+    // log_d("%2d:%s", newResult.code, newResult.name);
     results[numResults] = newResult;
     numResults++;
     return true;
@@ -460,6 +465,10 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
         snprintf(msg->reply, msgReplyLength, "%s%s %s %s",
                  VERSION, BUILDTAG, __DATE__, __TIME__);
         return success();
+    } else if (msg->argIs("bootlog")) {
+        Log::dumpBootLog();
+        strncpy(msg->reply, "bootlog", ATOLL_API_MSG_REPLY_LENGTH);
+        return success();
     } else if (msg->argIs("reboot")) {
         if (bleServer) {
             BLECharacteristic *c = bleServer->getChar(
@@ -542,8 +551,60 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
     }
 argInvalid:
     msg->replyAppend("|", true);
-    msg->replyAppend("build|reboot|secureApi[:0|1]|passkey[:1..999999]|deleteBond:[address|*]");
+    msg->replyAppend("build|bootlog|reboot|secureApi[:0|1]|passkey[:1..999999]|deleteBond:[address|*]");
     return result("argInvalid");
+}
+
+// BleCharacteristicCallbacks
+void Api::onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) {
+    if (c->getUUID().equals(BLEUUID(API_RX_CHAR_UUID))) {
+        ApiMessage msg = process(c->getValue().c_str());
+
+        // length = length(uint8max) + ":" + resultName
+        char resultStr[4 + ATOLL_API_RESULT_NAME_LENGTH];
+
+        if (msg.result->code == success()->code) {
+            // in case of success we omit the resultName: "resultCode;..."
+            snprintf(resultStr, sizeof(resultStr), "%d", msg.result->code);
+        } else {
+            // in case of an error we provide the resultName: "resultCode:resultName;..."
+            snprintf(resultStr, sizeof(resultStr), "%d:%s",
+                     msg.result->code, msg.result->name);
+        }
+        char reply[ATOLL_BLE_SERVER_CHAR_VALUE_MAXLENGTH] = "";
+        snprintf(reply, sizeof(reply), "%s;%d=",
+                 resultStr, msg.commandCode);
+        size_t replyLength = 0;
+        // in case of success we append the reply
+        if (msg.result->code == success()->code) {
+            size_t replyTextLength = strlen(reply);
+            // msg.replyLength will be set when msg.reply contains binary data
+            size_t replyDataLength = 0 < msg.replyLength ? msg.replyLength : strlen(msg.reply);
+            if (sizeof(reply) < replyTextLength + replyDataLength - 1) {
+                size_t prevLength = replyDataLength;
+                replyDataLength = sizeof(reply) - replyTextLength - 1;
+                log_w("%s reply has been cropped from %d to %d bytes",
+                      reply, prevLength, replyDataLength);
+            }
+            // log_d("reply: '%s', msg.replyLength: %d, replyTextLength: %d, replyDataLength: %d",
+            //       reply, msg.replyLength, replyTextLength, replyDataLength);
+            // using memcpy to deal with binary data
+            memcpy(reply + replyTextLength, msg.reply, replyDataLength);
+            replyLength = replyTextLength + replyDataLength;
+        } else {  // in case of an error we append the arg
+            msg.replyAppend(msg.arg);
+            replyLength = strlen(reply);
+        }
+        // log_d("apiRxChar reply(%d): %s", replyLength, reply);
+        if (bleServer)
+            bleServer->notify(
+                serviceUuid,
+                BLEUUID(API_TX_CHAR_UUID),
+                (uint8_t *)reply,
+                replyLength);
+        return;
+    }
+    BleCharacteristicCallbacks::onWrite(c, connInfo);
 }
 
 void Api::onLogWrite(const char *buf, size_t size) {

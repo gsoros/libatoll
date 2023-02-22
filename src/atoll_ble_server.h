@@ -7,6 +7,7 @@
 
 #include "atoll_ble_constants.h"
 #include "atoll_task.h"
+#include "atoll_ble_characteristic_callbacks.h"
 
 #ifndef ATOLL_BLE_SERVER_CHAR_VALUE_MAXLENGTH
 #ifdef BLE_CHAR_VALUE_MAXLENGTH
@@ -32,7 +33,7 @@ namespace Atoll {
 
 class BleServer : public Task,
                   public BLEServerCallbacks,
-                  public BLECharacteristicCallbacks {
+                  public BleCharacteristicCallbacks {
    public:
     const char *taskName() { return "BleServer"; }
     uint32_t taskStack = 4096;                        // task stack size in bytes
@@ -76,13 +77,6 @@ class BleServer : public Task,
     virtual uint32_t onPassKeyRequest() override;
     virtual void onAuthenticationComplete(BLEConnInfo &connInfo) override;
     virtual bool onConfirmPIN(uint32_t pin) override;
-
-    // BLECharacteristicCallbacks
-    virtual void onRead(BLECharacteristic *c, BLEConnInfo &connInfo) override;
-    virtual void onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) override;
-    virtual void onNotify(BLECharacteristic *c) override;
-    virtual void onStatus(BLECharacteristic *c, int code) override;
-    virtual void onSubscribe(BLECharacteristic *c, BLEConnInfo &connInfo, uint16_t subValue) override;
 
    protected:
     // keeps track of connected client handles, in order to gracefully disconnect them before deep sleep or reboot; TODO add has() to CircularBuffer

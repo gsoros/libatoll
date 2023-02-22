@@ -14,10 +14,10 @@ void Ble::init(const char *deviceName, uint16_t mtu, uint8_t iocap) {
 
     BLEDevice::init(deviceName);
 
-    log_i("setMTU(%d)", mtu);
+    // log_d("setMTU(%d)", mtu);
     BLEDevice::setMTU(mtu);
 
-    log_i("power: %d", BLEDevice::getPower());
+    // log_d("power: %d", BLEDevice::getPower());
 
     securityIOCap = iocap;
     setSecurityIOCap(iocap);
@@ -26,7 +26,7 @@ void Ble::init(const char *deviceName, uint16_t mtu, uint8_t iocap) {
 }
 
 void Ble::setSecurityIOCap(uint8_t iocap) {
-    log_d("setSecurityIOCap(%d)", iocap);
+    // log_d("setSecurityIOCap(%d)", iocap);
     BLEDevice::setSecurityIOCap(iocap);
 }
 

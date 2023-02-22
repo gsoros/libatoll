@@ -66,7 +66,7 @@ bool Peer::unpack(
     const char* packed,
     Saved* saved) {
     size_t packedLen = strnlen(packed, packedMaxLength);
-    log_d("unpacking '%s'(%d)", packed, packedLen);
+    // log_d("unpacking '%s'(%d)", packed, packedLen);
 
     Saved temp;
     bool addressFound = false;
@@ -170,8 +170,8 @@ bool Peer::unpack(
     strncpy(saved->name, temp.name, sizeof(saved->name));
     saved->passkey = (uint32_t)tPasskeyInt;
 
-    log_d("address: %s, addressType: %d, type: %s, name: %s, passkey: %d",
-          saved->address, saved->addressType, saved->type, saved->name, saved->passkey);
+    // log_d("address: %s, addressType: %d, type: %s, name: %s, passkey: %d",
+    //      saved->address, saved->addressType, saved->type, saved->name, saved->passkey);
     return true;
 }
 
@@ -204,9 +204,9 @@ void Peer::setConnectionParams(uint8_t profile) {
         timeout = (uint16_t)(5000 / 10);        // 5000 ms
     }
 
-    log_d("%s %s: interval(%d-%d), latency %d, timeout %d",
-          saved.name, profile == APCPP_ESTABLISHED ? "established" : "initial",
-          minInterval, maxInterval, latency, timeout);
+    // log_d("%s %s: interval(%d-%d), latency %d, timeout %d",
+    //       saved.name, profile == APCPP_ESTABLISHED ? "established" : "initial",
+    //       minInterval, maxInterval, latency, timeout);
 
     BLEClient* client = getClient();
     if (nullptr == client) {
@@ -231,23 +231,23 @@ void Peer::connect() {
     }
     connecting = true;
 
-    log_d("%s connecting", saved.name);
+    // log_d("%s connecting", saved.name);
 
     BLEClient* c = nullptr;
 
     if (hasClient()) {
-        log_d("%s has client", saved.name);
+        // log_d("%s has client", saved.name);
         goto connect;
     }
 
     c = BLEDevice::getClientByPeerAddress(BLEAddress(saved.address, saved.addressType));
     if (c) {
-        log_d("%s got client by peer address", saved.name);
+        // log_d("%s got client by peer address", saved.name);
         goto set;
     }
     c = BLEDevice::getDisconnectedClient();
     if (c) {
-        log_d("%s got disconnected client", saved.name);
+        // log_d("%s got disconnected client", saved.name);
         goto set;
     }
     if (BLEDevice::getClientListSize() >= NIMBLE_MAX_CONNECTIONS) {
@@ -256,7 +256,7 @@ void Peer::connect() {
     }
     c = BLEDevice::createClient(BLEAddress(saved.address, saved.addressType));
     if (c) {
-        log_d("%s created new client", saved.name);
+        // log_d("%s created new client", saved.name);
         goto set;
     }
 
@@ -273,7 +273,7 @@ connect:
     setConnectionParams(connParamsProfile);
     client->setConnectTimeout(2000);
     if (!connectClient()) {
-        log_d("%s failed to connect client", saved.name);
+        // log_d("%s failed to connect client", saved.name);
         goto fail;
     }
     log_i("%s connected", saved.name);

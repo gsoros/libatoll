@@ -18,7 +18,7 @@ void Battery::setup(
 
     preferencesSetup(p, "Battery");
     loadSettings();
-    printSettings();
+    // printSettings();
 
     addBleService();
 
@@ -63,7 +63,7 @@ bool Battery::addBleService() {
         return false;
     }
     bleServer->advertiseService(serviceUuid);
-    log_i("added ble service");
+    // log_d("added ble service");
     return true;
 }
 
@@ -136,9 +136,13 @@ uint8_t Battery::calculateLevel() {
     return level;
 }
 
-uint8_t Battery::calculateLevel(float voltage, uint8_t cellCount) {
+uint8_t Battery::calculateLevel(float voltage, uint8_t cellCount, float cellEmpty, float cellFull) {
     if (cellCount < 1) cellCount = 1;
     if (1 < cellCount) voltage = voltage / cellCount;
+    if (voltage < cellEmpty)
+        voltage = cellEmpty;
+    else if (cellFull < voltage)
+        voltage = cellFull;
 
     // based on https://lygte-info.dk/review/batteries2012/Samsung%20INR18650-29E%202900mAh%20%28Blue%29%20UK.html
     // index: 3.2 + i / 100
@@ -153,7 +157,7 @@ uint8_t Battery::calculateLevel(float voltage, uint8_t cellCount) {
         /* 3.90 ... 3.99 */ 82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
         /* 4.00 ... 4.09 */ 92, 93, 94, 95, 96, 97, 98, 99, 99, 99,
         /* 4.10 ... 4.19 */ 99, 99, 99, 100, 100, 100, 100, 100, 100, 100};
-    int i = (int)((voltage - ATOLL_BATTERY_EMPTY) / 100.0f);
+    int i = (int)((voltage - cellEmpty) * 100);
     if (i < 0)
         i = 0;
     else if (99 < i)
@@ -162,8 +166,8 @@ uint8_t Battery::calculateLevel(float voltage, uint8_t cellCount) {
 
     // // assume linear relationship between voltage and soc
     // uint8_t level = map(voltage * 1000,
-    //                     ATOLL_BATTERY_EMPTY * 1000,
-    //                     ATOLL_BATTERY_FULL * 1000,
+    //                     cellEmpty * 1000,
+    //                     cellFull * 1000,
     //                     0,
     //                     100000) /
     //                 1000;

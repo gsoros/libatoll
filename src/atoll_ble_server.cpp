@@ -97,7 +97,7 @@ void BleServer::loop() {
 }
 
 void BleServer::setSecurity(bool state, const uint32_t passkey) {
-    log_i("state: %s, passkey: %d", state ? "true" : "false", passkey);
+    // log_d("state: %s, passkey: %d", state ? "true" : "false", passkey);
     if (state) {
         BLEDevice::setSecurityAuth(true, true, true);
         if (passkey) {
@@ -158,7 +158,7 @@ void BleServer::startAdvertising() {
     }
     if (!advertising->isAdvertising()) {
         if (server->startAdvertising()) {
-            log_i("started");
+            // log_d("started");
             return;
         }
         log_e("failed to start");
@@ -256,47 +256,4 @@ bool BleServer::onConfirmPIN(uint32_t pin) {
     return true;
 }
 
-// BLECharacteristicCallbacks
-
-void BleServer::onRead(BLECharacteristic *c, BLEConnInfo &connInfo) {
-    log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
-}
-
-void BleServer::onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) {
-    log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
-}
-
-void BleServer::onNotify(BLECharacteristic *c) {
-    // log_d("%d", c->getValue<int>());
-}
-
-void BleServer::onStatus(BLECharacteristic *c, int code) {
-    // log_d("char: %s, code: %d", c->getUUID().toString().c_str(), code);
-}
-
-void BleServer::onSubscribe(BLECharacteristic *c, BLEConnInfo &info, uint16_t subValue) {
-    char remote[64];
-    snprintf(remote, sizeof(remote), "client ID: %d Address: %s (%s) ",
-             info.getConnHandle(),
-             info.getAddress().toString().c_str(), info.getIdAddress().toString().c_str());
-    switch (subValue) {
-        case 0:
-            log_i("%s unsubscribed from %s", remote, c->getUUID().toString().c_str());
-            break;
-        case 1:
-            log_i("%s subscribed to notfications for %s", remote, c->getUUID().toString().c_str());
-            break;
-        case 2:
-            log_i("%s subscribed to indications for %s", remote, c->getUUID().toString().c_str());
-            break;
-        case 3:
-            log_i("%s subscribed to notifications and indications for %s", remote, c->getUUID().toString().c_str());
-            break;
-        default:
-            log_i("%s did something to %s", remote, c->getUUID().toString().c_str());
-    }
-    if (c->getUUID() == BLEUUID(API_LOG_CHAR_UUID) && 0 < subValue) {
-        Atoll::Log::dumpBootLog();
-    }
-}
 #endif

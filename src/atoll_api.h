@@ -6,7 +6,7 @@
 
 #include "atoll_preferences.h"
 #include "atoll_ble_server.h"
-#include "atoll_api_rx_callbacks.h"
+#include "atoll_ble_characteristic_callbacks.h"
 
 #ifndef VERSION
 #define VERSION "0.1"
@@ -152,7 +152,7 @@ class ApiCommand {
     };
 };
 
-class Api : public Preferences {
+class Api : public Preferences, public BleCharacteristicCallbacks {
    public:
     static Api *instance;
     static Atoll::BleServer *bleServer;
@@ -193,6 +193,9 @@ class Api : public Preferences {
     static bool isAlNumStr(const char *str);
 
     static size_t write(const uint8_t *buffer, size_t size);
+
+    // BleCharacteristicCallbacks
+    void onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) override;
 
    protected:
     static CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> _commandBuf;
