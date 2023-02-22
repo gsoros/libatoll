@@ -5,11 +5,11 @@
 using namespace Atoll;
 
 void BleCharacteristicCallbacks::onRead(BLECharacteristic *c, BLEConnInfo &connInfo) {
-    log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
+    // log_d("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
 }
 
 void BleCharacteristicCallbacks::onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) {
-    log_i("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
+    // log_d("%s: value: %s", c->getUUID().toString().c_str(), c->getValue().c_str());
 }
 
 void BleCharacteristicCallbacks::onNotify(BLECharacteristic *c) {
@@ -30,18 +30,18 @@ void BleCharacteristicCallbacks::onSubscribe(BLECharacteristic *c, BLEConnInfo &
     strncpy(uuid, c->getUUID().toString().c_str(), sizeof(uuid));
     switch (subValue) {
         case 0:
-            log_i("%s unsubscribed from %s", remote, uuid);
+            log_d("%s unsubscribed from %s", remote, uuid);
             break;
         case 1:
-            log_i("%s subscribed to notfications for %s", remote, uuid);
+            log_d("%s subscribed to notfications for %s", remote, uuid);
             break;
         case 2:
-            log_i("%s subscribed to indications for %s", remote, uuid);
+            log_d("%s subscribed to indications for %s", remote, uuid);
             break;
         case 3:
-            log_i("%s subscribed to notifications and indications for %s", remote, uuid);
+            log_d("%s subscribed to notifications and indications for %s", remote, uuid);
             break;
         default:
-            log_i("%s did something to %s", remote, uuid);
+            log_d("%s did something to %s", remote, uuid);
     }
 }
