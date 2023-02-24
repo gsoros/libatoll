@@ -5,7 +5,7 @@
 #include "SD.h"
 #include "SPI.h"
 
-//#include "vfs_fat_internal.h"
+// #include "vfs_fat_internal.h"
 
 #include "atoll_fs.h"
 #include "atoll_log.h"
@@ -47,6 +47,28 @@ class SdCard : public Fs {
             log_e("failed to aquire mutex");
             return;
         }
+
+        /*
+            patch for "sdcard_mount(): f_mount failed: (3) The physical drive cannot work"
+            SD/src/sd_diskio.cpp
+            DSTATUS ff_sd_initialize(uint8_t pdrv) {
+            ...
+            // if (sdCommand(pdrv, GO_IDLE_STATE, 0, NULL) != 1) {
+            //     sdDeselectCard(pdrv);
+            //     log_e("GO_IDLE_STATE failed");
+            //     goto unknown_card;
+            // }
+
+            uint8_t go_idle_count = 0;
+            while (sdTransaction(pdrv, GO_IDLE_STATE, 0, NULL) != 1) {
+                log_e("GO_IDLE_STATE failed #%d", go_idle_count);
+                go_idle_count++;
+                if (go_idle_count == UINT8_MAX) {
+                    goto unknown_card;
+                }
+            }
+        */
+
         if (!card->begin(csPin, SPI, 4000000U, "/sd", (uint8_t)5U, true)) {
             log_e("mount failed");
             releaseMutex();

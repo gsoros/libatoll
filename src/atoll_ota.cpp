@@ -1,6 +1,6 @@
-//#include <ESPmDNS.h>
+// #include <ESPmDNS.h>
 #include <WiFi.h>
-//#include <WiFiUdp.h>
+// #include <WiFiUdp.h>
 
 #include "atoll_ota.h"
 
@@ -70,7 +70,7 @@ void Ota::stop() {
 }
 
 void Ota::onStart() {
-    log_i("Update start");
+    log_i("Update start, free heap: %d", ESP.getFreeHeap());
 
     if (ArduinoOTA.getCommand() == U_FLASH)
         log_i("Flash");
@@ -122,4 +122,5 @@ void Ota::onError(ota_error_t error) {
         log_e("End");
     else
         log_e("%d", error);
+    log_e("Free heap: %d", ESP.getFreeHeap());
 }
