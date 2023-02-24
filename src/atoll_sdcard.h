@@ -63,7 +63,7 @@ class SdCard : public Fs {
             while (sdTransaction(pdrv, GO_IDLE_STATE, 0, NULL) != 1) {
                 log_e("GO_IDLE_STATE failed #%d", go_idle_count);
                 go_idle_count++;
-                if (go_idle_count == UINT8_MAX) {
+                if (go_idle_count == 10) {
                     goto unknown_card;
                 }
             }
