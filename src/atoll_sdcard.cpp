@@ -18,28 +18,29 @@ void SdCard::setup() {
     }
 
     /*
-        patch for "sdcard_mount(): f_mount failed: (3) The physical drive cannot work"
+        fix for "sdcard_mount(): f_mount failed: (3) The physical drive cannot work"
+        https://github.com/espressif/arduino-esp32/issues/6081#issuecomment-1015426248
         SD/src/sd_diskio.cpp
-        DSTATUS ff_sd_initialize(uint8_t pdrv) {
-        ...
-        // if (sdCommand(pdrv, GO_IDLE_STATE, 0, NULL) != 1) {
-        //     sdDeselectCard(pdrv);
-        //     log_e("GO_IDLE_STATE failed");
-        //     goto unknown_card;
-        // }
-
-        uint8_t go_idle_count = 0;
-        while (sdTransaction(pdrv, GO_IDLE_STATE, 0, NULL) != 1) {
-            log_e("GO_IDLE_STATE failed #%d", go_idle_count);
-            go_idle_count++;
-            if (go_idle_count == 10) {
-                goto unknown_card;
+        bool sdSelectCard(uint8_t pdrv) {
+            ardu_sdcard_t* card = s_cards[pdrv];
+            digitalWrite(card->ssPin, LOW);
+            bool s = sdWait(pdrv, 500);
+            if (!s) {
+                log_e("Select Failed");
+                // digitalWrite(card->ssPin, HIGH); // commented out
+                // return false;                    // commented out
             }
+            return true;
         }
     */
 
     if (!card->begin(csPin, SPI,
-                     40000000U,  // 40MHz
+                     4000000U,  //  4MHz default
+                     // 16000000U,  //  16MHz
+                     // 27000000U,  //  27MHz
+                     // 40000000U,  //  40MHz
+                     // 1000000U,   //   1MHz
+                     // 400000U,    // 400kHz
                      "/sd", (uint8_t)5U, true)) {
         log_e("mount failed");
         releaseMutex();
