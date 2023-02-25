@@ -38,7 +38,9 @@ void SdCard::setup() {
         }
     */
 
-    if (!card->begin(csPin, SPI, 4000000U, "/sd", (uint8_t)5U, true)) {
+    if (!card->begin(csPin, SPI,
+                     40000000U,  // 40MHz
+                     "/sd", (uint8_t)5U, true)) {
         log_e("mount failed");
         releaseMutex();
         return;
