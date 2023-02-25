@@ -619,5 +619,5 @@ void Api::onLogWrite(const char *buf, size_t size) {
         return;
     }
     logChar->setValue((uint8_t *)buf, size);
-    logChar->notify();
+    // logChar->notify();
 }
