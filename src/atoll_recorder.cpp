@@ -482,7 +482,8 @@ bool Recorder::stop(bool forgetLast) {
         else if (!device->aquireMutex())
             log_e("could not aquire mutex");
         else {
-            fs->remove(continuePath);
+            if (fs->exists(continuePath))
+                fs->remove(continuePath);
             device->releaseMutex();
         }
         stats = Stats();
