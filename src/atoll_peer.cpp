@@ -315,6 +315,8 @@ BLEClient* Peer::getClient() {
 }
 
 void Peer::unsetClient() {
+    if (nullptr != client)
+        client->setClientCallbacks(nullptr);  // set default callbacks
     client = nullptr;
 }
 
