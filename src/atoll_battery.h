@@ -27,11 +27,11 @@
 #endif
 
 #ifndef ATOLL_BATTERY_CHARGE_START_VOLTAGE_RISE
-#define ATOLL_BATTERY_CHARGE_START_VOLTAGE_RISE 0.1f
+#define ATOLL_BATTERY_CHARGE_START_VOLTAGE_RISE 0.05f
 #endif
 
 #ifndef ATOLL_BATTERY_CHARGE_END_VOLTAGE_DROP
-#define ATOLL_BATTERY_CHARGE_END_VOLTAGE_DROP 0.1f
+#define ATOLL_BATTERY_CHARGE_END_VOLTAGE_DROP 0.05f
 #endif
 
 namespace Atoll {
@@ -44,8 +44,6 @@ class Battery : public Task, public Preferences {
     float voltage = 0.0;
     float pinVoltage = 0.0;
     uint8_t level = 0;
-    static Battery *instance;
-    BleServer *bleServer = nullptr;
 
     virtual ~Battery();
 
@@ -59,7 +57,7 @@ class Battery : public Task, public Preferences {
     void notifyChar(uint8_t *value);
     virtual bool report();
     void loop();
-    void detectChargingEvent(float oldVoltage);
+    void detectChargingState();
     uint8_t calculateLevel();
     static uint8_t calculateLevel(
         float voltage,
@@ -69,14 +67,25 @@ class Battery : public Task, public Preferences {
     float voltageAvg();
     float measureVoltage(bool useCorrection = true);
     void loadSettings();
-    void calibrateTo(float realVoltage);
+    void calibrateTo(float measuredVoltage);
     void saveSettings();
     void printSettings();
 
     static ApiResult *batteryProcessor(ApiMessage *reply);
 
-   private:
+    enum ChargingState {
+        csUnknown,
+        csDischarging,
+        csCharging
+    };
+    ChargingState getChargingState();
+
+   protected:
+    static Battery *instance;
     CircularBuffer<float, ATOLL_BATTERY_RINGBUF_SIZE> _voltageBuf;
+    Api *api = nullptr;
+    BleServer *bleServer = nullptr;
+    ChargingState chargingState = csUnknown;
 };
 
 }  // namespace Atoll

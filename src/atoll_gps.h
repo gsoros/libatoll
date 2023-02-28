@@ -17,7 +17,8 @@ class GPS : public Atoll::Task {
     // SoftwareSerial ss;
     HardwareSerial *serial;
     TinyGPSPlus device;
-    double minMovingSpeed = 2.0;  // km/h
+    double minWalkingSpeed = 2.0;  // km/h
+    double minCyclingSpeed = 8.0;  // km/h
 
     GPS() {}
     virtual ~GPS();
@@ -41,7 +42,7 @@ class GPS : public Atoll::Task {
     }
 
     bool isMoving() {
-        return device.speed.isValid() && minMovingSpeed <= device.speed.kmph();
+        return device.speed.isValid() && minWalkingSpeed <= device.speed.kmph();
     }
 
     void loop();

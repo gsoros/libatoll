@@ -15,6 +15,7 @@ void Battery::setup(
     this->pin = (pin < 0 || UINT8_MAX < pin) ? ATOLL_BATTERY_PIN : (uint8_t)pin;
     this->instance = instance;
     this->bleServer = bleServer;
+    this->api = api;
 
     preferencesSetup(p, "Battery");
     loadSettings();
@@ -101,23 +102,47 @@ bool Battery::report() {
 void Battery::loop() {
     float oldVoltage = voltage;
     measureVoltage();
-    detectChargingEvent(oldVoltage);
+    detectChargingState();
     calculateLevel();
     report();
 }
 
-void Battery::detectChargingEvent(float oldVoltage) {
-    // log_i("%f %f", oldVoltage, voltage);
-    if (oldVoltage < ATOLL_BATTERY_EMPTY) return;
-    if (voltage < ATOLL_BATTERY_EMPTY) return;
-    if (oldVoltage == ATOLL_BATTERY_EMPTY && voltage == ATOLL_BATTERY_FULL) return;
-    if (oldVoltage == ATOLL_BATTERY_FULL && voltage == ATOLL_BATTERY_EMPTY) return;
+void Battery::detectChargingState() {
+    static ChargingState prevState = csUnknown;
 
-    if ((oldVoltage < voltage) &&
-        (ATOLL_BATTERY_CHARGE_START_VOLTAGE_RISE <= (voltage - oldVoltage)))
-        log_i("TODO charge START event %.2f => %.2f", oldVoltage, voltage);
-    else if (ATOLL_BATTERY_CHARGE_END_VOLTAGE_DROP <= (oldVoltage - voltage))
-        log_i("TODO charge END event %.2f => %.2f", oldVoltage, voltage);
+    if (voltage < ATOLL_BATTERY_EMPTY) goto exit;
+
+    {
+        float avg = voltageAvg();
+
+        if (avg < ATOLL_BATTERY_EMPTY) goto exit;
+
+        if (ATOLL_BATTERY_CHARGE_START_VOLTAGE_RISE <= (voltage - avg)) {
+            // log_d("charging %.2f => %.2f", avg, voltage);
+            chargingState = csCharging;
+        } else if (voltage < avg && voltage <= ATOLL_BATTERY_FULL - ATOLL_BATTERY_CHARGE_END_VOLTAGE_DROP) {
+            // log_d("discharging %.2f => %.2f", avg, voltage);
+            chargingState = csDischarging;
+        }
+        if (csUnknown != chargingState && prevState != chargingState) {
+            log_i("%scharging %.2f => %.2f", csCharging == chargingState ? "" : "dis", avg, voltage);
+            if (nullptr == api || nullptr == bleServer) {
+                log_e("api or bleServer is null");
+                goto exit;
+            }
+            BLECharacteristic *c = bleServer->getChar(
+                BLEUUID(API_SERVICE_UUID),
+                BLEUUID(API_TX_CHAR_UUID));
+            if (nullptr == c) goto exit;
+            ApiMessage msg = api->process("bat");
+            char buf[32];
+            snprintf(buf, sizeof(buf), "%d;%d=%s", msg.result->code, msg.commandCode, msg.reply);
+            c->setValue((uint8_t *)buf, strlen(buf));
+            c->notify();
+        }
+    }
+exit:
+    prevState = chargingState;
 }
 
 float Battery::voltageAvg() {
@@ -255,7 +280,14 @@ ApiResult *Battery::batteryProcessor(ApiMessage *msg) {
             instance->measureVoltage();
         }
     }
-    // get current voltage
-    snprintf(msg->reply, sizeof(msg->reply), "%.2f", instance->voltage);
+    // get current voltage and charging state
+    snprintf(msg->reply, sizeof(msg->reply),
+             "%.2f%s",
+             instance->voltage,
+             csCharging == instance->chargingState
+                 ? ";charging"
+             : csDischarging == instance->chargingState
+                 ? ";discharging"
+                 : "");
     return Api::success();
 }
