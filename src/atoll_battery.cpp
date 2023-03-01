@@ -285,9 +285,9 @@ ApiResult *Battery::batteryProcessor(ApiMessage *msg) {
              "%.2f%s",
              instance->voltage,
              csCharging == instance->chargingState
-                 ? ";charging"
+                 ? "|charging"
              : csDischarging == instance->chargingState
-                 ? ";discharging"
+                 ? "|discharging"
                  : "");
     return Api::success();
 }

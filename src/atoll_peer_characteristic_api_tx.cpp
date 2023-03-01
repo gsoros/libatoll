@@ -17,7 +17,7 @@ String PeerCharacteristicApiTX::decode(const uint8_t* data, const size_t length)
     strncpy(value, (char*)data, length);
     value[length] = 0;
     lastValue = String(value);
-    log_d("%s length=%d '%s'", label, length, lastValue.c_str());
+    // log_d("%s length=%d '%s'", label, length, lastValue.c_str());
     return lastValue;
 }
 
@@ -28,7 +28,7 @@ bool PeerCharacteristicApiTX::encode(const String value, uint8_t* data, size_t l
 
 void PeerCharacteristicApiTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* data, size_t length, bool isNotify) {
     {
-        log_d("%s length: %d", label, length);
+        // log_d("%s length: %d", label, length);
         BLERemoteService* rs = rc->getRemoteService();
         if (nullptr == rs) {
             log_e("%s service is null", label);
@@ -44,13 +44,13 @@ void PeerCharacteristicApiTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* dat
             goto decode;
         }
         uint16_t mtu = client->getMTU();
-        log_d("%s mtu is %d", label, mtu);
+        // log_d("%s mtu is %d", label, mtu);
         if (mtu < 3) {
             log_e("%s mtu < 3", label);
             goto decode;
         }
         if (length < mtu - 3) {
-            log_d("%s length is %d, not reading", label, length);
+            // log_d("%s length is %d, not reading", label, length);
             goto decode;
         }
         // log_e("%s cannot read full value from inside a callback, workaround: increase mtu (received %d, mtu is %d)", label, length, mtu);
@@ -64,7 +64,7 @@ void PeerCharacteristicApiTX::onNotify(BLERemoteCharacteristic* rc, uint8_t* dat
         log_d("%s full value(%d): %s", label, lastValue.length(), lastValue.c_str());
         notify();
         */
-        log_d("%s marking dirty (received %d, mtu is %d)", label, length, mtu);
+        // log_d("%s marking dirty (received %d, mtu is %d)", label, length, mtu);
         lastValueDirty = true;
         return;
     }
@@ -83,7 +83,7 @@ bool PeerCharacteristicApiTX::readOnSubscribe() {
 
 void PeerCharacteristicApiTX::loop() {
     if (lastValueDirty) {
-        log_d("%s is dirty", label);
+        // log_d("%s is dirty", label);
         BLEClient* client = getClient();
         if (nullptr == client) {
             log_e("%s no client", label);
@@ -93,9 +93,9 @@ void PeerCharacteristicApiTX::loop() {
             log_e("%s not connected", label);
             return;
         }
-        log_d("%s reading...", label);
+        // log_d("%s reading...", label);
         read(client);
-        log_d("%s lastValue(%d): '%s'", label, lastValue.length(), lastValue.c_str());
+        // log_d("%s lastValue(%d): '%s'", label, lastValue.length(), lastValue.c_str());
         lastValueDirty = false;
         notify();
     }

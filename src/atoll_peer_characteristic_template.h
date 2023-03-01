@@ -30,15 +30,15 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
         }
         remoteOpStart(client);
         // lastValue = rc->readValue<T>();
-        log_d("%s reading into buffer", label);
+        // log_d("%s reading into buffer", label);
         NimBLEAttValue value = rc->readValue();
         remoteOpEnd(client);
         snprintf(readBuffer, sizeof(readBuffer), "%s", value.c_str());
         size_t len = strlen(readBuffer);
-        log_d("%s readBuf len=%d", label, len);
+        // log_d("%s readBuf len=%d", label, len);
         if (!len) return lastValue;
         lastValue = decode((uint8_t*)readBuffer, len);
-        log_d("%s 0x%x", label, lastValue);
+        // log_d("%s 0x%x", label, lastValue);
         return lastValue;
     }
 
