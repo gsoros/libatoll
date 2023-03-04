@@ -372,6 +372,16 @@ ApiResult *Api::argInvalid() {
     return result("argInvalid");
 }
 
+void Api::notifyTxChar(const char *str) {
+    if (!bleServer) {
+        log_e("no bleServer");
+        return;
+    }
+    bleServer->notify(serviceUuid,
+                      BLEUUID(API_TX_CHAR_UUID),
+                      (uint8_t *)str, strlen(str));
+}
+
 // Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
 ApiMessage Api::process(const char *commandWithArg, bool log) {

@@ -197,6 +197,8 @@ class Api : public Preferences, public BleCharacteristicCallbacks {
     // BleCharacteristicCallbacks
     void onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) override;
 
+    void notifyTxChar(const char *str);
+    
    protected:
     static CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> _commandBuf;
 

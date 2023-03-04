@@ -79,6 +79,7 @@ class Battery : public Task, public Preferences {
         csCharging
     };
     ChargingState getChargingState();
+    bool isCharging();
 
    protected:
     static Battery *instance;

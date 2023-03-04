@@ -269,6 +269,14 @@ void Battery::printSettings() {
     log_i("correction factor: %f", corrF);
 }
 
+Atoll::Battery::ChargingState Battery::getChargingState() {
+    return chargingState;
+}
+
+bool Battery::isCharging() {
+    return csCharging == chargingState;
+}
+
 ApiResult *Battery::batteryProcessor(ApiMessage *msg) {
     if (nullptr == instance) return Api::error();
     // set battery correction factor by supplying the measured voltage
