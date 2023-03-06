@@ -150,8 +150,7 @@ void Task::_taskAbortDelay() {
 }
 
 void Task::_taskDebug(const char *tag) {
-    // log_i("%s %s freq: %.2f, delay: %d", tag, taskName(),
-    //       _taskFreq, _taskDelayMs());
+    // log_d("%s %s freq: %.2f, delay: %d", tag, taskName(), _taskFreq, _taskDelayMs());
 }
 
 ulong Task::_taskDelayMs() {

@@ -131,7 +131,7 @@ void Battery::detectChargingState() {
                 goto exit;
             }
             BLECharacteristic *c = bleServer->getChar(
-                BLEUUID(API_SERVICE_UUID),
+                api->serviceUuid,
                 BLEUUID(API_TX_CHAR_UUID));
             if (nullptr == c) goto exit;
             ApiMessage msg = api->process("bat");

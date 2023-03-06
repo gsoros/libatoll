@@ -49,7 +49,9 @@
 #if API_SERVICE == 2
 #define API_SERVICE_UUID ESPCC_API_SERVICE_UUID
 #else
-#error API_SERVICE missing
+#ifndef API_SERVICE_UUID
+#define API_SERVICE_UUID ""
+#endif
 #endif
 #endif
 
@@ -198,7 +200,7 @@ class Api : public Preferences, public BleCharacteristicCallbacks {
     void onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) override;
 
     void notifyTxChar(const char *str);
-    
+
    protected:
     static CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> _commandBuf;
 

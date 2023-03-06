@@ -64,12 +64,15 @@ class Log {
 
    public:
     static void write(uint8_t level, const char *format, ...);
+
+    // 0: none, 1: error, 2: warning, 3, info, 4+: debug
     static void setLevel(uint8_t level);
+
     static void setWriteCallback(writeCallback_t callback);
     static void dumpBootLog();
 
    protected:
-    static uint8_t level;
+    static uint8_t level;  // 0: none, 1: error, 2: warning, 3, info, 4+: debug
 #if 0 != ATOLL_LOG_LEVEL
     static char buffer[ATOLL_LOG_BUFFER_SIZE];
     static SemaphoreHandle_t mutex;

@@ -46,6 +46,7 @@ void Log::write(uint8_t level, const char *format, ...) {
 #endif
 }
 
+// 0: none, 1: error, 2: warning, 3, info, 4+: debug
 void Log::setLevel(uint8_t level) {
     Log::level = level;
 }

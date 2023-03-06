@@ -482,7 +482,7 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
     } else if (msg->argIs("reboot")) {
         if (bleServer) {
             BLECharacteristic *c = bleServer->getChar(
-                BLEUUID(API_SERVICE_UUID),
+                serviceUuid,
                 BLEUUID(API_TX_CHAR_UUID));
             if (c) {
                 ApiCommand *command = Api::command("system");
@@ -621,7 +621,7 @@ void Api::onLogWrite(const char *buf, size_t size) {
 #ifndef FEATURE_BLELOG
     return;
 #endif
-    BLECharacteristic *logChar = bleServer->getChar(BLEUUID(API_SERVICE_UUID), BLEUUID(API_LOG_CHAR_UUID));
+    BLECharacteristic *logChar = bleServer->getChar(serviceUuid, BLEUUID(API_LOG_CHAR_UUID));
     if (nullptr == logChar) {
 #ifdef FEATURE_SERIAL
         Serial.print("[Api::onLogWrite] Error: could not get char\n");
