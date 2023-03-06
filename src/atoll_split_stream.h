@@ -16,7 +16,7 @@ class SplitStream : public Stream {
 
     virtual void setup(
         Stream *stream0,
-        Stream *stream1,
+        Stream *stream1 = nullptr,
         bool stream0_enabled = true,
         bool stream1_enabled = true);
 

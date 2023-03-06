@@ -16,7 +16,7 @@ void SplitStream::setup(
     s0 = stream0;
     s0_enabled = stream0_enabled;
     s1 = stream1;
-    s1_enabled = stream1_enabled;
+    s1_enabled = stream1 && stream1_enabled;
 }
 
 int SplitStream::available() {
