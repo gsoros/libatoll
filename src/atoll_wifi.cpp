@@ -1,3 +1,5 @@
+#ifdef FEATURE_WIFI
+
 #include "atoll_wifi.h"
 #include "atoll_serial.h"
 
@@ -342,3 +344,5 @@ ApiResult *Wifi::staPasswordProcessor(ApiMessage *msg) {
             sizeof(msg->reply));
     return Api::success();
 }
+
+#endif

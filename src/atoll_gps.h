@@ -1,4 +1,4 @@
-#ifndef __atoll_gps_h
+#if !defined(__atoll_gps_h) && defined(FEATURE_GPS)
 #define __atoll_gps_h
 
 #include <Arduino.h>

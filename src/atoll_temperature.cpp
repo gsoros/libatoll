@@ -1,3 +1,4 @@
+#ifdef FEATURE_TEMPERATURE
 #include "atoll_temperature.h"
 #include "atoll_log.h"
 
@@ -75,3 +76,5 @@ void Temperature::addressToStr(Address address, char *buf, size_t size) {
     }
     strncat(buf, "\0", size - strlen(buf) - 1);
 }
+
+#endif

@@ -1,4 +1,4 @@
-#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED) && !defined(CONFIG_BT_NIMBLE_ROLE_OBSERVER_DISABLED)
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED) && !defined(CONFIG_BT_NIMBLE_ROLE_OBSERVER_DISABLED) && defined(FEATURE_BLE_CLIENT)
 
 #include "atoll_ble.h"
 #include "atoll_ble_client.h"

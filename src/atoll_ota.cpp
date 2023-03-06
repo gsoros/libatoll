@@ -1,3 +1,5 @@
+#ifdef FEATURE_OTA
+
 // #include <ESPmDNS.h>
 #include <WiFi.h>
 // #include <WiFiUdp.h>
@@ -124,3 +126,5 @@ void Ota::onError(ota_error_t error) {
         log_e("%d", error);
     log_e("Free heap: %d", ESP.getFreeHeap());
 }
+
+#endif

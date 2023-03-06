@@ -1,4 +1,4 @@
-#if !defined(CONFIG_BT_NIMBLE_ROLE_PERIPHERAL_DISABLED)
+#if !defined(CONFIG_BT_NIMBLE_ROLE_PERIPHERAL_DISABLED) && defined(FEATURE_BLE_SERVER)
 
 #include "atoll_ble.h"
 #include "atoll_ble_server.h"

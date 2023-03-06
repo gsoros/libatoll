@@ -1,4 +1,4 @@
-#ifndef __atoll_ota_h
+#if !defined(__atoll_ota_h) && defined(FEATURE_OTA)
 #define __atoll_ota_h
 
 #include <ArduinoOTA.h>

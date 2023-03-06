@@ -31,7 +31,7 @@ class SplitStream : public Stream {
 
 }  // namespace Atoll
 
-#if !defined(NO_GLOBAL_SPLITSTREAM) && !defined(NO_GLOBAL_INSTANCES)
+#if defined(GLOBAL_SPLITSTREAM_SERIAL) && !defined(NO_GLOBAL_INSTANCES)
 extern Atoll::SplitStream Serial;
 #endif
 

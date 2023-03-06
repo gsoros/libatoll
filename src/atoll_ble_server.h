@@ -1,4 +1,4 @@
-#ifndef __atoll_ble_server_h
+#if !defined(__atoll_ble_server_h) && defined(FEATURE_BLE_SERVER)
 #define __atoll_ble_server_h
 
 #include <Arduino.h>

@@ -1,4 +1,4 @@
-#ifndef __atoll_recorder_h
+#if !defined(__atoll_recorder_h) && defined(FEATURE_RECORDER)
 #define __atoll_recorder_h
 
 #include <Arduino.h>

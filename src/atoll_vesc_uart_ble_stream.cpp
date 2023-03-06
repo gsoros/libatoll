@@ -1,6 +1,6 @@
-#include "atoll_vesc_uart_ble_stream.h"
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED) && defined(FEATURE_BLE_CLIENT)
 
-#if defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL)
+#include "atoll_vesc_uart_ble_stream.h"
 
 using namespace Atoll;
 

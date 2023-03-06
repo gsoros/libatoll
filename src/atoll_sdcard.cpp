@@ -1,3 +1,4 @@
+#ifdef FEATURE_SDCARD
 #include "atoll_sdcard.h"
 
 // #include "vfs_api.h"
@@ -141,3 +142,5 @@ int Atoll::SDFS::format() {
 Atoll::SDFS AtollSD = Atoll::SDFS(FSImplPtr(new VFSImpl()));
 
 */
+
+#endif

@@ -1,4 +1,4 @@
-#ifndef __atoll_ble_h
+#if !defined(__atoll_ble_h) && defined(FEATURE_BLE)
 #define __atoll_ble_h
 
 #include <Arduino.h>

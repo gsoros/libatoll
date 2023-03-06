@@ -1,3 +1,5 @@
+#if !defined(CONFIG_BT_NIMBLE_ROLE_PERIPHERAL_DISABLED) && defined(FEATURE_BLE_SERVER)
+
 #include "atoll_ble_characteristic_callbacks.h"
 #include "atoll_ble_constants.h"
 #include "atoll_log.h"
@@ -45,3 +47,5 @@ void BleCharacteristicCallbacks::onSubscribe(BLECharacteristic *c, BLEConnInfo &
             log_d("%s did something to %s", remote, uuid);
     }
 }
+
+#endif

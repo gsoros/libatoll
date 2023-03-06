@@ -1,4 +1,4 @@
-#ifndef __atoll_peer_characteristic_api_rx_h
+#if !defined(__atoll_peer_characteristic_api_rx_h) && defined(FEATURE_BLE_CLIENT)
 #define __atoll_peer_characteristic_api_rx_h
 
 #include "atoll_peer_characteristic_api.h"

@@ -1,4 +1,4 @@
-#ifndef __atoll_peer_characteristic_heartrate_h
+#if !defined(__atoll_peer_characteristic_heartrate_h) && defined(FEATURE_BLE_CLIENT)
 #define __atoll_peer_characteristic_heartrate_h
 
 #include "atoll_peer_characteristic_template.h"

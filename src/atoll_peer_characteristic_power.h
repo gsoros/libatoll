@@ -1,4 +1,4 @@
-#ifndef __atoll_peer_characteristic_power_h
+#if !defined(__atoll_peer_characteristic_power_h) && defined(FEATURE_BLE_CLIENT)
 #define __atoll_peer_characteristic_power_h
 
 #include "atoll_peer_characteristic_template.h"

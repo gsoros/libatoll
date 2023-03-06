@@ -1,3 +1,4 @@
+#ifdef FEATURE_BLE
 #include "atoll_ble.h"
 #include "atoll_log.h"
 
@@ -80,3 +81,5 @@ std::string Ble::connInfoToStr(BLEConnInfo *info) {
 
 bool Ble::initDone = false;
 uint8_t Ble::securityIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT;
+
+#endif

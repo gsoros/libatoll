@@ -1,4 +1,4 @@
-#ifndef __atoll_vesc_uart_ble_stream_h
+#if !defined(__atoll_vesc_uart_ble_stream_h) && defined(FEATURE_BLE_CLIENT)
 #define __atoll_vesc_uart_ble_stream_h
 
 #include <NimBLEDevice.h>

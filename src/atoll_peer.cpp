@@ -1,8 +1,9 @@
-#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED) && defined(FEATURE_BLE_CLIENT)
 
 #include "atoll_ble.h"
 #include "atoll_ble_client.h"
 #include "atoll_peer.h"
+#include "atoll_vesc_uart_ble_stream.h"
 
 using namespace Atoll;
 

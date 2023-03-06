@@ -1,4 +1,4 @@
-#ifndef __atoll_peer_characteristic_battery_h
+#if !defined(__atoll_peer_characteristic_battery_h) && defined(FEATURE_BLE_CLIENT)
 #define __atoll_peer_characteristic_battery_h
 
 #include "atoll_peer_characteristic_template.h"

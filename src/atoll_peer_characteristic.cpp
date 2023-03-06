@@ -1,4 +1,4 @@
-#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED)
+#if !defined(CONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED) && defined(FEATURE_BLE_CLIENT)
 
 #include "atoll_peer_characteristic.h"
 #include "atoll_peer.h"

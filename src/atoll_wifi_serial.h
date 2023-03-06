@@ -1,4 +1,4 @@
-#ifndef __atoll_wifi_serial_h
+#if !defined(__atoll_wifi_serial_h) && defined(FEATURE_WIFI_SERIAL)
 #define __atoll_wifi_serial_h
 
 #include <Arduino.h>

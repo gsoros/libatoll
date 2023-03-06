@@ -2,7 +2,7 @@
 
 #ifdef FEATURE_SERIAL
 
-#if !defined(NO_GLOBAL_SPLITSTREAM) && !defined(NO_GLOBAL_INSTANCES)
+#if defined(GLOBAL_SPLITSTREAM_SERIAL) && !defined(NO_GLOBAL_INSTANCES)
 Atoll::SplitStream Serial;
 #endif
 

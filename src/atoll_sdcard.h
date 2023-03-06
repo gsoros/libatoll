@@ -1,4 +1,4 @@
-#ifndef __atoll_sdcard_h
+#if !defined(__atoll_sdcard_h) && defined(FEATURE_SDCARD)
 #define __atoll_sdcard_h
 
 #include "FS.h"

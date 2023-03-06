@@ -1,4 +1,4 @@
-#ifndef __atoll_temperature_h
+#if !defined(__atoll_temperature_h) && defined(FEATURE_TEMPERATURE)
 #define __atoll_temperature_h
 
 #include <OneWire.h>

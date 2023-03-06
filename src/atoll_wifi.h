@@ -1,4 +1,4 @@
-#ifndef __atoll_wifi_h
+#if !defined(__atoll_wifi_h) && defined(FEATURE_WIFI)
 #define __atoll_wifi_h
 
 #include <Arduino.h>

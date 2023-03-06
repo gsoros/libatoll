@@ -1,4 +1,4 @@
-#ifndef __atoll_touch_h
+#if !defined(__atoll_touch_h) && defined(FEATURE_TOUCH)
 #define __atoll_touch_h
 
 #include <Arduino.h>

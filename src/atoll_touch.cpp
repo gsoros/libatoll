@@ -1,3 +1,5 @@
+#ifdef FEATURE_TOUCH
+
 #include "atoll_touch.h"
 #include "atoll_preferences.h"
 
@@ -21,3 +23,5 @@ void IRAM_ATTR Atoll::touchISR2() {
 void IRAM_ATTR Atoll::touchISR3() {
     Atoll::Touch::pads[3].last = millis();
 }
+
+#endif

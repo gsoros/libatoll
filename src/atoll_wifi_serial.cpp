@@ -1,3 +1,5 @@
+#ifdef FEATURE_WIFI_SERIAL
+
 #include "atoll_wifi_serial.h"
 
 using namespace Atoll;
@@ -130,3 +132,5 @@ int WifiSerial::peek() {
 void WifiSerial::flush() {
     _client.flush();
 }
+
+#endif

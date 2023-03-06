@@ -1,4 +1,4 @@
-#ifndef __atoll_ble_characteristic_callbacks_h
+#if !defined(__atoll_ble_characteristic_callbacks_h) && defined(FEATURE_BLE_SERVER)
 #define __atoll_ble_characteristic_callbacks_h
 
 #include <Arduino.h>
