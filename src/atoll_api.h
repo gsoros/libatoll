@@ -1,12 +1,15 @@
-#ifndef __atoll_api_h
+#if !defined(__atoll_api_h) && defined(FEATURE_API)
 #define __atoll_api_h
 
 #include <Arduino.h>
 #include <CircularBuffer.h>
 
 #include "atoll_preferences.h"
+
+#ifdef FEATURE_BLE_SERVER
 #include "atoll_ble_server.h"
 #include "atoll_ble_characteristic_callbacks.h"
+#endif
 
 #ifndef VERSION
 #define VERSION "0.1"
@@ -157,18 +160,29 @@ class ApiCommand {
 class Api : public Preferences, public BleCharacteristicCallbacks {
    public:
     static Api *instance;
+
+#ifdef FEATURE_BLE_SERVER
     static Atoll::BleServer *bleServer;
     static BLEUUID serviceUuid;
     static bool secureBle;    // whether to use LESC for BLE API service
     static uint32_t passkey;  // passkey for BLE API service, max 6 digits
+#endif
 
     static void setup(Api *instance,
                       ::Preferences *p,
                       const char *preferencesNS,
+
+#ifdef FEATURE_BLE_SERVER
                       BleServer *bleServer = nullptr,
-                      const char *serviceUuid = nullptr);
+                      const char *serviceUuid = nullptr
+#endif
+    );
+
+#ifdef FEATURE_BLE_SERVER
     static bool addBleService();
     virtual void beforeBleServiceStart(BLEService *service) {}
+#endif
+
     static bool addCommand(ApiCommand command);
     static bool addResult(ApiResult result);
     static ApiMessage process(const char *commandWithArg, bool log = true);
@@ -196,10 +210,12 @@ class Api : public Preferences, public BleCharacteristicCallbacks {
 
     static size_t write(const uint8_t *buffer, size_t size);
 
+#ifdef FEATURE_BLE_SERVER
     // BleCharacteristicCallbacks
     void onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) override;
 
     void notifyTxChar(const char *str);
+#endif
 
    protected:
     static CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> _commandBuf;

@@ -1,5 +1,9 @@
+#ifdef FEATURE_API
 #include "atoll_api.h"
+
+#ifdef FEATURE_BLE_SERVER
 #include "atoll_ble.h"
+#endif
 
 using namespace Atoll;
 
@@ -10,23 +14,34 @@ uint8_t Api::numResults = 0;
 CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> Api::_commandBuf;
 
 Api *Api::instance = nullptr;
+
+#ifdef FEATURE_BLE_SERVER
 BleServer *Api::bleServer = nullptr;
 BLEUUID Api::serviceUuid = BLEUUID("DEAD");
 bool Api::secureBle = false;                // whether to use LESC for BLE API service
 uint32_t Api::passkey = ATOLL_API_PASSKEY;  // passkey for BLE API service, max 6 digits
+#endif
 
 void Api::setup(
     Api *instance,
     ::Preferences *p,
-    const char *preferencesNS,
+    const char *preferencesNS
+#ifdef FEATURE_BLE_SERVER
+    ,
     BleServer *bleServer,
-    const char *serviceUuid) {
+    const char *serviceUuid
+#endif
+) {
     Atoll::Api::instance = instance;
+
+#ifdef FEATURE_BLE_SERVER
     Atoll::Api::bleServer = bleServer;
     if (serviceUuid && strlen(serviceUuid))
         Atoll::Api::serviceUuid = BLEUUID(serviceUuid);
     else if (bleServer)
         log_e("bleServer is set but serviceUuid is not");
+#endif
+
     if (instance)
         instance->preferencesSetup(p, preferencesNS);
 
@@ -45,12 +60,14 @@ void Api::setup(
     loadSettings();
     // printSettings();
 
+#ifdef FEATURE_BLE_SERVER
     if (nullptr != bleServer && nullptr != serviceUuid)
         addBleService();
-
+#endif
     _commandBuf.clear();
 }
 
+#ifdef FEATURE_BLE_SERVER
 bool Api::addBleService() {
     // log_d("adding API service to BleServer");
     if (!bleServer) {
@@ -135,6 +152,7 @@ bool Api::addBleService() {
     // log_d("added ble service");
     return true;
 }
+#endif
 
 // call with newCommand.code = 0 to assign the next available slot
 bool Api::addCommand(ApiCommand newCommand) {
@@ -372,6 +390,7 @@ ApiResult *Api::argInvalid() {
     return result("argInvalid");
 }
 
+#ifdef FEATURE_BLE_SERVER
 void Api::notifyTxChar(const char *str) {
     if (!bleServer) {
         log_e("no bleServer");
@@ -381,6 +400,7 @@ void Api::notifyTxChar(const char *str) {
                       BLEUUID(API_TX_CHAR_UUID),
                       (uint8_t *)str, strlen(str));
 }
+#endif
 
 // Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
@@ -606,17 +626,23 @@ void Api::onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) {
             replyLength = strlen(reply);
         }
         // log_d("apiRxChar reply(%d): %s", replyLength, reply);
+
+#ifdef FEATURE_BLE_SERVER
         if (bleServer)
             bleServer->notify(
                 serviceUuid,
                 BLEUUID(API_TX_CHAR_UUID),
                 (uint8_t *)reply,
                 replyLength);
+#endif
         return;
     }
+#ifdef FEATURE_BLE_SERVER
     BleCharacteristicCallbacks::onWrite(c, connInfo);
+#endif
 }
 
+#ifdef FEATURE_BLE_SERVER
 void Api::onLogWrite(const char *buf, size_t size) {
 #ifndef FEATURE_BLELOG
     return;
@@ -631,3 +657,6 @@ void Api::onLogWrite(const char *buf, size_t size) {
     logChar->setValue((uint8_t *)buf, size);
     logChar->notify();
 }
+#endif  // FEATURE_BLE_SERVER
+
+#endif  //  FEATURE_API

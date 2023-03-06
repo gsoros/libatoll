@@ -1,3 +1,5 @@
+#ifdef FEATURE_BATTERY
+
 #include "atoll_battery.h"
 
 using namespace Atoll;
@@ -10,26 +12,39 @@ void Battery::setup(
     ::Preferences *p,
     int16_t pin,
     Battery *instance,
-    Api *api,
-    BleServer *bleServer) {
+#ifdef FEATURE_API
+    Api *api
+#endif
+#ifdef FEATURE_BLE_SERVER
+    ,
+    BleServer *bleServer
+#endif
+) {
     this->pin = (pin < 0 || UINT8_MAX < pin) ? ATOLL_BATTERY_PIN : (uint8_t)pin;
     this->instance = instance;
-    this->bleServer = bleServer;
-    this->api = api;
 
+#ifdef FEATURE_BLE_SERVER
+    this->bleServer = bleServer;
+#endif
+#ifdef FEATURE_API
+    this->api = api;
+#endif
     preferencesSetup(p, "Battery");
     loadSettings();
     // printSettings();
-
+#ifdef FEATURE_BLE_SERVER
     addBleService();
-
+#endif
     _voltageBuf.clear();
 
     if (nullptr == instance) return;
+#ifdef FEATURE_API
     if (nullptr != api)
         api->addCommand(ApiCommand("bat", batteryProcessor));
+#endif
 }
 
+#ifdef FEATURE_BLE_SERVER
 bool Battery::addBleService() {
     if (nullptr == bleServer) {
         log_i("bleServer is null, not adding battery service");
@@ -80,6 +95,7 @@ void Battery::notifyChar(uint8_t *value) {
     c->setValue(value, 1);
     c->notify();
 }
+#endif  // FEATURE_BLE_SERVER
 
 // returns true if notification was sent
 bool Battery::report() {
@@ -93,7 +109,11 @@ bool Battery::report() {
         lastNotification = t;
         lastLevel = (int16_t)level;
         // log_i("%fV, %fVavg, %d%%", voltage, voltageAvg(), level);
+#ifdef FEATURE_BLE_SERVER
         notifyChar(&level);
+#else
+        log_i("no bleServer");
+#endif
         return true;
     }
     return false;
@@ -126,6 +146,8 @@ void Battery::detectChargingState() {
         }
         if (csUnknown != chargingState && prevState != chargingState) {
             log_i("%scharging %.2f => %.2f", csCharging == chargingState ? "" : "dis", avg, voltage);
+#ifdef FEATURE_API
+#ifdef FEATURE_BLE_SERVER
             if (nullptr == api || nullptr == bleServer) {
                 log_e("api or bleServer is null");
                 goto exit;
@@ -139,6 +161,8 @@ void Battery::detectChargingState() {
             snprintf(buf, sizeof(buf), "%d;%d=%s", msg.result->code, msg.commandCode, msg.reply);
             c->setValue((uint8_t *)buf, strlen(buf));
             c->notify();
+#endif
+#endif
         }
     }
 exit:
@@ -299,3 +323,5 @@ ApiResult *Battery::batteryProcessor(ApiMessage *msg) {
                  : "");
     return Api::success();
 }
+
+#endif  // FEATURE_BATTERY

@@ -1,4 +1,4 @@
-#ifndef __atoll_battery_h
+#if !defined(__atoll_battery_h) && defined(FEATURE_BATTERY)
 #define __atoll_battery_h
 
 #include <Arduino.h>
@@ -7,8 +7,12 @@
 
 #include "atoll_preferences.h"
 #include "atoll_task.h"
+#ifdef FEATURE_API
 #include "atoll_api.h"
+#endif
+#ifdef FEATURE_BLE_SERVER
 #include "atoll_ble_server.h"
+#endif
 
 #ifndef ATOLL_BATTERY_PIN
 #define ATOLL_BATTERY_PIN 35
@@ -50,11 +54,20 @@ class Battery : public Task, public Preferences {
     void setup(
         ::Preferences *p,
         int16_t pin = -1,
-        Battery *instance = nullptr,
-        Api *api = nullptr,
+        Battery *instance = nullptr
+#ifdef FEATURE_API
+        ,
+        Api *api = nullptr
+#endif
+#ifdef FEATURE_BLE_SERVER
+        ,
         BleServer *bleServer = nullptr);
     bool addBleService();
     void notifyChar(uint8_t *value);
+#else
+    );
+#endif
+
     virtual bool report();
     void loop();
     void detectChargingState();
@@ -84,8 +97,12 @@ class Battery : public Task, public Preferences {
    protected:
     static Battery *instance;
     CircularBuffer<float, ATOLL_BATTERY_RINGBUF_SIZE> _voltageBuf;
+#ifdef FEATURE_API
     Api *api = nullptr;
+#endif
+#ifdef FEATURE_BLE_SERVER
     BleServer *bleServer = nullptr;
+#endif
     ChargingState chargingState = csUnknown;
 };
 
