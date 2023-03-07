@@ -16,6 +16,8 @@
 
 namespace Atoll {
 
+typedef NIMBLE_PROPERTY BLE_PROP;
+
 class Ble {
    public:
     static void init(

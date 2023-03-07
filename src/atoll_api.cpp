@@ -88,9 +88,9 @@ bool Api::addBleService() {
         log_e("could not create service");
         return false;
     }
-    uint32_t properties = NIMBLE_PROPERTY::WRITE;
+    uint32_t properties = BLE_PROP::WRITE;
     if (secureBle)
-        properties |= NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::WRITE_AUTHEN;
+        properties |= BLE_PROP::WRITE_ENC | BLE_PROP::WRITE_AUTHEN;
     BLECharacteristic *rx = s->createCharacteristic(
         BLEUUID(API_RX_CHAR_UUID),
         properties);
@@ -102,9 +102,9 @@ bool Api::addBleService() {
 
     char str[SETTINGS_STR_LENGTH] = "";
     strncpy(str, "Ready", sizeof(str));
-    properties = NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::INDICATE | NIMBLE_PROPERTY::NOTIFY;
+    properties = BLE_PROP::READ | BLE_PROP::INDICATE | BLE_PROP::NOTIFY;
     if (secureBle)
-        properties |= NIMBLE_PROPERTY::READ_ENC | NIMBLE_PROPERTY::READ_AUTHEN;
+        properties |= BLE_PROP::READ_ENC | BLE_PROP::READ_AUTHEN;
     BLECharacteristic *tx = s->createCharacteristic(
         BLEUUID(API_TX_CHAR_UUID),
         properties);
@@ -117,9 +117,9 @@ bool Api::addBleService() {
 
 #ifdef FEATURE_BLELOG
     strncpy(str, "Log start", sizeof(str));
-    properties = NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::INDICATE | NIMBLE_PROPERTY::NOTIFY;
+    properties = BLE_PROP::READ | BLE_PROP::INDICATE | BLE_PROP::NOTIFY;
     if (secureBle)
-        properties |= NIMBLE_PROPERTY::READ_ENC | NIMBLE_PROPERTY::READ_AUTHEN;
+        properties |= BLE_PROP::READ_ENC | BLE_PROP::READ_AUTHEN;
     BLECharacteristic *log = s->createCharacteristic(
         BLEUUID(API_LOG_CHAR_UUID),
         properties);
@@ -135,7 +135,7 @@ bool Api::addBleService() {
     snprintf(str, sizeof(str), "%s API v0.1", bleServer->deviceName);
     BLEDescriptor *d = rx->createDescriptor(
         BLEUUID(API_DESC_UUID),
-        NIMBLE_PROPERTY::READ);
+        BLE_PROP::READ);
     if (nullptr == d) {
         log_e("could not create descriptor");
         return false;

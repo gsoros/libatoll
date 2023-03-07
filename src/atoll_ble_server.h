@@ -5,6 +5,7 @@
 #include <NimBLEDevice.h>
 #include <CircularBuffer.h>
 
+#include "atoll_ble.h"
 #include "atoll_ble_constants.h"
 #include "atoll_task.h"
 #include "atoll_ble_characteristic_callbacks.h"

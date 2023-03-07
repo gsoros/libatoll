@@ -58,7 +58,7 @@ bool Battery::addBleService() {
     }
     BLECharacteristic *c = s->createCharacteristic(
         BLEUUID(BATTERY_LEVEL_CHAR_UUID),
-        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+        BLE_PROP::READ | BLE_PROP::NOTIFY);
     if (nullptr == c) {
         log_e("could not create char");
         return false;
@@ -67,7 +67,7 @@ bool Battery::addBleService() {
     c->setCallbacks(bleServer);
     // BLEDescriptor *d = c->createDescriptor(
     //     BLEUUID(BATTERY_LEVEL_DESC_UUID),
-    //     NIMBLE_PROPERTY::READ);
+    //     BLE_PROP::READ);
     // if (nullptr == d) {
     //     log_e("could not create descriptor");
     //     return false;

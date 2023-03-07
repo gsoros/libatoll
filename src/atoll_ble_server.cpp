@@ -64,7 +64,7 @@ bool BleServer::createDeviceInformationService() {
     }
     BLECharacteristic *c = s->createCharacteristic(
         BLEUUID(DEVICE_NAME_CHAR_UUID),
-        NIMBLE_PROPERTY::READ);
+        BLE_PROP::READ);
     if (nullptr == c) {
         log_e("could not create char");
         return false;
