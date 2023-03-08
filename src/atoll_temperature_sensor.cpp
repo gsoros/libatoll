@@ -4,20 +4,23 @@
 
 using namespace Atoll;
 
+// multiple sensors on the same pin
 TemperatureSensor::TemperatureSensor(
     DallasTemperature *dallas,
     const char *label,
     Address address,
-    float updateFrequency,
-    Callback onTempChange,
     SemaphoreHandle_t *mutex,
-    uint32_t mutexTimeout)
+    uint8_t resolution,
+    uint32_t mutexTimeout,
+    float updateFrequency,
+    Callback onTempChange)
     : dallas(dallas),
-      onTempChange(onTempChange),
       mutex(mutex),
-      mutexTimeout(mutexTimeout) {
-    strncpy(this->label, label, sizeof(this->label));
-    this->label[sizeof(this->label) - 1] = '\0';
+      resolution(resolution),
+      mutexTimeout(mutexTimeout),
+      onTempChange(onTempChange) {
+    mode = TSM_SHARED;
+    setLabel(label);
     if (!dallas) {
         log_e("%s no dallas", label);
     }
@@ -26,29 +29,67 @@ TemperatureSensor::TemperatureSensor(
     }
     for (uint8_t i = 0; i < sizeof(Address); i++) this->address[i] = address[i];
     taskSetFreq(updateFrequency);
-    //_taskDebug();
+}
+
+// single sensor on the pin
+TemperatureSensor::TemperatureSensor(
+    uint8_t pin,
+    const char *label,
+    uint8_t resolution,
+    float updateFrequency,
+    Callback onTempChange)
+    : resolution(resolution),
+      onTempChange(onTempChange) {
+    mode = TSM_EXCLUSIVE;
+    setLabel(label);
+    bus = new OneWire(pin);
+    dallas = new DallasTemperature(bus);
+    taskSetFreq(updateFrequency);
+}
+
+TemperatureSensor::~TemperatureSensor() {
+    if (TSM_EXCLUSIVE == mode) {
+        if (nullptr != dallas) delete dallas;
+        if (nullptr != bus) delete bus;
+    }
+}
+
+void TemperatureSensor::begin() {
+    if (TSM_EXCLUSIVE == mode) {
+        dallas->begin();
+        log_d("%d sensor(s), %sparasitic",
+              getDeviceCount(dallas),
+              dallas->isParasitePowerMode() ? "" : "not ");
+        Address address;
+        if (!getAddressByIndex(dallas, 0, address)) {
+            log_e("%s could not get address", label);
+            return;
+        }
+        char buf[40];
+        addressToStr(address, buf, sizeof(buf));
+        log_d("%s found at %s", label, buf);
+        for (uint8_t i = 0; i < sizeof(Address); i++) this->address[i] = address[i];
+    }
+    setResolution(resolution);
+    taskStart();
 }
 
 void TemperatureSensor::loop() {
     float prevValue = value;
-    if (update())
-        lastUpdate = millis();
+    if (update()) lastUpdate = millis();
     if (onTempChange && prevValue != value) onTempChange(this);
 }
 
 bool TemperatureSensor::update() {
-    if (mutex && !xSemaphoreTake(*mutex, (TickType_t)mutexTimeout) == pdTRUE) {
-        log_e("%s could not aquire mutex in %dms", label, mutexTimeout);
-        return false;
-    }
+    if (!dallas || !aquireMutex()) return false;
     DallasTemperature::request_t req = dallas->requestTemperaturesByAddress(address);
     if (!req.result) {
-        if (mutex) xSemaphoreGive(*mutex);
+        releaseMutex();
         log_d("%s request failed", label);
         return false;
     }
     float newValue = dallas->getTempC(address);
-    if (mutex) xSemaphoreGive(*mutex);
+    releaseMutex();
     if (newValue < validMin || validMax < newValue) {
         log_e("%s out of range: %d", label, newValue);
         return false;
@@ -67,14 +108,25 @@ bool TemperatureSensor::update() {
     return true;
 }
 
+void TemperatureSensor::setLabel(const char *label) {
+    strncpy(this->label, label, sizeof(this->label));
+    this->label[sizeof(this->label) - 1] = '\0';
+}
+
 bool TemperatureSensor::setResolution(uint8_t resolution) {
-    return dallas->setResolution(address, resolution);
+    this->resolution = resolution;
+    if (!dallas->setResolution(address, resolution)) {
+        log_e("%s could not set resolution %d", label, resolution);
+        return false;
+    }
+    return true;
 }
 
 uint8_t TemperatureSensor::getDeviceCount(DallasTemperature *dallas) {
     return dallas->getDeviceCount();
 }
 
+// set global resolution
 void TemperatureSensor::setResolution(DallasTemperature *dallas, uint8_t resolution) {
     dallas->setResolution(resolution);
 }
@@ -98,6 +150,24 @@ void TemperatureSensor::addressToStr(Address address, char *buf, size_t size) {
         strncat(buf, hex, size - strlen(buf) - 1);
     }
     strncat(buf, "\0", size - strlen(buf) - 1);
+}
+
+bool TemperatureSensor::aquireMutex() {
+    if (TSM_EXCLUSIVE == mode) return true;
+    if (!mutex) {
+        log_e("%s no mutex", label);
+        return false;
+    }
+    if (!xSemaphoreTake(*mutex, (TickType_t)mutexTimeout) == pdTRUE) {
+        log_e("%s could not aquire mutex in %dms", label, mutexTimeout);
+        return false;
+    }
+    return true;
+}
+
+void TemperatureSensor::releaseMutex() {
+    if (TSM_EXCLUSIVE == mode) return;
+    if (mutex) xSemaphoreGive(*mutex);
 }
 
 #ifdef FEATURE_BLE_SERVER
