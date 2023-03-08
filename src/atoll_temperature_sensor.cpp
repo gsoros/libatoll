@@ -77,7 +77,19 @@ void TemperatureSensor::begin() {
 void TemperatureSensor::loop() {
     float prevValue = value;
     if (update()) lastUpdate = millis();
-    if (onTempChange && prevValue != value) onTempChange(this);
+    if (prevValue != value) {
+#ifdef FEATURE_BLE_SERVER
+        if (bleChar) {
+            uint16_t bleVal = (uint16_t)(value * 100);
+            unsigned char buf[2];
+            buf[0] = bleVal & 0xff;
+            buf[1] = (bleVal >> 8) & 0xff;
+            bleChar->setValue((uint8_t *)buf, sizeof(buf));
+            bleChar->notify();
+        }
+#endif
+        if (onTempChange) onTempChange(this);
+        }
 }
 
 bool TemperatureSensor::update() {
@@ -95,16 +107,6 @@ bool TemperatureSensor::update() {
         return false;
     }
     value = newValue;
-#ifdef FEATURE_BLE_SERVER
-    if (bleChar) {
-        uint16_t bleVal = (uint16_t)(value * 100);
-        unsigned char buf[2];
-        buf[0] = bleVal & 0xff;
-        buf[1] = (bleVal >> 8) & 0xff;
-        bleChar->setValue((uint8_t *)buf, sizeof(buf));
-        bleChar->notify();
-    }
-#endif
     return true;
 }
 

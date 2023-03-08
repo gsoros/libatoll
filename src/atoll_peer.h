@@ -10,6 +10,7 @@
 #include "atoll_peer_characteristic_power.h"
 #include "atoll_peer_characteristic_heartrate.h"
 #include "atoll_peer_characteristic_weightscale.h"
+#include "atoll_peer_characteristic_temperature.h"
 #include "atoll_peer_characteristic_api_rx.h"
 #include "atoll_peer_characteristic_api_tx.h"
 #include "atoll_peer_characteristic_vesc_rx.h"
@@ -140,7 +141,8 @@ class ESPM : public PowerMeter {
         PeerCharacteristicBattery* customBattChar = nullptr,
         PeerCharacteristicApiTX* customApiTxChar = nullptr,
         PeerCharacteristicApiRX* customApiRxChar = nullptr,
-        PeerCharacteristicWeightscale* customWeightChar = nullptr);
+        PeerCharacteristicWeightscale* customWeightChar = nullptr,
+        PeerCharacteristicTemperature* customTemperatureChar = nullptr);
 
     virtual void loop() override;
 

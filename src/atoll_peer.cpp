@@ -548,7 +548,8 @@ ESPM::ESPM(
     PeerCharacteristicBattery* customBattChar,
     PeerCharacteristicApiTX* customApiTxChar,
     PeerCharacteristicApiRX* customApiRxChar,
-    PeerCharacteristicWeightscale* customWeightChar)
+    PeerCharacteristicWeightscale* customWeightChar,
+    PeerCharacteristicTemperature* customTemperatureChar)
     : PowerMeter(
           saved,
           customPowerChar,
@@ -562,6 +563,9 @@ ESPM::ESPM(
     addChar(nullptr != customWeightChar
                 ? customWeightChar
                 : new PeerCharacteristicWeightscale());
+    addChar(nullptr != customTemperatureChar
+                ? customTemperatureChar
+                : new PeerCharacteristicTemperature());
 }
 
 void ESPM::loop() {
