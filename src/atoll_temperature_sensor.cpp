@@ -4,7 +4,15 @@
 
 using namespace Atoll;
 
-// multiple sensors on the same pin
+/// @brief constructor for multiple sensors on the same pin
+/// @param dallas
+/// @param label
+/// @param address
+/// @param mutex
+/// @param resolution
+/// @param mutexTimeout
+/// @param updateFrequency
+/// @param onTempChange
 TemperatureSensor::TemperatureSensor(
     DallasTemperature *dallas,
     const char *label,
@@ -30,7 +38,12 @@ TemperatureSensor::TemperatureSensor(
     taskSetFreq(updateFrequency);
 }
 
-// single sensor on the pin
+/// @brief constructor for single sensor on the pin
+/// @param pin
+/// @param label
+/// @param resolution
+/// @param updateFrequency
+/// @param onValueChange
 TemperatureSensor::TemperatureSensor(
     gpio_num_t pin,
     const char *label,
@@ -140,7 +153,10 @@ bool TemperatureSensor::getAddressByIndex(DallasTemperature *dallas, uint8_t ind
     return dallas->getAddress(address, index);
 }
 
-// e.g. "0x28 0x8a 0x85 0x0a 0x00 0x00 0x00 0x39"
+/// @brief Put the string representation of address into buf, e.g. "0x28 0x8a 0x85 0x0a 0x00 0x00 0x00 0x39"
+/// @param address
+/// @param buf
+/// @param size
 void TemperatureSensor::addressToStr(Address address, char *buf, size_t size) {
     if (1 < size) snprintf(buf, size, "");
     if (size < sizeof(Address) * 5) {

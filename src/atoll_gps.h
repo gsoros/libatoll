@@ -14,7 +14,6 @@ namespace Atoll {
 class GPS : public Atoll::Task {
    public:
     const char *taskName() { return "GPS"; }
-    // SoftwareSerial ss;
     HardwareSerial *serial;
     TinyGPSPlus device;
     double minWalkingSpeed = 2.0;  // km/h
