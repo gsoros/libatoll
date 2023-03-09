@@ -31,6 +31,7 @@ class Ble {
     static bool deleteBond(const char *address);
 
     static std::string connInfoToStr(BLEConnInfo *info);
+    static std::string charUUIDToStr(BLEUUID uuid);
 
    protected:
     static bool initDone;

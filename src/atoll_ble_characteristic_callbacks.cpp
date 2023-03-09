@@ -2,6 +2,7 @@
 
 #include "atoll_ble_characteristic_callbacks.h"
 #include "atoll_ble_constants.h"
+#include "atoll_ble.h"
 #include "atoll_log.h"
 
 using namespace Atoll;
@@ -29,7 +30,7 @@ void BleCharacteristicCallbacks::onSubscribe(BLECharacteristic *c, BLEConnInfo &
              info.getAddress().toString().c_str(), info.getIdAddress().toString().c_str());
 
     char uuid[40] = "";
-    strncpy(uuid, c->getUUID().toString().c_str(), sizeof(uuid));
+    strncpy(uuid, Ble::charUUIDToStr(c->getUUID()).c_str(), sizeof(uuid));
     switch (subValue) {
         case 0:
             log_d("%s unsubscribed from %s", remote, uuid);

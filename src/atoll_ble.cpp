@@ -1,5 +1,6 @@
 #ifdef FEATURE_BLE
 #include "atoll_ble.h"
+#include "atoll_ble_constants.h"
 #include "atoll_log.h"
 
 using namespace Atoll;
@@ -77,6 +78,21 @@ std::string Ble::connInfoToStr(BLEConnInfo *info) {
     snprintf(buf, bufSize, ", keySize: %d]", info->getSecKeySize());
     s += buf;
     return s;
+}
+
+std::string Ble::charUUIDToStr(BLEUUID uuid) {
+    if (uuid.equals(BLEUUID(CSC_MEASUREMENT_CHAR_UUID))) return std::string("Speed and Cadence");
+    if (uuid.equals(BLEUUID(CYCLING_POWER_MEASUREMENT_CHAR_UUID))) return std::string("Power");
+    if (uuid.equals(BLEUUID(BATTERY_LEVEL_CHAR_UUID))) return std::string("Battery");
+    if (uuid.equals(BLEUUID(WEIGHT_MEASUREMENT_CHAR_UUID))) return std::string("Weight");
+    if (uuid.equals(BLEUUID(TEMPERATURE_CHAR_UUID))) return std::string("Temperature");
+    if (uuid.equals(BLEUUID(API_RX_CHAR_UUID))) return std::string("API RX");
+    if (uuid.equals(BLEUUID(API_TX_CHAR_UUID))) return std::string("API TX");
+    if (uuid.equals(BLEUUID(API_LOG_CHAR_UUID))) return std::string("API Log");
+    if (uuid.equals(BLEUUID(HALL_CHAR_UUID))) return std::string("Hall");
+    if (uuid.equals(BLEUUID(VESC_RX_CHAR_UUID))) return std::string("Vesc RX");
+    if (uuid.equals(BLEUUID(VESC_TX_CHAR_UUID))) return std::string("Vesc TX");
+    return uuid.toString();
 }
 
 bool Ble::initDone = false;
