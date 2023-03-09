@@ -18,28 +18,27 @@ TemperatureSensor::TemperatureSensor(
       mutex(mutex),
       resolution(resolution),
       mutexTimeout(mutexTimeout),
-      onTempChange(onTempChange) {
+      onValueChange(onTempChange) {
     mode = TSM_SHARED;
     setLabel(label);
     if (!dallas) {
         log_e("%s no dallas", label);
-    }
-    if (!dallas->validAddress(address)) {
+    } else if (!dallas->validAddress(address)) {
         log_e("%s invalid address", label);
-    }
-    for (uint8_t i = 0; i < sizeof(Address); i++) this->address[i] = address[i];
+    } else
+        setAddress(address);
     taskSetFreq(updateFrequency);
 }
 
 // single sensor on the pin
 TemperatureSensor::TemperatureSensor(
-    uint8_t pin,
+    gpio_num_t pin,
     const char *label,
     uint8_t resolution,
     float updateFrequency,
-    Callback onTempChange)
+    Callback onValueChange)
     : resolution(resolution),
-      onTempChange(onTempChange) {
+      onValueChange(onValueChange) {
     mode = TSM_EXCLUSIVE;
     setLabel(label);
     bus = new OneWire(pin);
@@ -49,8 +48,8 @@ TemperatureSensor::TemperatureSensor(
 
 TemperatureSensor::~TemperatureSensor() {
     if (TSM_EXCLUSIVE == mode) {
-        if (nullptr != dallas) delete dallas;
-        if (nullptr != bus) delete bus;
+        if (dallas) delete dallas;
+        if (bus) delete bus;
     }
 }
 
@@ -68,7 +67,7 @@ void TemperatureSensor::begin() {
         char buf[40];
         addressToStr(address, buf, sizeof(buf));
         log_d("%s found at %s", label, buf);
-        for (uint8_t i = 0; i < sizeof(Address); i++) this->address[i] = address[i];
+        setAddress(address);
     }
     setResolution(resolution);
     taskStart();
@@ -88,8 +87,8 @@ void TemperatureSensor::loop() {
             bleChar->notify();
         }
 #endif
-        if (onTempChange) onTempChange(this);
-        }
+        if (onValueChange) onValueChange(this);
+    }
 }
 
 bool TemperatureSensor::update() {
@@ -108,6 +107,10 @@ bool TemperatureSensor::update() {
     }
     value = newValue;
     return true;
+}
+
+void TemperatureSensor::setAddress(const Address address) {
+    for (uint8_t i = 0; i < sizeof(Address); i++) this->address[i] = address[i];
 }
 
 void TemperatureSensor::setLabel(const char *label) {

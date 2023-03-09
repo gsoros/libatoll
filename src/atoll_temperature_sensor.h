@@ -44,15 +44,15 @@ class TemperatureSensor : public Task
         uint8_t resolution = 11,
         uint32_t mutexTimeout = 1000,
         float updateFrequency = 1.0f,
-        Callback onTempChange = nullptr);
+        Callback onValueChange = nullptr);
 
     // single sensor on the pin
     TemperatureSensor(
-        uint8_t pin,
+        gpio_num_t pin,
         const char *label,
         uint8_t resolution = 11,
         float updateFrequency = 1.0f,
-        Callback onTempChange = nullptr);
+        Callback onValueChange = nullptr);
 
     virtual ~TemperatureSensor();
     virtual const char *taskName() override { return label; }
@@ -61,6 +61,7 @@ class TemperatureSensor : public Task
     virtual void loop() override;
 
     virtual bool update();
+    virtual void setAddress(const Address address);
     virtual void setLabel(const char *label);
     virtual bool setResolution(uint8_t resolution);
 
@@ -82,7 +83,7 @@ class TemperatureSensor : public Task
     uint8_t mode = TSM_EXCLUSIVE;
     OneWire *bus = nullptr;
     DallasTemperature *dallas = nullptr;
-    Callback onTempChange = nullptr;
+    Callback onValueChange = nullptr;
     SemaphoreHandle_t *mutex = nullptr;
     uint32_t mutexTimeout = 1000;
 };
