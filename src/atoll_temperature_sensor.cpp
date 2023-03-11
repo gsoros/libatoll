@@ -116,8 +116,12 @@ bool TemperatureSensor::update() {
     }
     float newValue = dallas->getTempC(address);
     releaseMutex();
+    if (DEVICE_DISCONNECTED_C == newValue) {
+        log_e("%s disconnected", label);
+        return false;
+    }
     if (newValue < validMin || validMax < newValue) {
-        log_e("%s out of range: %d", label, newValue);
+        log_e("%s out of range: %.2f", label, newValue);
         return false;
     }
     value = newValue;

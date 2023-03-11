@@ -22,6 +22,78 @@ bool Api::secureBle = false;                // whether to use LESC for BLE API s
 uint32_t Api::passkey = ATOLL_API_PASSKEY;  // passkey for BLE API service, max 6 digits
 #endif
 
+Api::Result::Result(
+    const char *name,
+    uint8_t code) {
+    this->code = code;
+    snprintf(this->name, sizeof(this->name), "%s", name);
+}
+
+bool Api::Message::argIs(const char *str) {
+    return argStartsWith(str) && strlen(arg) == strlen(str);
+}
+
+bool Api::Message::argStartsWith(const char *str) {
+    int res = strncmp(arg, str, strlen(str));
+    // log_i("arg: %s, str: %s, res: %d", arg, str, res);
+    return res == 0;
+}
+
+bool Api::Message::argHasParam(const char *str) {
+    char *match;
+    match = strstr(arg, str);
+    // log_d("arg: %s, str: %s, res: %s", arg, str, match ? "true" : "false");
+    return match ? true : false;
+}
+
+size_t Api::Message::argGetParam(const char *str, char *buf, size_t size, char delim) {
+    char *cp;
+    cp = strstr(arg, str);
+    if (!cp) {
+        // log_d("no match for '%s' in '%s'", str, arg);
+        return 0;
+    }
+    size_t copied = 0;
+    cp += strlen(str);
+    while (copied < size) {
+        if (*cp == '\0' || *cp == delim)
+            break;
+        buf[copied] = *cp;
+        copied++;
+        cp++;
+    }
+    buf[copied] = '\0';
+    // log_i("found '%s' for '%s' in '%s'", buf, str, arg);
+    return copied;
+}
+
+size_t Api::Message::replyAppend(const char *str, bool onlyIfNotEmpty) {
+    size_t sVal = strlen(reply);
+    if (onlyIfNotEmpty && !sVal) return 0;
+    strncat(reply, str, ATOLL_API_MSG_REPLY_LENGTH - sVal - strlen(str) - 1);
+    return strlen(reply) - sVal;
+}
+
+Api::Command::Command(
+    const char *name,
+    Processor processor,
+    uint8_t code) {
+    this->code = code;
+    snprintf(this->name, sizeof(this->name), "%s", name);
+    this->processor = processor;
+}
+
+Api::Result *Api::Command::call(Api::Message *msg) {
+    if (nullptr == processor) {
+        log_e("Command %d:%s has no processor", code, name);
+        return nullptr;
+    }
+    msg->result = processor(msg);
+    // log_i("command(%d:%s)=arg(%s) ===> result(%d:%s) value(%s)",
+    //       code, name, msg->arg, msg->result->code, msg->result->name, msg->value);
+    return msg->result;
+}
+
 void Api::setup(
     Api *instance,
     ::Preferences *p,
