@@ -14,9 +14,9 @@
 #define ATOLL_BLE_SECURITY_IOCAP_DEFAULT BLE_HS_IO_DISPLAY_ONLY
 #endif
 
-namespace Atoll {
-
 typedef NIMBLE_PROPERTY BLE_PROP;
+
+namespace Atoll {
 
 class Ble {
    public:

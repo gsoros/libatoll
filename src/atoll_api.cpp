@@ -7,9 +7,9 @@
 
 using namespace Atoll;
 
-ApiCommand Api::commands[ATOLL_API_MAX_COMMANDS];
+Api::Command Api::commands[ATOLL_API_MAX_COMMANDS];
 uint8_t Api::numCommands = 0;
-ApiResult Api::results[ATOLL_API_MAX_RESULTS];
+Api::Result Api::results[ATOLL_API_MAX_RESULTS];
 uint8_t Api::numResults = 0;
 CircularBuffer<char, ATOLL_API_COMMAND_BUF_LENGTH> Api::_commandBuf;
 
@@ -45,17 +45,17 @@ void Api::setup(
     if (instance)
         instance->preferencesSetup(p, preferencesNS);
 
-    addResult(ApiResult("success", 1));
-    addResult(ApiResult("error"));
-    addResult(ApiResult("commandMissing"));
-    addResult(ApiResult("unknownCommand"));
-    addResult(ApiResult("commandTooLong"));
-    addResult(ApiResult("argInvalid"));
-    addResult(ApiResult("argTooLong"));
-    addResult(ApiResult("internalError"));
+    addResult(Result("success", 1));
+    addResult(Result("error"));
+    addResult(Result("commandMissing"));
+    addResult(Result("unknownCommand"));
+    addResult(Result("commandTooLong"));
+    addResult(Result("argInvalid"));
+    addResult(Result("argTooLong"));
+    addResult(Result("internalError"));
 
-    addCommand(ApiCommand("init", Atoll::Api::initProcessor, 1));
-    addCommand(ApiCommand("system", Atoll::Api::systemProcessor));
+    addCommand(Command("init", Atoll::Api::initProcessor, 1));
+    addCommand(Command("system", Atoll::Api::systemProcessor));
 
     loadSettings();
     // printSettings();
@@ -155,12 +155,12 @@ bool Api::addBleService() {
 #endif
 
 // call with newCommand.code = 0 to assign the next available slot
-bool Api::addCommand(ApiCommand newCommand) {
+bool Api::addCommand(Command newCommand) {
     if (strlen(newCommand.name) < 1) {
         log_e("no name");
         return false;
     }
-    ApiCommand *existing = command(newCommand.code, false);
+    Command *existing = command(newCommand.code, false);
     if (nullptr != existing) {
         log_e("code %d already exists: %s", existing->code, existing->name);
         return false;
@@ -210,12 +210,12 @@ uint8_t Api::nextAvailableCommandCode() {
 }
 
 // call with newResult.code = 0 to assign the next available slot
-bool Api::addResult(ApiResult newResult) {
+bool Api::addResult(Result newResult) {
     if (strlen(newResult.name) < 1) {
         log_e("no name");
         return false;
     }
-    ApiResult *existing = result(newResult.code, false);
+    Result *existing = result(newResult.code, false);
     if (nullptr != existing) {
         log_e("code %d already exists: %s", existing->code, existing->name);
         return false;
@@ -318,7 +318,7 @@ size_t Api::write(const uint8_t *buffer, size_t size) {
                 }
                 if (!strlen(buf)) continue;
                 log_d("processing '%s'", buf);
-                ApiMessage msg = process(buf);
+                Message msg = process(buf);
 #ifdef FEATURE_SERIAL
                 Serial.printf("%s: %s%s%s\n", buf, msg.result->name,
                               strlen(msg.reply) ? ", " : "", msg.reply);
@@ -338,7 +338,7 @@ size_t Api::write(const uint8_t *buffer, size_t size) {
     return i;
 }
 
-ApiCommand *Api::command(uint8_t code, bool logOnError) {
+Api::Command *Api::command(uint8_t code, bool logOnError) {
     if (code < 1) return nullptr;
     for (int i = 0; i < numCommands; i++)
         if (commands[i].code == code)
@@ -347,7 +347,7 @@ ApiCommand *Api::command(uint8_t code, bool logOnError) {
     return nullptr;
 }
 
-ApiCommand *Api::command(const char *name, bool logOnError) {
+Api::Command *Api::command(const char *name, bool logOnError) {
     if (strlen(name) < 1) return nullptr;
     for (int i = 0; i < numCommands; i++)
         if (0 == strcmp(commands[i].name, name))
@@ -356,7 +356,7 @@ ApiCommand *Api::command(const char *name, bool logOnError) {
     return nullptr;
 }
 
-ApiResult *Api::result(uint8_t code, bool logOnError) {
+Api::Result *Api::result(uint8_t code, bool logOnError) {
     if (code < 1) return nullptr;
     for (int i = 0; i < numResults; i++)
         if (results[i].code == code)
@@ -365,7 +365,7 @@ ApiResult *Api::result(uint8_t code, bool logOnError) {
     return nullptr;
 }
 
-ApiResult *Api::result(const char *name, bool logOnError) {
+Api::Result *Api::result(const char *name, bool logOnError) {
     if (strlen(name) < 1) return nullptr;
     for (int i = 0; i < numResults; i++)
         if (0 == strcmp(results[i].name, name))
@@ -374,19 +374,19 @@ ApiResult *Api::result(const char *name, bool logOnError) {
     return nullptr;
 }
 
-ApiResult *Api::success() {
+Api::Result *Api::success() {
     return result("success");
 }
 
-ApiResult *Api::error() {
+Api::Result *Api::error() {
     return result("error");
 }
 
-ApiResult *Api::internalError() {
+Api::Result *Api::internalError() {
     return result("internalError");
 }
 
-ApiResult *Api::argInvalid() {
+Api::Result *Api::argInvalid() {
     return result("argInvalid");
 }
 
@@ -402,11 +402,11 @@ void Api::notifyTxChar(const char *str) {
 }
 #endif
 
-// Command format: commandCode|commandStr[=[arg]];
+// Api::Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
-ApiMessage Api::process(const char *commandWithArg, bool log) {
+Api::Message Api::process(const char *commandWithArg, bool log) {
     // log_i("Processing command %s%s", commandWithArg, log ? "" : " (logging suppressed)");
-    Atoll::ApiMessage msg;
+    Message msg;
     msg.log = log;
     char commandStr[ATOLL_API_COMMAND_NAME_LENGTH] = "";
     int commandWithArgLength = strlen(commandWithArg);
@@ -436,7 +436,7 @@ ApiMessage Api::process(const char *commandWithArg, bool log) {
     }
     // log_i("commandStr=%s arg=%s", commandStr, msg.arg);
 
-    ApiCommand *c = command(commandStr, false);  // try parsing command as string, don't log error
+    Command *c = command(commandStr, false);  // try parsing command as string, don't log error
     if (nullptr == c) {
         int code = atoi(commandStr);
         if (code < 1 || UINT8_MAX < code) {  // first command index assumed to be 1
@@ -459,14 +459,14 @@ ApiMessage Api::process(const char *commandWithArg, bool log) {
 
 // process all available commands except 'init' without arguments
 // and return the results in the format: commandCode:commandName=value;...
-ApiResult *Api::initProcessor(ApiMessage *msg) {
+Api::Result *Api::initProcessor(Message *msg) {
     char reply[msgReplyLength] = "";
     char token[6 + ATOLL_API_COMMAND_NAME_LENGTH + msgReplyLength];
-    ApiResult *successResult = success();
+    Result *successResult = success();
     for (int i = 0; i < numCommands; i++) {
         if (0 == strcmp(commands[i].name, "init")) continue;
         // call command without arg, suppress logging
-        ApiMessage msg = process(commands[i].name, false);
+        Message msg = process(commands[i].name, false);
         if (msg.result == successResult)
             snprintf(token, sizeof(token), "%d:%s=%s;",
                      commands[i].code,
@@ -490,7 +490,7 @@ ApiResult *Api::initProcessor(ApiMessage *msg) {
     return successResult;
 }
 
-ApiResult *Api::systemProcessor(ApiMessage *msg) {
+Api::Result *Api::systemProcessor(Message *msg) {
     if (msg->argIs("build")) {
         snprintf(msg->reply, msgReplyLength, "%s%s %s %s",
                  VERSION, BUILDTAG, __DATE__, __TIME__);
@@ -505,14 +505,10 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
                 serviceUuid,
                 BLEUUID(API_TX_CHAR_UUID));
             if (c) {
-                ApiCommand *command = Api::command("system");
-                ApiResult *result = Api::result("success");
-                if (command && result) {
-                    char msg[32];
-                    snprintf(msg, sizeof(msg), "%d;%d=reboot", result->code, command->code);
-                    c->setValue((uint8_t *)msg, strlen(msg));
-                    c->notify();
-                }
+                char msg[32];
+                snprintf(msg, sizeof(msg), "%d;%d=reboot", success()->code, command("system")->code);
+                c->setValue((uint8_t *)msg, strlen(msg));
+                c->notify();
             }
         }
         log_i("rebooting");
@@ -588,7 +584,7 @@ argInvalid:
 // BleCharacteristicCallbacks
 void Api::onWrite(BLECharacteristic *c, BLEConnInfo &connInfo) {
     if (c->getUUID().equals(BLEUUID(API_RX_CHAR_UUID))) {
-        ApiMessage msg = process(c->getValue().c_str());
+        Message msg = process(c->getValue().c_str());
 
         // length = length(uint8max) + ":" + resultName
         char resultStr[4 + ATOLL_API_RESULT_NAME_LENGTH];

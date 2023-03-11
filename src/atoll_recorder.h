@@ -175,7 +175,7 @@ class Recorder : public Task {
 
     virtual bool rec2gpx(const char *in, const char *out, bool overwrite = false);
 
-    static ApiResult *recProcessor(ApiMessage *reply);
+    static Api::Result *recProcessor(Api::Message *reply);
 };
 
 }  // namespace Atoll

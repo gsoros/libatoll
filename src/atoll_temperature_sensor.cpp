@@ -54,7 +54,8 @@ TemperatureSensor::TemperatureSensor(
       onValueChange(onValueChange) {
     mode = TSM_EXCLUSIVE;
     setLabel(label);
-    bus = new OneWire(pin);
+    this->pin = pin;
+    bus = new OneWire();
     dallas = new DallasTemperature(bus);
     taskSetFreq(updateFrequency);
 }
@@ -68,6 +69,7 @@ TemperatureSensor::~TemperatureSensor() {
 
 void TemperatureSensor::begin() {
     if (TSM_EXCLUSIVE == mode) {
+        bus->begin(pin);
         dallas->begin();
         log_d("%d sensor(s), %sparasitic",
               getDeviceCount(dallas),

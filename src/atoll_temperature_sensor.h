@@ -81,11 +81,12 @@ class TemperatureSensor : public Task
     virtual void releaseMutex();
 
     uint8_t mode = TSM_EXCLUSIVE;
-    OneWire *bus = nullptr;
-    DallasTemperature *dallas = nullptr;
-    Callback onValueChange = nullptr;
-    SemaphoreHandle_t *mutex = nullptr;
-    uint32_t mutexTimeout = 1000;
+    DallasTemperature *dallas = nullptr;  //
+    Callback onValueChange = nullptr;     //
+    gpio_num_t pin = GPIO_NUM_NC;         // used in exclusive mode only
+    OneWire *bus = nullptr;               // used in exclusive mode only
+    SemaphoreHandle_t *mutex = nullptr;   // used in shared mode only
+    uint32_t mutexTimeout = 1000;         // used in shared mode only
 };
 
 }  // namespace Atoll

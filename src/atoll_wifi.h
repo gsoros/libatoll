@@ -61,13 +61,13 @@ class Wifi : public Preferences, public Task {
 
     virtual void onEvent(arduino_event_id_t event, arduino_event_info_t info);
 
-    static ApiResult *enabledProcessor(ApiMessage *reply);
-    static ApiResult *apProcessor(ApiMessage *reply);
-    static ApiResult *apSSIDProcessor(ApiMessage *reply);
-    static ApiResult *apPasswordProcessor(ApiMessage *reply);
-    static ApiResult *staProcessor(ApiMessage *reply);
-    static ApiResult *staSSIDProcessor(ApiMessage *reply);
-    static ApiResult *staPasswordProcessor(ApiMessage *reply);
+    static Api::Result *enabledProcessor(Api::Message *reply);
+    static Api::Result *apProcessor(Api::Message *reply);
+    static Api::Result *apSSIDProcessor(Api::Message *reply);
+    static Api::Result *apPasswordProcessor(Api::Message *reply);
+    static Api::Result *staProcessor(Api::Message *reply);
+    static Api::Result *staSSIDProcessor(Api::Message *reply);
+    static Api::Result *staPasswordProcessor(Api::Message *reply);
 };
 
 }  // namespace Atoll

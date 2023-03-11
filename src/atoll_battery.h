@@ -84,7 +84,7 @@ class Battery : public Task, public Preferences {
     void saveSettings();
     void printSettings();
 
-    static ApiResult *batteryProcessor(ApiMessage *reply);
+    static Api::Result *batteryProcessor(Api::Message *reply);
 
     enum ChargingState {
         csUnknown,

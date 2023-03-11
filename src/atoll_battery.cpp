@@ -40,7 +40,7 @@ void Battery::setup(
     if (nullptr == instance) return;
 #ifdef FEATURE_API
     if (nullptr != api)
-        api->addCommand(ApiCommand("bat", batteryProcessor));
+        api->addCommand(Api::Command("bat", batteryProcessor));
 #endif
 }
 
@@ -156,7 +156,7 @@ void Battery::detectChargingState() {
                 api->serviceUuid,
                 BLEUUID(API_TX_CHAR_UUID));
             if (nullptr == c) goto exit;
-            ApiMessage msg = api->process("bat");
+            Api::Message msg = api->process("bat");
             char buf[32];
             snprintf(buf, sizeof(buf), "%d;%d=%s", msg.result->code, msg.commandCode, msg.reply);
             c->setValue((uint8_t *)buf, strlen(buf));
@@ -301,7 +301,7 @@ bool Battery::isCharging() {
     return csCharging == chargingState;
 }
 
-ApiResult *Battery::batteryProcessor(ApiMessage *msg) {
+Api::Result *Battery::batteryProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
     // set battery correction factor by supplying the measured voltage
     if (0 < strlen(msg->arg)) {

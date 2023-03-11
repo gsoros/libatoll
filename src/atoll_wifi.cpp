@@ -26,13 +26,13 @@ void Wifi::setup(
 
     if (nullptr == instance) return;
     if (nullptr == api) return;
-    api->addCommand(ApiCommand("w", enabledProcessor));
-    api->addCommand(ApiCommand("wa", apProcessor));
-    api->addCommand(ApiCommand("was", apSSIDProcessor));
-    api->addCommand(ApiCommand("wap", apPasswordProcessor));
-    api->addCommand(ApiCommand("ws", staProcessor));
-    api->addCommand(ApiCommand("wss", staSSIDProcessor));
-    api->addCommand(ApiCommand("wsp", staPasswordProcessor));
+    api->addCommand(Api::Command("w", enabledProcessor));
+    api->addCommand(Api::Command("wa", apProcessor));
+    api->addCommand(Api::Command("was", apSSIDProcessor));
+    api->addCommand(Api::Command("wap", apPasswordProcessor));
+    api->addCommand(Api::Command("ws", staProcessor));
+    api->addCommand(Api::Command("wss", staSSIDProcessor));
+    api->addCommand(Api::Command("wsp", staPasswordProcessor));
 };
 
 void Wifi::loop() {
@@ -235,7 +235,7 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
     prevConnected = connected;
 }
 
-ApiResult *Wifi::enabledProcessor(ApiMessage *msg) {
+Api::Result *Wifi::enabledProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
     // set wifi
     bool newValue = true;  // enable wifi by default
@@ -249,7 +249,7 @@ ApiResult *Wifi::enabledProcessor(ApiMessage *msg) {
     return Api::success();
 }
 
-ApiResult *Wifi::apProcessor(ApiMessage *msg) {
+Api::Result *Wifi::apProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
     // set
     bool newValue = true;  // enable by default
@@ -267,7 +267,7 @@ ApiResult *Wifi::apProcessor(ApiMessage *msg) {
     return Api::success();
 }
 
-ApiResult *Wifi::apSSIDProcessor(ApiMessage *msg) {
+Api::Result *Wifi::apSSIDProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
     // set
     if (0 < strlen(msg->arg)) {
@@ -282,7 +282,7 @@ ApiResult *Wifi::apSSIDProcessor(ApiMessage *msg) {
     return Api::success();
 }
 
-ApiResult *Wifi::apPasswordProcessor(ApiMessage *msg) {
+Api::Result *Wifi::apPasswordProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
     // set
     if (0 < strlen(msg->arg)) {
@@ -297,7 +297,7 @@ ApiResult *Wifi::apPasswordProcessor(ApiMessage *msg) {
     return Api::success();
 }
 
-ApiResult *Wifi::staProcessor(ApiMessage *msg) {
+Api::Result *Wifi::staProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
     // set
     bool newValue = true;  // enable by default
@@ -315,7 +315,7 @@ ApiResult *Wifi::staProcessor(ApiMessage *msg) {
     return Api::success();
 }
 
-ApiResult *Wifi::staSSIDProcessor(ApiMessage *msg) {
+Api::Result *Wifi::staSSIDProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
     // set
     if (0 < strlen(msg->arg)) {
@@ -330,7 +330,7 @@ ApiResult *Wifi::staSSIDProcessor(ApiMessage *msg) {
     return Api::success();
 }
 
-ApiResult *Wifi::staPasswordProcessor(ApiMessage *msg) {
+Api::Result *Wifi::staPasswordProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
     // set
     if (0 < strlen(msg->arg)) {

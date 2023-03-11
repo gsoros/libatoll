@@ -35,7 +35,7 @@ void Recorder::setup(GPS *gps,
     this->instance = instance;
     this->api = api;
     if (nullptr != api)
-        api->addCommand(ApiCommand("rec", recProcessor));
+        api->addCommand(Api::Command("rec", recProcessor));
 }
 
 void Recorder::loop() {
@@ -899,9 +899,9 @@ bool Recorder::rec2gpx(const char *recPath,
     return true;
 }
 
-ApiResult *Recorder::recProcessor(ApiMessage *msg) {
+Api::Result *Recorder::recProcessor(Api::Message *msg) {
     if (nullptr == instance) return Api::error();
-    Atoll::ApiResult *result = Api::success();
+    Api::Result *result = Api::success();
     if (0 < strlen(msg->arg)) {
         if (msg->argIs("start")) {
             if (!instance->start()) result = Api::error();
