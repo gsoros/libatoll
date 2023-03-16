@@ -477,7 +477,7 @@ void Api::notifyTxChar(const char *str) {
 // Api::Command format: commandCode|commandStr[=[arg]];
 // Reply format: resultCode[:resultName];[commandCode[=value]]
 Api::Message Api::process(const char *commandWithArg, bool log) {
-    // log_i("Processing command %s%s", commandWithArg, log ? "" : " (logging suppressed)");
+    // log_d("Processing command %s%s", commandWithArg, log ? "" : " (logging suppressed)");
     Message msg;
     msg.log = log;
     char commandStr[ATOLL_API_COMMAND_NAME_LENGTH] = "";
@@ -498,7 +498,7 @@ Api::Message Api::process(const char *commandWithArg, bool log) {
 
     if (eqSign) {
         int argLength = commandWithArgLength - commandEnd - 1;
-        // log_i("argLength=%d", argLength);
+        // log_d("argLength=%d", argLength);
         if (ATOLL_API_MSG_ARG_LENGTH < argLength) {
             log_e("arg too long: %s", commandWithArg);
             msg.result = result("argTooLong");
@@ -506,7 +506,7 @@ Api::Message Api::process(const char *commandWithArg, bool log) {
         }
         strncpy(msg.arg, eqSign + 1, sizeof(msg.arg));
     }
-    // log_i("commandStr=%s arg=%s", commandStr, msg.arg);
+    // log_d("commandStr=%s arg=%s", commandStr, msg.arg);
 
     Command *c = command(commandStr, false);  // try parsing command as string, don't log error
     if (nullptr == c) {
