@@ -77,6 +77,7 @@ class TemperatureSensor : public Task
 #endif
 
    protected:
+    virtual void updateValue(float newValue);
     virtual bool aquireMutex();
     virtual void releaseMutex();
 

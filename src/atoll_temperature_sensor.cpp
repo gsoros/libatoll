@@ -124,7 +124,7 @@ bool TemperatureSensor::update() {
         log_e("%s out of range: %.2f", label, newValue);
         return false;
     }
-    value = newValue;
+    updateValue(newValue);
     return true;
 }
 
@@ -177,6 +177,10 @@ void TemperatureSensor::addressToStr(Address address, char *buf, size_t size) {
         strncat(buf, hex, size - strlen(buf) - 1);
     }
     strncat(buf, "\0", size - strlen(buf) - 1);
+}
+
+void TemperatureSensor::updateValue(float newValue) {
+    value = newValue;
 }
 
 bool TemperatureSensor::aquireMutex() {
