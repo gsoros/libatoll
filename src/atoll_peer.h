@@ -81,7 +81,6 @@ class Peer : public BLEClientCallbacks {
 
     virtual void setConnectionParams(uint8_t profile);
     virtual void connect();
-
     virtual void disconnect();
 
     virtual bool setClient(BLEClient* client);
@@ -110,6 +109,8 @@ class Peer : public BLEClientCallbacks {
     int8_t charsMax = ATOLL_BLE_PEER_DEVICE_MAX_CHARACTERISTICS;           // convenience for iterating
 
     virtual bool connectClient(bool deleteAttributes = true);
+    virtual void beforeConnect();
+    virtual void afterConnect();
 
     // client callbacks
     virtual void onConnect(BLEClient* pClient) override;
@@ -145,6 +146,10 @@ class ESPM : public PowerMeter {
         PeerCharacteristicTemperature* customTemperatureChar = nullptr);
 
     virtual void loop() override;
+
+    uint16_t savedMtu = 0;
+    virtual void beforeConnect() override;
+    virtual void afterConnect() override;
 
     virtual void onConnect(BLEClient* pClient) override;
 

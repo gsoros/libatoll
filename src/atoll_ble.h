@@ -29,6 +29,8 @@ class Ble {
     static void restoreSecurityIOCap();
     // address = "*" to delete all bonds
     static bool deleteBond(const char *address);
+    static uint16_t getMTU();
+    static bool setMTU(uint16_t mtu);
 
     static std::string connInfoToStr(BLEConnInfo *info);
     static std::string charUUIDToStr(BLEUUID uuid);

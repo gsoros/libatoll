@@ -85,8 +85,11 @@ void BleServer::loop() {
         log_e("not started");
         return;
     }
-    // if (server->getConnectedCount() >= NIMBLE_MAX_CONNECTIONS) {
-    // }
+    if (ATOLL_BLE_SERVER_MAX_CLIENTS <= _clients.size()) {
+        if (nullptr != advertising && advertising->isAdvertising())
+            stopAdvertising();
+        return;
+    }
     if (nullptr != advertising) {
         if (advertising->isAdvertising() && 0 < advertisingTimeoutMs && millis() < advertisingTimeoutMs) {
             stopAdvertising();

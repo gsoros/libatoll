@@ -17,7 +17,7 @@ void Ble::init(const char *deviceName, uint16_t mtu, uint8_t iocap) {
     BLEDevice::init(deviceName);
 
     // log_d("setMTU(%d)", mtu);
-    BLEDevice::setMTU(mtu);
+    setMTU(mtu);
 
     // log_d("power: %d", BLEDevice::getPower());
 
@@ -42,6 +42,14 @@ bool Ble::deleteBond(const char *address) {
         return true;
     }
     return BLEDevice::deleteBond(BLEAddress(address));
+}
+
+uint16_t Ble::getMTU() {
+    return BLEDevice::getMTU();
+}
+
+bool Ble::setMTU(uint16_t mtu) {
+    return 0 == BLEDevice::setMTU(mtu);
 }
 
 std::string Ble::connInfoToStr(BLEConnInfo *info) {

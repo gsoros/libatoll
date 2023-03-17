@@ -273,11 +273,14 @@ connect:
     connParamsProfile = APCPP_INITIAL;
     setConnectionParams(connParamsProfile);
     client->setConnectTimeout(2000);
+    beforeConnect();
     if (!connectClient()) {
         // log_d("%s failed to connect client", saved.name);
+        afterConnect();
         goto fail;
     }
     log_i("%s connected", saved.name);
+    afterConnect();
     goto end;
 
 fail:
@@ -287,6 +290,9 @@ end:
     // log_d("end");
     connecting = false;
 }
+
+void Peer::beforeConnect() {}
+void Peer::afterConnect() {}
 
 void Peer::disconnect() {
     shouldConnect = false;
@@ -575,6 +581,28 @@ void ESPM::loop() {
     else
         apiTx->loop();
     PowerMeter::loop();
+}
+
+void ESPM::beforeConnect() {
+    // hack: as the nimble_arduino client is not (yet) able to request MTU from the remote server,
+    // we temporarily change the global MTU for our adapter, this can have strange consequences on
+    // our local server and any other peers
+    uint16_t mtu = Ble::getMTU();
+    if (!mtu) {
+        log_e("could not get mtu");
+        return;
+    }
+    savedMtu = mtu;
+    if (!Ble::setMTU(23)) {
+        log_e("could not set mtu");
+        savedMtu = 0;
+    }
+}
+
+void ESPM::afterConnect() {
+    // restore global MTU
+    if (savedMtu)
+        Ble::setMTU(savedMtu);
 }
 
 void ESPM::onConnect(BLEClient* client) {
