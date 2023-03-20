@@ -131,8 +131,12 @@ void Recorder::addDataPoint() {
         point->flags |= Flags.heartrate;
         point->heartrate = avg;
     }  // else log_i("avgHr returned < 0");
+    if (INT16_MIN < temperature) {
+        point->flags |= Flags.temperature;
+        point->temperature = temperature;
+    }
 
-    log_i("#%2d T%ld F%d %.7f %.7f ^%d+%dm >%.1fm P%4d C%3d H%3d",
+    log_i("#%2d T%ld F%d %.7f %.7f ^%d+%dm >%.1fm P%4d C%3d H%3d T%.1f",
           bufIndex,
           point->time,
           point->flags,
@@ -143,7 +147,8 @@ void Recorder::addDataPoint() {
           stats.distance,
           point->power,
           point->cadence,
-          point->heartrate);
+          point->heartrate,
+          (temperature == INT16_MIN) ? 0.0f : (float)temperature / 100);
 
     // char bufDump[sizeof(DataPoint) * 5] = "";
     // char bufDec[4] = "";
@@ -581,6 +586,10 @@ int16_t Recorder::avgHeartrate(bool clearBuffer) {
     return (int16_t)avg;
 }
 
+void Recorder::onTemperature(int16_t value) {
+    temperature = value;
+}
+
 bool Recorder::aquireMutex(SemaphoreHandle_t mutex, uint32_t timeout) {
     // log_i("aquireMutex %d", mutex);
     if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
@@ -705,7 +714,7 @@ bool Recorder::rec2gpx(const char *recPath,
           <power>%d</power>)====";
 
     const char *tpxFormat = R"====(
-          <gpxtpx:TrackPointExtension>%s%s
+          <gpxtpx:TrackPointExtension>%s%s%s
           </gpxtpx:TrackPointExtension>)====";
 
     const char *hrFormat = R"====(
@@ -713,6 +722,9 @@ bool Recorder::rec2gpx(const char *recPath,
 
     const char *cadFormat = R"====(
             <gpxtpx:cad>%d</gpxtpx:cad>)====";
+
+    const char *tempFormat = R"====(
+            <gpxtpx:atemp>%.1f</gpxtpx:atemp>)====";
 
     const char *footer = R"====(
     </trkseg>
@@ -755,10 +767,15 @@ bool Recorder::rec2gpx(const char *recPath,
         strlen(cadFormat)  //
         + 3                // uint8 cadence
     ] = "";
+    char tempBuf[           //
+        strlen(tempFormat)  //
+        + 5                 // float temperature -99.9...99.9
+    ] = "";
     char tpxBuf[           //
         strlen(tpxFormat)  //
         + sizeof(hrBuf)    //
         + sizeof(cadBuf)   //
+        + sizeof(tempBuf)  //
     ] = "";
     char extBuf[            //
         strlen(extFormat)   //
@@ -847,9 +864,15 @@ bool Recorder::rec2gpx(const char *recPath,
         else
             strncpy(cadBuf, "", sizeof(cadBuf));
 
-        if (0 < strlen(powerBuf) || 0 < strlen(hrBuf) || 0 < strlen(cadBuf)) {
-            if (0 < strlen(hrBuf) || 0 < strlen(cadBuf)) {
-                snprintf(tpxBuf, sizeof(tpxBuf), tpxFormat, hrBuf, cadBuf);
+        if (point.flags & Flags.temperature &&  //
+            -9999 <= point.temperature && point.temperature <= 9999)
+            snprintf(tempBuf, sizeof(tempBuf), tempFormat, (float)point.temperature / 100);
+        else
+            strncpy(cadBuf, "", sizeof(cadBuf));
+
+        if (0 < strlen(powerBuf) || 0 < strlen(hrBuf) || 0 < strlen(cadBuf) || 0 < strlen(tempBuf)) {
+            if (0 < strlen(hrBuf) || 0 < strlen(cadBuf) || 0 < strlen(tempBuf)) {
+                snprintf(tpxBuf, sizeof(tpxBuf), tpxFormat, hrBuf, cadBuf, tempBuf);
             } else
                 strncpy(tpxBuf, "", sizeof(tpxBuf));
             snprintf(extBuf, sizeof(extBuf), extFormat, powerBuf, tpxBuf);

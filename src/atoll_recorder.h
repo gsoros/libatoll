@@ -61,7 +61,7 @@ class Recorder : public Task {
         uint16_t power = 0;       // length: 2; unit: W
         uint8_t cadence = 0;      // length: 1; unit: rpm
         uint8_t heartrate = 0;    // length: 1; unit: bpm
-        int16_t temperature = 0;  // length: 2; unit: ˚C / 10; unused
+        int16_t temperature = 0;  // length: 2; unit: ˚C / 10
         // TODO uint32_t crc = 0; // crc32 checksum
         // https://stackoverflow.com/questions/21001659/crc32-algorithm-implementation-in-c-without-a-look-up-table-and-with-a-public-li
 
@@ -107,8 +107,8 @@ class Recorder : public Task {
         const byte power = 4;
         const byte cadence = 8;
         const byte heartrate = 16;
-        const byte temperature = 32;  // unused
-        const byte lap = 64;          // unused
+        const byte temperature = 32;
+        const byte lap = 64;  // unused
         // const byte isChecksum = 128; // TODO if set, the first four bytes after the flags contain the crc32 checksum of the previous datapoints
     } const Flags;
 
@@ -155,20 +155,24 @@ class Recorder : public Task {
     virtual void onDistanceChanged(double value) {}
     virtual void onAltGainChanged(uint16_t value) {}
 
-    CircularBuffer<uint16_t, ATOLL_RECORDER_POWER_RINGBUF_SIZE> powerBuf;
+    CircularBuffer<uint16_t, ATOLL_RECORDER_POWER_RINGBUF_SIZE> powerBuf;  // use powerMutex
     SemaphoreHandle_t powerMutex = xSemaphoreCreateMutex();
     virtual void onPower(uint16_t value);
     int16_t avgPower(bool clearBuffer = false);
 
-    CircularBuffer<uint8_t, ATOLL_RECORDER_CADENCE_RINGBUF_SIZE> cadenceBuf;
+    CircularBuffer<uint8_t, ATOLL_RECORDER_CADENCE_RINGBUF_SIZE> cadenceBuf;  // use cadenceMutex
     SemaphoreHandle_t cadenceMutex = xSemaphoreCreateMutex();
     virtual void onCadence(uint8_t value);
     int16_t avgCadence(bool clearBuffer = false);
 
-    CircularBuffer<uint8_t, ATOLL_RECORDER_HR_RINGBUF_SIZE> heartrateBuf;
+    CircularBuffer<uint8_t, ATOLL_RECORDER_HR_RINGBUF_SIZE> heartrateBuf;  // use heartrateMutex
     SemaphoreHandle_t heartrateMutex = xSemaphoreCreateMutex();
     virtual void onHeartrate(uint8_t value);
     int16_t avgHeartrate(bool clearBuffer = false);
+
+    int16_t temperature = INT16_MIN;  // unit: ˚C / 10, INT16_MIN: unknown
+    // unit: ˚C / 10, INT16_MIN: unknown
+    virtual void onTemperature(int16_t value);
 
     bool aquireMutex(SemaphoreHandle_t mutex, uint32_t timeout = 100);
     void releaseMutex(SemaphoreHandle_t mutex);
