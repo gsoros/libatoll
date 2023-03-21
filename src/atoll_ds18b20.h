@@ -50,7 +50,8 @@ class DS18B20 : public TemperatureSensor {
     virtual bool setResolution(uint8_t resolution);
     static uint8_t getDeviceCount(DallasTemperature *dallas);
     static bool getAddressByIndex(DallasTemperature *dallas, uint8_t index, Address address);
-    static void setResolution(DallasTemperature *dallas, uint8_t resolution);  // set global resolution
+    // set global resolution
+    static void setResolution(DallasTemperature *dallas, uint8_t resolution);
     static void addressToStr(Address address, char *buf, size_t size);
 
    protected:

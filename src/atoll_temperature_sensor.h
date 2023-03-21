@@ -1,13 +1,15 @@
 #if !defined(__atoll_temperature_sensor_h) && defined(FEATURE_TEMPERATURE)
 #define __atoll_temperature_sensor_h
 
+#include "atoll_preferences.h"
+
 #ifdef FEATURE_BLE_SERVER
 #include "atoll_ble_server.h"
 #endif
 
 namespace Atoll {
 
-class TemperatureSensor : public Task
+class TemperatureSensor : public Task, public Preferences
 #ifdef FEATURE_BLE_SERVER
     ,
                           public BleCharacteristicCallbacks
@@ -21,6 +23,7 @@ class TemperatureSensor : public Task
     float validMin = -50.0f;  // ˚C
     float validMax = 100.0f;  // ˚C
     ulong lastUpdate = 0;     // ms
+    float offset = 0.0f;      // ˚C
 
     TemperatureSensor(
         const char *label,
@@ -29,6 +32,7 @@ class TemperatureSensor : public Task
 
     virtual ~TemperatureSensor();
 
+    virtual void setup(::Preferences *p = nullptr);
     virtual void begin();
     virtual void loop();
     virtual bool update() = 0;
@@ -46,6 +50,10 @@ class TemperatureSensor : public Task
 #endif
 
     virtual const char *taskName() override { return label; }
+
+    void loadSettings();
+    void saveSettings();
+    void printSettings();
 
    protected:
     virtual void updateValue(float newValue);

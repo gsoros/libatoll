@@ -15,6 +15,20 @@ TemperatureSensor::TemperatureSensor(
 
 TemperatureSensor::~TemperatureSensor() {}
 
+void TemperatureSensor::setup(::Preferences *p) {
+    if (nullptr == p) {
+        log_w("%s not loading settings", label);
+    } else {
+        if (strlen(label) < 2) {
+            log_e("label too short: '%s'", label);
+        } else {
+            preferencesSetup(p, label);
+            loadSettings();
+            printSettings();
+        }
+    }
+}
+
 void TemperatureSensor::begin() {
     taskStart();
 }
@@ -22,6 +36,7 @@ void TemperatureSensor::begin() {
 void TemperatureSensor::loop() {
     float prevValue = value;
     if (update()) lastUpdate = millis();
+    value += offset;
     if (prevValue == value) return;
 #ifdef FEATURE_BLE_SERVER
     if (bleChar) {
@@ -37,6 +52,7 @@ void TemperatureSensor::loop() {
 }
 
 void TemperatureSensor::setLabel(const char *label) {
+    if (strlen(this->label)) log_i("changing label from '%s' to '%s'", this->label, label);
     strncpy(this->label, label, sizeof(this->label));
     this->label[sizeof(this->label) - 1] = '\0';
 }
@@ -84,5 +100,21 @@ void TemperatureSensor::addBleService(
     bleServer->advertiseService(serviceUuid);
 }
 #endif  // FEATURE_BLE_SERVER
+
+void TemperatureSensor::loadSettings() {
+    if (!preferencesStartLoad()) return;
+    offset = preferences->getFloat("offset", offset);
+    preferencesEnd();
+}
+
+void TemperatureSensor::saveSettings() {
+    if (!preferencesStartSave()) return;
+    preferences->putFloat("offset", offset);
+    preferencesEnd();
+}
+
+void TemperatureSensor::printSettings() {
+    log_i("offset: %.2f˚C", offset);
+}
 
 #endif  // FEATURE_TEMPERATURE
