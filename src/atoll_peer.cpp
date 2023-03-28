@@ -691,7 +691,7 @@ bool Vesc::requestUpdate() {
     bool res = uart->getVescValues();
     ulong end = millis();
     if (res) lastUpdate = end;
-    if (50 < end - start)
+    if (70 < end - start)
         log_d("%d ms", end - start);
     pending = false;
     return res;
