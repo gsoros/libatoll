@@ -1,4 +1,4 @@
-#if !defined(__atoll_ds18b20_h) && defined(FEATURE_TEMPERATURE)
+#if !defined(__atoll_ds18b20_h) && defined(FEATURE_TEMPERATURE) && defined(FEATURE_DS18B20)
 #define __atoll_ds18b20_h
 
 #include <OneWire.h>
