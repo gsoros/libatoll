@@ -16,10 +16,7 @@
   ],
   "license": "GPL",
   "homepage": "",
-  "dependencies": {
-    "h2zero/NimBLE-Arduino": "^1.3.7",
-    "rlogiacco/CircularBuffer": "^1.3.3"
-  },
+  "dependencies": {},
   "frameworks": "arduino",
   "platforms": "espressif32"
 }

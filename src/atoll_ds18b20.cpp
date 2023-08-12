@@ -1,4 +1,4 @@
-#ifdef FEATURE_TEMPERATURE
+#if defined(FEATURE_TEMPERATURE) && defined(FEATURE_DS18B20)
 #include "atoll_ds18b20.h"
 #include "atoll_log.h"
 
