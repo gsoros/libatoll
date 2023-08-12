@@ -12,9 +12,12 @@ BleClient::~BleClient() {
     }
 }
 
-void BleClient::setup(
-    const char* deviceName,
-    ::Preferences* p) {
+void BleClient::setup(const char* deviceName, ::Preferences* p
+#ifdef FEATURE_API
+                      ,
+                      Api* api
+#endif
+) {
     strncpy(this->deviceName, deviceName, sizeof(this->deviceName));
     preferencesSetup(p, "BleClient");
     loadSettings();
@@ -28,6 +31,9 @@ void BleClient::setup(
     scan->setScanCallbacks(this);
 
     // client->start();
+#ifdef FEATURE_API
+    this->api = api;
+#endif
 }
 
 void BleClient::init() {
@@ -96,6 +102,57 @@ void BleClient::stop() {
     shouldStop = true;
 }
 
+void BleClient::loadSettings() {
+    if (!preferencesStartLoad()) return;
+    for (uint8_t i = 0; i < peersMax; i++) {
+        char key[8] = "";
+        snprintf(key, sizeof(key), "peer%d", i);
+        char packed[Peer::packedMaxLength] = "";
+        strncpy(packed,
+                preferences->getString(key, packed).c_str(),
+                sizeof(packed));
+        if (strlen(packed) < 1) continue;
+        // log_d("loading %s: %s", key, packed);
+        Peer::Saved saved;
+        if (Peer::unpack(packed, &saved)) {
+            Peer* peer = createPeer(saved);
+            if (nullptr == peer) continue;  // delete nullptr should be safe!
+            if (!addPeer(peer)) delete peer;
+        }
+    }
+    preferencesEnd();
+}
+
+void BleClient::saveSettings() {
+    if (!preferencesStartSave()) return;
+    char key[8] = "";
+    char packed[Peer::packedMaxLength] = "";
+    char saved[Peer::packedMaxLength] = "";
+    for (uint8_t i = 0; i < peersMax; i++) {
+        snprintf(key, sizeof(key), "peer%d", i);
+        strncpy(packed, "", sizeof(packed));
+        strncpy(saved,
+                preferences->getString(key).c_str(),
+                sizeof(saved));
+        if (nullptr != peers[i] &&
+            !peers[i]->markedForRemoval &&
+            !peers[i]->pack(packed, sizeof(packed))) {
+            log_e("could not pack %s: %s", key, peers[i]->saved.address);
+            continue;
+        }
+        log_i("saving %s: %s", key, packed);
+        preferences->putString(key, packed);
+    }
+    preferencesEnd();
+}
+
+void BleClient::printSettings() {
+    for (uint8_t i = 0; i < peersMax; i++)
+        if (nullptr != peers[i])
+            log_i("peer %d name: %s, type: %s, address: %s(%d), passkey: %d",
+                  i, peers[i]->saved.name, peers[i]->saved.type, peers[i]->saved.address, peers[i]->saved.addressType, peers[i]->saved.passkey);
+}
+
 void BleClient::disconnectPeers() {
     for (uint8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
@@ -132,7 +189,61 @@ bool BleClient::startScan(uint32_t duration) {
     scan->setWindow(37);        // How long to scan during the interval; in milliseconds.
     scan->setMaxResults(0);     // do not store the scan results, use callback only.
 
-    return scan->start(duration, false);
+    bool ret = scan->start(duration, false);
+#ifdef FEATURE_API
+    if (nullptr == api) {
+        log_e("api is null");
+    } else {
+        char reply[ATOLL_API_MSG_REPLY_LENGTH];
+        snprintf(reply, sizeof(reply), "%d;%d=%d",
+                 ret ? api->success()->code : api->error()->code,
+                 api->command("scan")->code,
+                 (uint8_t)ret);
+
+        log_d("calling api.notifyTXChar('%s')", reply);
+        api->notifyTxChar(reply);
+    }
+#endif
+    return ret;
+}
+
+Peer* BleClient::createPeer(Peer::Saved saved) {
+    // log_d("creating %s,%d,%s,%s,%d", saved.address, saved.addressType, saved.type, saved.name, saved.passkey);
+    Peer* peer;
+    if (strstr(saved.type, "E"))
+        peer = new ESPM(saved);
+    else if (strstr(saved.type, "P"))
+        peer = new PowerMeter(saved);
+    else if (strstr(saved.type, "H"))
+        peer = new HeartrateMonitor(saved);
+    else if (strstr(saved.type, "V"))
+        peer = new Vesc(saved);
+    else
+        return nullptr;
+    return peer;
+}
+
+Peer* BleClient::createPeer(BLEAdvertisedDevice* device) {
+    Peer::Saved saved;
+    strncpy(saved.address, device->getAddress().toString().c_str(), sizeof(saved.address));
+    saved.addressType = device->getAddress().getType();
+    strncpy(saved.name, device->getName().c_str(), sizeof(saved.name));
+
+    Peer* peer = nullptr;
+    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID))) {
+        strncpy(saved.type, "E", sizeof(saved.type));
+        peer = new ESPM(saved);
+    } else if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID))) {
+        strncpy(saved.type, "P", sizeof(saved.type));
+        peer = new PowerMeter(saved);
+    } else if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID))) {
+        strncpy(saved.type, "H", sizeof(saved.type));
+        peer = new HeartrateMonitor(saved);
+    } else if (device->isAdvertisingService(BLEUUID(VESC_SERVICE_UUID))) {
+        strncpy(saved.type, "V", sizeof(saved.type));
+        peer = new Vesc(saved);
+    }
+    return peer;
 }
 
 // get index of existing peer address
@@ -218,18 +329,6 @@ void BleClient::onNotify(BLECharacteristic* pCharacteristic) {
     log_i("not implemented");
 }
 
-void BleClient::loadSettings() {
-    log_i("not implemented");
-}
-
-void BleClient::saveSettings() {
-    log_i("not implemented");
-}
-
-void BleClient::printSettings() {
-    log_i("not implemented");
-}
-
 /**
  * @brief Called when a new scan result is detected.
  *
@@ -238,10 +337,58 @@ void BleClient::printSettings() {
  */
 void BleClient::onResult(BLEAdvertisedDevice* advertisedDevice) {
     log_i("scan found %s", advertisedDevice->toString().c_str());
+
+#ifdef FEATURE_API
+    if (nullptr == api) {
+        log_e("api is null");
+        return;
+    }
+    if (peerExists(advertisedDevice->getAddress().toString().c_str())) {
+        log_i("peer exists");
+        return;
+    }
+    if (advertisedDevice->haveTargetAddress())
+        for (int i = 0; i < advertisedDevice->getTargetAddressCount(); i++)
+            log_i("Target address %i: %s", advertisedDevice->getTargetAddress(i).toString().c_str());
+
+    Peer* peer = createPeer(advertisedDevice);
+    if (nullptr == peer) {
+        log_i("peer %s is null", advertisedDevice->getName().c_str());
+        return;
+    }
+
+    char reply[ATOLL_API_MSG_REPLY_LENGTH];
+    snprintf(reply, sizeof(reply), "%d;%d=%s,%d,%s,%s",
+             api->success()->code,
+             api->command("scanResult")->code,
+             peer->saved.address,
+             peer->saved.addressType,
+             peer->saved.type,
+             peer->saved.name);
+
+    log_i("calling api.notifyTxChar('%s')", reply);
+    api->notifyTxChar(reply);
+
+    delete peer;
+#endif
 }
 
 void BleClient::onScanEnd(BLEScanResults results) {
     log_i("scan end");
+#ifdef FEATURE_API
+    if (nullptr == api) {
+        log_e("api is null");
+        return;
+    }
+    char reply[ATOLL_API_MSG_REPLY_LENGTH];
+    snprintf(reply, sizeof(reply), "%d;%d=%d",
+             api->success()->code,
+             api->command("scan")->code,
+             0);
+
+    log_i("calling api.notifyTxChar('%s')", reply);
+    api->notifyTxChar(reply);
+#endif
 }
 
 #endif

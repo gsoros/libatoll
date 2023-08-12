@@ -8,6 +8,9 @@
 #include "atoll_task.h"
 #include "atoll_preferences.h"
 #include "atoll_peer.h"
+#ifdef FEATURE_API
+#include "atoll_api.h"
+#endif
 
 #ifndef BLE_CHAR_VALUE_MAXLENGTH
 #define BLE_CHAR_VALUE_MAXLENGTH 128
@@ -37,22 +40,37 @@ class BleClient : public Task,
     BLEScan* scan;                                           // pointer to scan object
     Peer* peers[ATOLL_BLE_CLIENT_PEERS];                     // peer devices we want connected
     static const uint8_t peersMax = ATOLL_BLE_CLIENT_PEERS;  // convenience for iterations
+#ifdef FEATURE_API
+    Api* api = nullptr;
+#endif
 
     BleClient() {
         for (uint8_t i = 0; i < peersMax; i++) peers[i] = nullptr;  // initialize pointers
     }
     virtual ~BleClient();
 
-    virtual void setup(const char* deviceName, ::Preferences* p);
+    virtual void setup(const char* deviceName, ::Preferences* p
+#ifdef FEATURE_API
+                       ,
+                       Api* api = nullptr
+#endif
+    );
     virtual void init();
     virtual void loop();
     virtual void stop();
+
+    virtual void loadSettings();
+    virtual void saveSettings();
+    virtual void printSettings();
 
     virtual void disconnectPeers();
     virtual void deleteClients();
 
     // duration is in milliseconds
     virtual bool startScan(uint32_t duration);
+
+    virtual Peer* createPeer(Peer::Saved saved);
+    virtual Peer* createPeer(BLEAdvertisedDevice* advertisedDevice);
 
     virtual int8_t peerIndex(const char* address);
     virtual bool peerExists(const char* address);
@@ -61,10 +79,6 @@ class BleClient : public Task,
     virtual uint8_t removePeer(const char* address, bool markOnly = true);
 
     virtual void onNotify(BLECharacteristic* pCharacteristic);
-
-    virtual void loadSettings();
-    virtual void saveSettings();
-    virtual void printSettings();
 
    protected:
     bool shouldStop = false;

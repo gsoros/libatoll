@@ -52,8 +52,12 @@
 #if API_SERVICE == 2
 #define API_SERVICE_UUID ESPCC_API_SERVICE_UUID
 #else
+#if API_SERVICE == 3
+#define API_SERVICE_UUID THROTTLE_API_SERVICE_UUID
+#else
 #ifndef API_SERVICE_UUID
 #define API_SERVICE_UUID ""
+#endif
 #endif
 #endif
 #endif
