@@ -46,6 +46,7 @@
 #define ATOLL_API_PASSKEY 696669
 #endif
 
+#ifndef API_SERVICE_UUID
 #if API_SERVICE == 1
 #define API_SERVICE_UUID ESPM_API_SERVICE_UUID
 #else
@@ -57,6 +58,7 @@
 #else
 #ifndef API_SERVICE_UUID
 #define API_SERVICE_UUID ""
+#endif
 #endif
 #endif
 #endif
