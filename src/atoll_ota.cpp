@@ -98,7 +98,8 @@ void Ota::onEnd() {
     taskSetFreq(savedTaskFreq);
     log_i("end");
     if (100 == lastPercent) {
-        log_i("rebooting");
+        log_i("rebooting...");
+        delay(1000);
         ESP.restart();
     }
 }
