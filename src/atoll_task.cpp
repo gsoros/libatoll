@@ -91,9 +91,9 @@ void Task::_taskLoop(void *p) {
         thisPtr->loop();
         ulong loopTime = millis() - start;
         if (thisPtr->_taskDelay < loopTime) {
-            // log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
-            //       thisPtr->taskName(), loopTime,
-            //       pdTICKS_TO_MS(thisPtr->_taskDelay), thisPtr->_taskFreq);
+            log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
+                  thisPtr->taskName(), loopTime,
+                  pdTICKS_TO_MS(thisPtr->_taskDelay), thisPtr->_taskFreq);
         }
         thisPtr->_taskLastWakeTime = xTaskGetTickCount();
         thisPtr->_taskNextWakeTime = thisPtr->_taskLastWakeTime + thisPtr->_taskDelay;
