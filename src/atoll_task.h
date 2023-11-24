@@ -53,6 +53,7 @@ class Task {
     TickType_t _taskLastWakeTime = 0;
     TickType_t _taskNextWakeTime = 0;
     TickType_t _taskDelay = 0;
+    ulong _taskLoopCount = 0;
 
     static void _taskLoop(void *p);
     void _taskSetFreqAndDelay(const float freq);

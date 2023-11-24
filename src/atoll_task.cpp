@@ -87,19 +87,25 @@ void Task::_taskLoop(void *p) {
     thisPtr->_taskLastWakeTime = xTaskGetTickCount();
     for (;;) {
         // log_i("%s", thisPtr->taskName());
-        ulong start = millis();
-        thisPtr->loop();
-        ulong loopTime = millis() - start;
-        if (thisPtr->_taskDelay < loopTime) {
-            log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
-                  thisPtr->taskName(), loopTime,
-                  pdTICKS_TO_MS(thisPtr->_taskDelay), thisPtr->_taskFreq);
+        if (1 != thisPtr->_taskLoopCount) {  // skip loop #1
+            ulong start = millis();
+            thisPtr->loop();
+            ulong loopTime = millis() - start;
+            /*
+            if (thisPtr->_taskDelay < loopTime) {
+                log_w("%s loop time %dms > taskDelay %dms (taskFreq %.2fHz)",
+                      thisPtr->taskName(), loopTime,
+                      pdTICKS_TO_MS(thisPtr->_taskDelay), thisPtr->_taskFreq);
+            }
+            */
         }
         thisPtr->_taskLastWakeTime = xTaskGetTickCount();
         thisPtr->_taskNextWakeTime = thisPtr->_taskLastWakeTime + thisPtr->_taskDelay;
         // log_i("%s delaying for %dms", thisPtr->taskName(),
         //       pdTICKS_TO_MS(thisPtr->_taskNextWakeTime) - millis());
-        xTaskDelayUntil(&(thisPtr->_taskLastWakeTime), thisPtr->_taskDelay);
+        if (thisPtr->_taskLoopCount)  // don't delay first loop
+            xTaskDelayUntil(&(thisPtr->_taskLastWakeTime), thisPtr->_taskDelay);
+        thisPtr->_taskLoopCount++;
     }
 }
 
