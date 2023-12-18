@@ -27,6 +27,11 @@ class Wifi : public Preferences, public Task {
         bool staEnabled = false;
         char staSSID[SETTINGS_STR_LENGTH] = "";
         char staPassword[SETTINGS_STR_LENGTH] = "";
+        IPAddress staticIp = IPAddress(0, 0, 0, 0);
+        IPAddress staticSubnet = IPAddress(0, 0, 0, 0);
+        IPAddress staticGateway = IPAddress(0, 0, 0, 0);
+        IPAddress staticDns0 = IPAddress(0, 0, 0, 0);
+        IPAddress staticDns1 = IPAddress(0, 0, 0, 0);
     } Settings;
 
     const char *taskName() { return "Wifi"; }
@@ -54,6 +59,8 @@ class Wifi : public Preferences, public Task {
     virtual void printAPSettings();
     virtual void printSTASettings();
     virtual void applySettings();
+    virtual void startAp();
+    virtual void startSta();
     virtual void setEnabled(bool state, bool save = true);
     virtual bool isEnabled();
     virtual bool isConnected();
@@ -68,6 +75,10 @@ class Wifi : public Preferences, public Task {
     static Api::Result *staProcessor(Api::Message *reply);
     static Api::Result *staSSIDProcessor(Api::Message *reply);
     static Api::Result *staPasswordProcessor(Api::Message *reply);
+    static Api::Result *staStaticProcessor(Api::Message *reply);
+
+   protected:
+    const IPAddress ipUnset = IPAddress(0, 0, 0, 0);
 };
 
 }  // namespace Atoll
