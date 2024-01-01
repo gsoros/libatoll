@@ -15,6 +15,10 @@ void Task::taskStart(float freq,
         taskStop();
     }
     _taskSetFreqAndDelay(_taskFreq);
+    if (_taskFreq <= 0.0f) {
+        log_e("not creating task for %s because freq is %.2fHz", taskName(), _taskFreq);
+        return;
+    }
     uint32_t heap = xPortGetFreeHeapSize();
     BaseType_t err = xTaskCreatePinnedToCore(
         _taskLoop,
@@ -53,7 +57,7 @@ void Task::taskStop() {
 
 void Task::taskSetFreq(const float freq) {
     if (freq <= 0.0f) {
-        log_e("%s not setting zero freq", taskName());
+        // log_d("%s not setting zero freq", taskName());
         return;
     }
     _taskSetFreqAndDelay(freq);
@@ -86,7 +90,7 @@ void Task::_taskLoop(void *p) {
     Task *thisPtr = (Task *)p;
     thisPtr->_taskLastWakeTime = xTaskGetTickCount();
     for (;;) {
-        // log_i("%s", thisPtr->taskName());
+        // log_d("%s loop %d", thisPtr->taskName(), thisPtr->_taskLoopCount);
         if (1 != thisPtr->_taskLoopCount) {  // skip loop #1
             ulong start = millis();
             thisPtr->loop();
@@ -141,9 +145,11 @@ void Task::_taskSetDelay() {
     TickType_t t = pdMS_TO_TICKS(millis());
     TickType_t lastWake = t < _taskLastWakeTime ? 0 : t - _taskLastWakeTime;
     TickType_t delay = _taskDelay <= lastWake ? 1 : _taskDelay - lastWake;
-    // log_i("delaying %s for %dms", taskName(), pdTICKS_TO_MS(delay));
     _taskNextWakeTime = _taskLastWakeTime + delay;
-    xTaskDelayUntil(&_taskLastWakeTime, delay);
+    if (nullptr != taskHandle) {
+        // log_i("delaying %s for %dms", taskName(), pdTICKS_TO_MS(delay));
+        xTaskDelayUntil(&_taskLastWakeTime, delay);
+    }
 }
 
 void Task::_taskAbortDelay() {

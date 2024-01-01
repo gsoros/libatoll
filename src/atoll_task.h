@@ -26,7 +26,7 @@ namespace Atoll {
 
 class Task {
    public:
-    TaskHandle_t taskHandle = NULL;
+    TaskHandle_t taskHandle = nullptr;
 
     virtual const char *taskName() = 0;
 
