@@ -298,10 +298,10 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
             log_i("[STA] disconnected");
             if (settings.enabled && settings.staEnabled) {
-                log_i("[STA] reconnecting");
-                // WiFi.disconnect();
-                WiFi.reconnect();
-                // WiFi.begin();
+                // log_i("[STA] reconnecting");
+                //  WiFi.disconnect();
+                // WiFi.reconnect();
+                //  WiFi.begin();
             }
             break;
         case ARDUINO_EVENT_WIFI_STA_STOP:

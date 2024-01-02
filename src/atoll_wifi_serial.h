@@ -44,6 +44,8 @@ class WifiSerial : public Task, public Stream {
     int peek() override;
 
     void flush();
+    void receive();
+    void transmit();
 
    private:
     WiFiServer _server;

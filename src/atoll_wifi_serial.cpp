@@ -43,8 +43,8 @@ void WifiSerial::loop() {
         disconnect();
         return;
     }
-    while (0 < _client.available()) _rxBuf.push(_client.read());
-    while (0 < _txBuf.size()) _client.write(_txBuf.shift());
+    receive();
+    // transmit();
     /*
     static char buf[WIFISERIAL_RINGBUF_TX_SIZE];
     strncpy(buf, "", sizeof(buf));
@@ -97,6 +97,7 @@ size_t WifiSerial::write(const uint8_t *buf, size_t size) {
         _txBuf.push(*buf++);
         size--;
     }
+    transmit();
     return written;
 }
 
@@ -131,6 +132,14 @@ int WifiSerial::peek() {
 
 void WifiSerial::flush() {
     _client.flush();
+}
+
+void WifiSerial::receive() {
+    while (0 < _client.available()) _rxBuf.push(_client.read());
+}
+
+void WifiSerial::transmit() {
+    while (0 < _txBuf.size()) _client.write(_txBuf.shift());
 }
 
 #endif
