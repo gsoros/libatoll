@@ -56,6 +56,12 @@
 #define log_d(format, ...) ((void)0)
 #endif
 
+#ifdef log_s
+#undef log_s
+#endif
+/* naked info log */
+#define log_s(format, ...) Atoll::Log::write(ARDUHAL_LOG_LEVEL_INFO, format "\r\n", ##__VA_ARGS__)
+
 namespace Atoll {
 
 class Log {
