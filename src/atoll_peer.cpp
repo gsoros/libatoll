@@ -455,6 +455,10 @@ bool Peer::isVesc() {
     return nullptr != strchr(saved.type, 'V');
 }
 
+bool Peer::isJkBms() {
+    return nullptr != strchr(saved.type, 'B');
+}
+
 void Peer::onConnect(BLEClient* client) {
     log_d("%s connected", saved.name);
 

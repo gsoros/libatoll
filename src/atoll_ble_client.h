@@ -86,6 +86,10 @@ class BleClient : public Task,
     // NimBLEScanCallbacks
     virtual void onResult(BLEAdvertisedDevice* advertisedDevice) override;
     virtual void onScanEnd(BLEScanResults results) override;
+
+#ifdef FEATURE_API
+    Api::Result* peersProcessor(Api::Message*);
+#endif
 };
 
 }  // namespace Atoll
