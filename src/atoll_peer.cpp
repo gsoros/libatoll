@@ -26,6 +26,11 @@ Peer::Peer(Saved saved,
 }
 
 void Peer::loop() {
+    if (!enabled) {
+        log_d("%s is disabled, disconnecting", saved.name);
+        if (isConnected()) disconnect();
+        return;
+    }
     if (connParamsProfile != APCPP_ESTABLISHED && isConnected()) {
         connParamsProfile = APCPP_ESTABLISHED;
         log_d("%s setting conn params", saved.name);
@@ -222,6 +227,10 @@ void Peer::setConnectionParams(uint8_t profile) {
 }
 
 void Peer::connect() {
+    if (!enabled) {
+        // log_d("%s is disabled", saved.name);
+        return;
+    }
     if (isConnected()) {
         log_d("%s already connected", saved.name);
         return;
@@ -232,7 +241,7 @@ void Peer::connect() {
     }
     connecting = true;
 
-    // log_d("%s connecting", saved.name);
+    log_d("connecting %s", saved.name);
 
     BLEClient* c = nullptr;
 
@@ -336,10 +345,18 @@ bool Peer::isConnected() {
 }
 
 bool Peer::connectClient(bool deleteAttributes) {
+    if (!enabled) {
+        log_d("%s is disabled", saved.name);
+        return false;
+    }
     return hasClient() && client->connect(BLEAddress(saved.address, saved.addressType), deleteAttributes);
 }
 
 void Peer::subscribeChars(BLEClient* client) {
+    if (!enabled) {
+        log_d("%s is disabled", saved.name);
+        return;
+    }
     if (!isConnected()) {
         log_e("not connected");
         return;

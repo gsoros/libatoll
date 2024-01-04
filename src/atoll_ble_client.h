@@ -77,6 +77,8 @@ class BleClient : public Task,
     virtual bool addPeer(Peer* peer);
     virtual uint8_t removePeer(Peer* peer, bool markOnly = true);
     virtual uint8_t removePeer(const char* address, bool markOnly = true);
+    virtual uint8_t disablePeer(const char* name);
+    virtual Peer* getFirstPeerByName(const char* name);
 
     virtual void onNotify(BLECharacteristic* pCharacteristic);
 

@@ -42,6 +42,15 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
         return lastValue;
     }
 
+    virtual bool write(T value, size_t length) {
+        BLEClient* client = getClient();
+        if (nullptr == client) {
+            log_e("client is null");
+            return false;
+        }
+        return write(client, value, length);
+    }
+
     virtual bool write(BLEClient* client, T value, size_t length) {
         BLERemoteCharacteristic* rc = getRemoteChar(client);
         if (!rc) return false;
@@ -71,12 +80,18 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
 
     virtual bool subscribe(BLEClient* client) override {
         bool res = PeerCharacteristic::subscribe(client);
-        if (res && readOnSubscribe()) {
+        if (res) {
+            onSubscribe(client);
+        }
+        return res;
+    }
+
+    virtual void onSubscribe(BLEClient* client) {
+        if (readOnSubscribe()) {
             log_d("%s readOnSubscribe, calling read", label);
             read(client);
             notify();
         }
-        return res;
     }
 };
 

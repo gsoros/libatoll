@@ -54,6 +54,7 @@ class Peer : public BLEClientCallbacks {
         uint32_t passkey = 0;
     } saved;
 
+    bool enabled = true;
     bool connecting = false;
     ulong lastConnectionAttempt = 0;
     bool shouldConnect = true;
@@ -195,79 +196,68 @@ class JkBms : public Peer {
         addChar(nullptr != customJkBmsChar
                     ? customJkBmsChar
                     : new PeerCharacteristicJkBms());
-    }
-
-    virtual void loop() override {
-        write_register(COMMAND_DEVICE_INFO, 0x00000000, 0x00);
-    }
-
-    virtual bool requestUpdate() {
-        write_register(COMMAND_CELL_INFO, 0x00000000, 0x00);
-        return true;
-    }
-
-    bool write_register(uint8_t address, uint32_t value, uint8_t length) {
-        uint8_t frame[20];
-        frame[0] = 0xAA;     // start sequence
-        frame[1] = 0x55;     // start sequence
-        frame[2] = 0x90;     // start sequence
-        frame[3] = 0xEB;     // start sequence
-        frame[4] = address;  // holding register
-        frame[5] = length;   // size of the value in byte
-        frame[6] = value >> 0;
-        frame[7] = value >> 8;
-        frame[8] = value >> 16;
-        frame[9] = value >> 24;
-        frame[10] = 0x00;
-        frame[11] = 0x00;
-        frame[12] = 0x00;
-        frame[13] = 0x00;
-        frame[14] = 0x00;
-        frame[15] = 0x00;
-        frame[16] = 0x00;
-        frame[17] = 0x00;
-        frame[18] = 0x00;
-        frame[19] = crc(frame, sizeof(frame) - 1);
-
-        print_hex(frame, sizeof(frame), "Frame: ");
-
         PeerCharacteristicJkBms* c = (PeerCharacteristicJkBms*)getChar("JkBms");
         if (nullptr == c) {
-            log_e("could not get char");
-            return false;
+            log_e("char is null");
+            return;
         }
-        if (!hasClient()) {
-            log_e("no client");
-            return false;
+        status = &c->status;
+    }
+
+    void loop() override {
+        if (!enabled) {
+            log_d("%s is disabled, disconnecting", saved.name);
+            if (isConnected()) disconnect();
+            return;
         }
-        return c->write(client, String((char*)&frame, sizeof(frame)), sizeof(frame));
+        // don't set established conn params
+    }
+
+    PeerCharacteristicJkBms::Status* status = nullptr;
+
+    void printStatus() {
+        log_s(
+            "%d%%  "
+            "%.2f"
+            "/%.0fAh  "
+            "%.3fV  "
+            "%.1fA  "
+            "%.0fW  "
+            "%.3f "
+            "+-%.3fVpc "
+            "(%d, "
+            "%d)  "
+            "%.3fAb  "
+            "%.1f "
+            "%.1f "
+            "%.1fC  "
+            "%d cyc "
+            "(%.2fAh)"
+            "%s"
+            "%s"
+            "%s",
+            status->soc,
+            status->capacityRemaining,
+            status->capacityNominal,
+            status->voltage,
+            status->chargeCurrent,
+            status->power,
+            status->cellVoltageAvg,
+            status->cellVoltageDelta / 2.0f,
+            status->cellVoltageMaxId,
+            status->cellVoltageMinId,
+            status->balanceCurrent,
+            status->temp0,
+            status->temp1,
+            status->temp2,
+            status->cycleCount,
+            status->capacityCycle,
+            status->chargingEnabled ? "" : " [charging disabled] ",
+            status->dischargingEnabled ? "" : " [discharging disabled] ",
+            status->errors);
     }
 
    protected:
-    // https://github.com/syssi/esphome-jk-bms/blob/main/components/jk_bms_ble/jk_bms_ble.cpp
-    static const uint8_t COMMAND_CELL_INFO = 0x96;
-    static const uint8_t COMMAND_DEVICE_INFO = 0x97;
-    static const uint16_t MIN_RESPONSE_SIZE = 300;
-    static const uint16_t MAX_RESPONSE_SIZE = 320;
-
-    uint8_t crc(const uint8_t data[], const uint16_t len) {
-        uint8_t crc = 0;
-        for (uint16_t i = 0; i < len; i++) {
-            crc = crc + data[i];
-        }
-        return crc;
-    }
-
-    void print_hex(const uint8_t* s, size_t size, const char* pre = "") {
-        printf(pre);
-        unsigned char* p = (unsigned char*)s;
-        for (int i = 0; i < size; ++i) {
-            // if (!(i % 16) && i)
-            //    log_s("\n");
-            printf("0x%02x ", p[i]);
-        }
-        printf("\n");
-    }
 };
 
 }  // namespace Atoll

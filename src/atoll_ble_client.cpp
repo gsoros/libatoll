@@ -221,6 +221,8 @@ Peer* BleClient::createPeer(Peer::Saved saved) {
         peer = new HeartrateMonitor(saved);
     else if (strstr(saved.type, "V"))
         peer = new Vesc(saved);
+    else if (strstr(saved.type, "B"))
+        peer = new JkBms(saved);
     else
         return nullptr;
     return peer;
@@ -327,9 +329,34 @@ uint8_t BleClient::removePeer(const char* address, bool markOnly) {
     return removed;
 }
 
+uint8_t BleClient::disablePeer(const char* name) {
+    if (strlen(name) < 1) return 0;
+    uint8_t changed = 0;
+    for (int8_t i = 0; i < peersMax; i++) {
+        if (nullptr == peers[i]) continue;
+        log_d("comparing '%s' to '%s'", peers[i]->saved.name, name);
+        if (0 == strcmp(peers[i]->saved.name, name) && peers[i]->enabled) {
+            log_d("disabling and disconnecting %s, reboot to re-enable", peers[i]->saved.name);
+            peers[i]->enabled = 0;
+            if (peers[i]->isConnected()) peers[i]->disconnect();
+            changed++;
+        }
+    }
+    return changed;
+}
+
 uint8_t BleClient::removePeer(Peer* peer, bool markOnly) {
     if (nullptr == peer) return 0;
     return removePeer(peer->saved.address, markOnly);
+}
+
+Peer* BleClient::getFirstPeerByName(const char* name) {
+    for (uint8_t i = 0; i < peersMax; i++) {
+        if (nullptr == peers[i]) continue;
+        if (0 == strcmp(name, peers[i]->saved.name))
+            return peers[i];
+    }
+    return nullptr;
 }
 
 void BleClient::onNotify(BLECharacteristic* pCharacteristic) {
@@ -439,21 +466,21 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
         if (!Peer::unpack(
                 param,
                 &saved)) {
-            if (msg->log) log_e("could not unpack %s", msg->arg);
+            if (msg->log) log_e("could not unpack %s", param);
             return Api::result("argInvalid");
         }
         if (peerExists(saved.address)) {
-            if (msg->log) log_e("peer already exists: %s", msg->arg);
+            if (msg->log) log_e("peer already exists: %s", saved.address);
             return Api::result("argInvalid");
         }
         Peer* peer = createPeer(saved);
         if (nullptr == peer) {
-            if (msg->log) log_e("could not create peer from %s", msg->arg);
+            if (msg->log) log_e("could not create peer from %s", param);
             return Api::error();
         }
         if (!addPeer(peer)) {
             delete peer;
-            if (msg->log) log_e("could not add peer from %s", msg->arg);
+            if (msg->log) log_e("could not add peer from %s", param);
             return Api::error();
         }
         saveSettings();
@@ -470,10 +497,28 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
             return Api::result("argInvalid");
         }
         log_i("removePeer(%s)", param);
-        uint8_t removed = removePeer(param);
-        if (0 < removed) {
+        uint8_t changed = removePeer(param);
+        if (0 < changed) {
             saveSettings();
-            snprintf(msg->reply, sizeof(msg->reply), "%d", removed);
+            snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
+            return Api::success();
+        }
+        return Api::error();
+    }
+    if (msg->argStartsWith("disable")) {
+        if (!msg->argStartsWith("disable:")) {
+            msg->replyAppend("usage: disable:name");
+            return Api::argInvalid();
+        }
+        char* param = msg->arg + 8;
+        if (strlen(param) < 1) {
+            if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
+            return Api::result("argInvalid");
+        }
+        log_i("disablePeer(%s)", param);
+        uint8_t changed = disablePeer(param);
+        if (0 < changed) {
+            snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
             return Api::success();
         }
         return Api::error();
