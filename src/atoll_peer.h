@@ -216,49 +216,12 @@ class JkBms : public Peer {
     PeerCharacteristicJkBms::CellInfo* cellInfo = nullptr;
 
     void printStatus() {
-        char bal[] = "     ";
-        if (0.0001f < cellInfo->balanceCurrent)
-            snprintf(bal, sizeof(bal), "B%.1fA", cellInfo->balanceCurrent);
-
-        log_s(
-            "%d%%  "
-            "%.2f"
-            "/%.0fAh  "
-            "%.3fV  "
-            "%.1fA  "
-            "%.0fW  "
-            "C%d "
-            "%.3fV "
-            "C%d "
-            "%.3fV  "
-            "%s  "
-            "%.1f "
-            "%.1f "
-            "%.1fC  "
-            "%d:"
-            "%.0fAh"
-            "%s"
-            "%s"
-            "%s",
-            cellInfo->soc,
-            cellInfo->capacityRemaining,
-            cellInfo->capacityNominal,
-            cellInfo->voltage,
-            cellInfo->chargeCurrent,
-            cellInfo->power,
-            cellInfo->cellVoltageMaxId,
-            cellInfo->cellVoltageMax,
-            cellInfo->cellVoltageMinId,
-            cellInfo->cellVoltageMin,
-            bal,
-            cellInfo->temp0,
-            cellInfo->temp1,
-            cellInfo->temp2,
-            cellInfo->cycleCount,
-            cellInfo->capacityCycle,
-            cellInfo->chargingEnabled ? "" : " [charging disabled] ",
-            cellInfo->dischargingEnabled ? "" : " [discharging disabled] ",
-            cellInfo->errors);
+        PeerCharacteristicJkBms* c = (PeerCharacteristicJkBms*)getChar("JkBms");
+        if (nullptr == c) {
+            log_e("char is null");
+            return;
+        }
+        c->printCellInfo();
     }
 
    protected:

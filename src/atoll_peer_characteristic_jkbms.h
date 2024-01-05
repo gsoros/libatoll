@@ -21,6 +21,78 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
     virtual bool requestDeviceInfo();
     virtual bool requestCellInfo();
 
+    struct DeviceInfo {
+        char vendorId[16] = "";
+        char hardwareVersion[8] = "";
+        char softwareVersion[8] = "";
+        int32_t uptime = 0;  // seconds
+        int32_t powerOnCount = 0;
+        char deviceName[16] = "";
+        char devicePasscode[16] = "";
+        char manufacturingDate[8] = "";
+        char serialNumber[11] = "";
+        char passcode[5] = "";
+        char userData[16] = "";
+        char setupPasscode[16] = "";
+    } deviceInfo;
+
+    struct Settings {
+        float cellUVP = 0.0f;   // undervoltage protection
+        float cellUVPR = 0.0f;  // undervoltage protection recovery
+        float cellOVP = 0.0f;   // overvoltage protection
+        float cellOVPR = 0.0f;  // overvoltage protection recovery
+        float balanceTriggerVoltage = 0.0f;
+        float powerOffVoltage = 0.0f;
+        float maxChargeCurrent = 0.0f;
+        int32_t chargeOCPDelay = 0;   // charge overcurrent protection time in seconds
+        int32_t chargeOCPRDelay = 0;  // charge overcurrent protection recovery time in seconds
+        float maxDischargeCurrent = 0.0f;
+        int32_t dischargeOCPDelay = 0;   // discharge overcurrent protection delay in seconds
+        int32_t dischargeOCPRDelay = 0;  // // discharge overcurrent protection recovery delay in seconds
+        int32_t scpRecoveryTime = 0;     // shortcircuit protection recovery time in seconds
+        float maxBalanceCurrent = 0.0f;
+        float chargeOTP = 0.0f;      // charge overtemperature protection in C
+        float chargeOTPR = 0.0f;     // charge overtemperature protection recovery in C
+        float dischargeOTP = 0.0f;   // discharge overtemperature protection in C
+        float dischargeOTPR = 0.0f;  // discharge overtemperature protection recovery in C
+        float chargeUTP = 0.0f;      // charge undertemperature protection in C
+        float chargeUTPR = 0.0f;     // charge undertemperature protection recovery in C
+        float mosOTP = 0.0f;         // mos overtemperature protection in C
+        float mosOTPR = 0.0f;        // mos overtemperature protection recovery in  C
+        uint32_t cellCount = 0;
+        bool chargingSwitch = false;
+        bool dischargingSwitch = false;
+        bool balancerSwitch = false;
+        float nominalCapacity = 0.0f;
+        float balanceStartingVoltage = 0.0f;
+        float conWireResistance[24] = {
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f};
+        bool disableTemperatureSensors = false;
+        bool displayAlwaysOn = false;
+    } settings;
+
     struct CellInfo {
         ulong lastUpdate = 0;
 
@@ -61,6 +133,10 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
         char errors[512] = "";
     } cellInfo;
 
+    void printDeviceInfo();
+    void printSettings();
+    void printCellInfo();
+
     // https://github.com/syssi/esphome-jk-bms/blob/main/components/jk_bms_ble/jk_bms_ble.cpp
 
     static const uint16_t SERVICE_UUID = 0xffe0;
@@ -97,13 +173,13 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
 
     bool writeRegister(uint8_t address, uint32_t value, uint8_t length);
     void assemble(const uint8_t* data, uint16_t length);
-    void decode(const std::vector<uint8_t>& data);
-    void decodeJk02CellInfo(const std::vector<uint8_t>& data);
 
-    // void decodeJk04CellInfo(const std::vector<uint8_t>& data)
-    // void decodeJk02Settings(const std::vector<uint8_t>& data)
-    // void decodeJk04Settings(const std::vector<uint8_t>& data)
-    // void decodeDeviceInfo(const std::vector<uint8_t>& data)
+    void decode(const std::vector<uint8_t>& data);
+    void decodeDeviceInfo(const std::vector<uint8_t>& data);
+    void decodeJk02Settings(const std::vector<uint8_t>& data);
+    void decodeJk04Settings(const std::vector<uint8_t>& data);
+    void decodeJk02CellInfo(const std::vector<uint8_t>& data);
+    void decodeJk04CellInfo(const std::vector<uint8_t>& data);
 
     std::string errorToString(const uint16_t mask);
     std::string modeToString(const uint16_t mask);
