@@ -21,7 +21,9 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
     virtual bool requestDeviceInfo();
     virtual bool requestCellInfo();
 
-    struct Status {
+    struct CellInfo {
+        ulong lastUpdate = 0;
+
         struct Cell {
             float voltage = 0.0f;
             float resistance = 0.0f;
@@ -57,7 +59,7 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
         bool dischargingEnabled = false;
 
         char errors[512] = "";
-    } status;
+    } cellInfo;
 
     // https://github.com/syssi/esphome-jk-bms/blob/main/components/jk_bms_ble/jk_bms_ble.cpp
 
@@ -86,7 +88,6 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
     */
 
     std::vector<uint8_t> frameBuffer;
-    uint32_t lastCellInfo = 0;
     uint32_t cellInfoMinDelay = 1000;
 
     static const uint8_t COMMAND_CELL_INFO = 0x96;

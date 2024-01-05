@@ -201,7 +201,7 @@ class JkBms : public Peer {
             log_e("char is null");
             return;
         }
-        status = &c->status;
+        cellInfo = &c->cellInfo;
     }
 
     void loop() override {
@@ -213,9 +213,13 @@ class JkBms : public Peer {
         // don't set established conn params
     }
 
-    PeerCharacteristicJkBms::Status* status = nullptr;
+    PeerCharacteristicJkBms::CellInfo* cellInfo = nullptr;
 
     void printStatus() {
+        char bal[] = "     ";
+        if (0.0001f < cellInfo->balanceCurrent)
+            snprintf(bal, sizeof(bal), "B%.1fA", cellInfo->balanceCurrent);
+
         log_s(
             "%d%%  "
             "%.2f"
@@ -223,38 +227,38 @@ class JkBms : public Peer {
             "%.3fV  "
             "%.1fA  "
             "%.0fW  "
-            "%.3f "
-            "+-%.3fVpc "
-            "(%d, "
-            "%d)  "
-            "%.3fAb  "
+            "C%d "
+            "%.3fV "
+            "C%d "
+            "%.3fV  "
+            "%s  "
             "%.1f "
             "%.1f "
             "%.1fC  "
-            "%d cyc "
-            "(%.2fAh)"
+            "%d:"
+            "%.0fAh"
             "%s"
             "%s"
             "%s",
-            status->soc,
-            status->capacityRemaining,
-            status->capacityNominal,
-            status->voltage,
-            status->chargeCurrent,
-            status->power,
-            status->cellVoltageAvg,
-            status->cellVoltageDelta / 2.0f,
-            status->cellVoltageMaxId,
-            status->cellVoltageMinId,
-            status->balanceCurrent,
-            status->temp0,
-            status->temp1,
-            status->temp2,
-            status->cycleCount,
-            status->capacityCycle,
-            status->chargingEnabled ? "" : " [charging disabled] ",
-            status->dischargingEnabled ? "" : " [discharging disabled] ",
-            status->errors);
+            cellInfo->soc,
+            cellInfo->capacityRemaining,
+            cellInfo->capacityNominal,
+            cellInfo->voltage,
+            cellInfo->chargeCurrent,
+            cellInfo->power,
+            cellInfo->cellVoltageMaxId,
+            cellInfo->cellVoltageMax,
+            cellInfo->cellVoltageMinId,
+            cellInfo->cellVoltageMin,
+            bal,
+            cellInfo->temp0,
+            cellInfo->temp1,
+            cellInfo->temp2,
+            cellInfo->cycleCount,
+            cellInfo->capacityCycle,
+            cellInfo->chargingEnabled ? "" : " [charging disabled] ",
+            cellInfo->dischargingEnabled ? "" : " [discharging disabled] ",
+            cellInfo->errors);
     }
 
    protected:

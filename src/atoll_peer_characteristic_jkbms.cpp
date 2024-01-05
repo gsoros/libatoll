@@ -123,17 +123,18 @@ void PeerCharacteristicJkBms::decode(const std::vector<uint8_t>& data) {
 }
 
 void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& data) {
-    auto jk_get_16bit = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
-    auto jk_get_32bit = [&](size_t i) -> uint32_t {
-        return (uint32_t(jk_get_16bit(i + 2)) << 16) | (uint32_t(jk_get_16bit(i + 0)) << 0);
+    auto get16 = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
+
+    auto get32 = [&](size_t i) -> uint32_t {
+        return (uint32_t(get16(i + 2)) << 16) | (uint32_t(get16(i + 0)) << 0);
     };
 
     const uint32_t now = millis();
-    if (now - lastCellInfo < cellInfoMinDelay) {
+    if (now - cellInfo.lastUpdate < cellInfoMinDelay) {
         // log_d("what's the rush?");
         return;
     }
-    lastCellInfo = now;
+    cellInfo.lastUpdate = now;
 
     uint8_t offset = 0;
     uint8_t frameVersion = FRAME_VERSION_JK02;
@@ -192,22 +193,22 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
     // 10    2   0x01 0x0D              Voltage cell 03       0.001        V
     // ...
     uint8_t cells = 24 + (offset / 2);
-    float min_cell_voltage = 100.0f;
-    float max_cell_voltage = -100.0f;
+    float cellVoltageMin = 100.0f;
+    float cellVoltageMax = -100.0f;
     for (uint8_t i = 0; i < cells; i++) {
-        float cell_voltage = (float)jk_get_16bit(i * 2 + 6) * 0.001f;
-        float cell_resistance = (float)jk_get_16bit(i * 2 + 64 + offset) * 0.001f;
-        if (cell_voltage > 0 && cell_voltage < min_cell_voltage) {
-            min_cell_voltage = cell_voltage;
+        float cellVoltage = (float)get16(i * 2 + 6) * 0.001f;
+        float cell_resistance = (float)get16(i * 2 + 64 + offset) * 0.001f;
+        if (cellVoltage > 0 && cellVoltage < cellVoltageMin) {
+            cellVoltageMin = cellVoltage;
         }
-        if (cell_voltage > max_cell_voltage) {
-            max_cell_voltage = cell_voltage;
+        if (cellVoltage > cellVoltageMax) {
+            cellVoltageMax = cellVoltage;
         }
-        status.cells[i].voltage = cell_voltage;
-        status.cells[i].resistance = cell_resistance;
+        cellInfo.cells[i].voltage = cellVoltage;
+        cellInfo.cells[i].resistance = cell_resistance;
     }
-    status.cellVoltageMin = min_cell_voltage;
-    status.cellVoltageMax = max_cell_voltage;
+    cellInfo.cellVoltageMin = cellVoltageMin;
+    cellInfo.cellVoltageMax = cellVoltageMax;
 
     // 54    4   0xFF 0xFF 0x00 0x00    Enabled cells bitmask
     //           0x0F 0x00 0x00 0x00    4 cells enabled
@@ -220,18 +221,18 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
     // log_d("Enabled cells bitmask: 0x%02X 0x%02X 0x%02X 0x%02X", data[54 + offset], data[55 + offset], data[56 + offset], data[57 + offset]);
 
     // 58    2   0x00 0x0D              Average Cell Voltage  0.001        V
-    status.cellVoltageAvg = (float)jk_get_16bit(58 + offset) * 0.001f;
+    cellInfo.cellVoltageAvg = (float)get16(58 + offset) * 0.001f;
     // log_d("cellVoltageAvg: %.3f V", cellVoltageAvg);
 
     // 60    2   0x00 0x00              Delta Cell Voltage    0.001        V
-    status.cellVoltageDelta = (float)jk_get_16bit(60 + offset) * 0.001f;
+    cellInfo.cellVoltageDelta = (float)get16(60 + offset) * 0.001f;
     // log_d("cellVoltageDelta: %.3f V", cellVoltageDelta);
 
     // 62    1   0x00                   Max voltage cell      1
-    status.cellVoltageMaxId = data[62 + offset] + 1;
+    cellInfo.cellVoltageMaxId = data[62 + offset] + 1;
 
     // 63    1   0x00                   Min voltage cell      1
-    status.cellVoltageMinId = data[63 + offset] + 1;
+    cellInfo.cellVoltageMinId = data[63 + offset] + 1;
 
     // 64    2   0x9D 0x01              Resistance Cell 01    0.001        Ohm
     // 66    2   0x96 0x01              Resistance Cell 02    0.001        Ohm
@@ -243,7 +244,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
 
     // 112   2   0x00 0x00              Unknown112
     if (frameVersion == FRAME_VERSION_JK02_32S) {
-        status.temp0 = (float)((int16_t)jk_get_16bit(112 + offset)) * 0.1f;
+        cellInfo.temp0 = (float)((int16_t)get16(112 + offset)) * 0.1f;
         // log_d("temp0: %.1f C", temp0);
 
     } else {
@@ -254,23 +255,23 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
     // log_d("Wire resistance warning bitmask: 0x%02X 0x%02X 0x%02X 0x%02X", data[114 + offset], data[115 + offset], data[116 + offset], data[117 + offset]);
 
     // 118   4   0x03 0xD0 0x00 0x00    Battery voltage       0.001        V
-    status.voltage = (float)jk_get_32bit(118 + offset) * 0.001f;
+    cellInfo.voltage = (float)get32(118 + offset) * 0.001f;
     // log_d("voltage: %.2f V", voltage);
 
     // 122   4   0x00 0x00 0x00 0x00    Battery power         0.001        W
-    status.power = (float)((int32_t)jk_get_32bit(122 + offset)) * 0.001f;
+    cellInfo.power = (float)((int32_t)get32(122 + offset)) * 0.001f;
     // log_d("power: %.2f W", power);
 
     // 126   4   0x00 0x00 0x00 0x00    Charge current        0.001        A
-    status.chargeCurrent = (float)((int32_t)jk_get_32bit(126 + offset)) * 0.001f;
+    cellInfo.chargeCurrent = (float)((int32_t)get32(126 + offset)) * 0.001f;
     // log_d("chargeCurrent: %.2f A", chargeCurrent);
-    if (status.chargeCurrent < 0.0f && 0.0f < status.power) status.power *= -1;
+    if (cellInfo.chargeCurrent < 0.0f && 0.0f < cellInfo.power) cellInfo.power *= -1;
     // 130   2   0xBE 0x00              Temperature Sensor 1  0.1          °C
-    status.temp1 = (float)((int16_t)jk_get_16bit(130 + offset)) * 0.1f;
+    cellInfo.temp1 = (float)((int16_t)get16(130 + offset)) * 0.1f;
     // log_d("temp1: %.1f C", temp1);
 
     // 132   2   0xBF 0x00              Temperature Sensor 2  0.1          °C
-    status.temp2 = (float)((int16_t)jk_get_16bit(132 + offset)) * 0.1f;
+    cellInfo.temp2 = (float)((int16_t)get16(132 + offset)) * 0.1f;
     // log_d("temp2: %.1f C", temp2);
 
     // 134   2   0xD2 0x00              MOS Temperature       0.1          °C
@@ -281,7 +282,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         publish_state_(errors_text_sensor_, errorToString(raw_errors_bitmask));
         */
     } else {
-        status.temp0 = (float)((int16_t)jk_get_16bit(134 + offset)) * 0.1f;
+        cellInfo.temp0 = (float)((int16_t)get16(134 + offset)) * 0.1f;
         // log_d("temp0: %.1f C", temp0);
     }
 
@@ -310,35 +311,35 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
     if (frameVersion != FRAME_VERSION_JK02_32S) {
         uint16_t raw_errors_bitmask = (uint16_t(data[136 + offset]) << 8) |
                                       (uint16_t(data[136 + 1 + offset]) << 0);
-        strncpy(status.errors, errorToString(raw_errors_bitmask).c_str(), sizeof(status.errors));
+        strncpy(cellInfo.errors, errorToString(raw_errors_bitmask).c_str(), sizeof(cellInfo.errors));
         // log_d("errors: %s", errors);
     }
 
     // 138   2   0x00 0x00              Balance current      0.001         A
-    float bc = (float)((int16_t)jk_get_16bit(138 + offset)) * 0.001f;
+    float bc = (float)((int16_t)get16(138 + offset)) * 0.001f;
     // 140   1   0x00                   Balancing action                   0x00: Off
     //                                                                     0x01: Charging balancer
     //                                                                     0x02: Discharging balancer
     if (0x02 == data[140 + offset]) bc *= -1;
-    status.balanceCurrent = bc;
+    cellInfo.balanceCurrent = bc;
     // log_d("balanceCurrent: %.3f A", balanceCurrent);
 
     // 141   1   0x54                   State of charge in   1.0           %
-    status.soc = data[141 + offset];
+    cellInfo.soc = data[141 + offset];
     // log_d("soc: %d%", soc);
 
     // 142   4   0x8E 0x0B 0x01 0x00    Capacity_Remain      0.001         Ah
-    status.capacityRemaining = (float)jk_get_32bit(142 + offset) * 0.001f;
+    cellInfo.capacityRemaining = (float)get32(142 + offset) * 0.001f;
 
     // 146   4   0x68 0x3C 0x01 0x00    Nominal_Capacity     0.001         Ah
-    status.capacityNominal = (float)jk_get_32bit(146 + offset) * 0.001f;
+    cellInfo.capacityNominal = (float)get32(146 + offset) * 0.001f;
     // log_d("capacity: %.3f Ah / %.3f Ah", capacityRemaining, capacityNominal);
 
     // 150   4   0x00 0x00 0x00 0x00    Cycle_Count          1.0
-    status.cycleCount = jk_get_32bit(150 + offset);
+    cellInfo.cycleCount = get32(150 + offset);
 
     // 154   4   0x3D 0x04 0x00 0x00    Cycle_Capacity       0.001         Ah
-    status.capacityCycle = (float)jk_get_32bit(154 + offset) * 0.001f;
+    cellInfo.capacityCycle = (float)get32(154 + offset) * 0.001f;
     // log_d("cycles: %d (%.3f Ah)", cycleCount, capacityCycle);
 
     // 158   2   0x64 0x00              Unknown158
@@ -348,13 +349,13 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
     // log_d("Unknown160: 0x%02X 0x%02X (always 0xC5 0x09?)", data[160 + offset], data[161 + offset]);
 
     // 162   4   0xCA 0x03 0x10 0x00    Total runtime in seconds           s
-    status.totalRuntime = jk_get_32bit(162 + offset);
+    cellInfo.totalRuntime = get32(162 + offset);
 
     // 166   1   0x01                   Charging mosfet enabled                      0x00: off, 0x01: on
-    status.chargingEnabled = (bool)data[166 + offset];
+    cellInfo.chargingEnabled = (bool)data[166 + offset];
 
     // 167   1   0x01                   Discharging mosfet enabled                   0x00: off, 0x01: on
-    status.dischargingEnabled = (bool)data[167 + offset];
+    cellInfo.dischargingEnabled = (bool)data[167 + offset];
     // log_d("%s   %s", chargingEnabled ? "charging" : "", dischargingEnabled ? "discharging" : "");
 
     // log_d("Unknown168: %s",   format_hex_pretty(&data.front() + 168 + offset, data.size() - (168 + offset) - 4 - 81 - 1).c_str());
@@ -398,9 +399,9 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
 
 /*
     void decodeJk04CellInfo(const std::vector<uint8_t>& data) {
-        auto jk_get_16bit = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
-        auto jk_get_32bit = [&](size_t i) -> uint32_t {
-            return (uint32_t(jk_get_16bit(i + 2)) << 16) | (uint32_t(jk_get_16bit(i + 0)) << 0);
+        auto get16 = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
+        auto get32 = [&](size_t i) -> uint32_t {
+            return (uint32_t(get16(i + 2)) << 16) | (uint32_t(get16(i + 0)) << 0);
         };
 
         const uint32_t now = millis();
@@ -483,38 +484,38 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         // 198   4   0x00 0x00 0x00 0x00    Cell resistance 25                 Ohm
         //                                  https://github.com/jblance/mpp-solar/issues/98#issuecomment-823701486
         uint8_t cells = 24;
-        float min_cell_voltage = 100.0f;
-        float max_cell_voltage = -100.0f;
+        float cellVoltageMin = 100.0f;
+        float cellVoltageMax = -100.0f;
         float total_voltage = 0.0f;
         uint8_t min_voltage_cell = 0;
         uint8_t max_voltage_cell = 0;
         for (uint8_t i = 0; i < cells; i++) {
-            float cell_voltage = (float)ieee_float_(jk_get_32bit(i * 4 + 6));
-            float cell_resistance = (float)ieee_float_(jk_get_32bit(i * 4 + 102));
-            total_voltage = total_voltage + cell_voltage;
-            if (cell_voltage > 0 && cell_voltage < min_cell_voltage) {
-                min_cell_voltage = cell_voltage;
+            float cellVoltage = (float)ieee_float_(get32(i * 4 + 6));
+            float cell_resistance = (float)ieee_float_(get32(i * 4 + 102));
+            total_voltage = total_voltage + cellVoltage;
+            if (cellVoltage > 0 && cellVoltage < cellVoltageMin) {
+                cellVoltageMin = cellVoltage;
                 min_voltage_cell = i + 1;
             }
-            if (cell_voltage > max_cell_voltage) {
-                max_cell_voltage = cell_voltage;
+            if (cellVoltage > cellVoltageMax) {
+                cellVoltageMax = cellVoltage;
                 max_voltage_cell = i + 1;
             }
-            publish_state_(cells_[i].cell_voltage_sensor_, cell_voltage);
+            publish_state_(cells_[i].cellVoltage_sensor_, cellVoltage);
             publish_state_(cells_[i].cell_resistance_sensor_, cell_resistance);
         }
 
-        publish_state_(min_cell_voltage_sensor_, min_cell_voltage);
-        publish_state_(max_cell_voltage_sensor_, max_cell_voltage);
+        publish_state_(cellVoltageMin_sensor_, cellVoltageMin);
+        publish_state_(cellVoltageMax_sensor_, cellVoltageMax);
         publish_state_(max_voltage_cell_sensor_, (float)max_voltage_cell);
         publish_state_(min_voltage_cell_sensor_, (float)min_voltage_cell);
         publish_state_(total_voltage_sensor_, total_voltage);
 
         // 202   4   0x03 0x95 0x56 0x40    Average Cell Voltage               V
-        publish_state_(average_cell_voltage_sensor_, (float)ieee_float_(jk_get_32bit(202)));
+        publish_state_(average_cellVoltage_sensor_, (float)ieee_float_(get32(202)));
 
         // 206   4   0x00 0xBE 0x90 0x3B    Delta Cell Voltage                 V
-        publish_state_(delta_cell_voltage_sensor_, (float)ieee_float_(jk_get_32bit(206)));
+        publish_state_(delta_cellVoltage_sensor_, (float)ieee_float_(get32(206)));
 
         // 210   4   0x00 0x00 0x00 0x00    Unknown210
         log_d("Unknown210: 0x%02X 0x%02X 0x%02X 0x%02X (always 0x00 0x00 0x00 0x00)", data[210], data[211], data[212],
@@ -539,7 +540,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         log_d("Unknown221: 0x%02X", data[221]);
 
         // 222   4   0x00 0x00 0x00 0x00    Balancing current
-        publish_state_(balancing_current_sensor_, (float)ieee_float_(jk_get_32bit(222)));
+        publish_state_(balancing_current_sensor_, (float)ieee_float_(get32(222)));
 
         // 226   7   0x00 0x00 0x00 0x00 0x00 0x00 0x00    Unknown226
         log_d("Unknown226: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X (always 0x00...0x00?)", data[226],
@@ -547,7 +548,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
 
         // 233   4   0x66 0xA0 0xD2 0x4A    Unknown233
         log_d("Unknown233: 0x%02X 0x%02X 0x%02X 0x%02X (%f)", data[233], data[234], data[235], data[236],
-              ieee_float_(jk_get_32bit(233)));
+              ieee_float_(get32(233)));
 
         // 237   4   0x40 0x00 0x00 0x00    Unknown237
         log_d("Unknown237: 0x%02X 0x%02X 0x%02X 0x%02X (always 0x40 0x00 0x00 0x00?)", data[237], data[238],
@@ -560,8 +561,8 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         //           0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
         //           0x00 0x00 0x00 0x00 0x00
         // 286   3   0x53 0x96 0x1C 0x00        Uptime
-        publish_state_(total_runtime_sensor_, (float)jk_get_32bit(286));
-        publish_state_(total_runtime_formatted_text_sensor_, format_total_runtime_(jk_get_32bit(286)));
+        publish_state_(total_runtime_sensor_, (float)get32(286));
+        publish_state_(total_runtime_formatted_text_sensor_, format_total_runtime_(get32(286)));
 
         // 290   4   0x00 0x00 0x00 0x00    Unknown290
         log_d("Unknown290: 0x%02X 0x%02X 0x%02X 0x%02X (always 0x00 0x00 0x00 0x00?)", data[290], data[291],
@@ -578,9 +579,9 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         status_notification_received_ = true;
     }
     void decodeJk02Settings(const std::vector<uint8_t>& data) {
-        auto jk_get_16bit = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
-        auto jk_get_32bit = [&](size_t i) -> uint32_t {
-            return (uint32_t(jk_get_16bit(i + 2)) << 16) | (uint32_t(jk_get_16bit(i + 0)) << 0);
+        auto get16 = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
+        auto get32 = [&](size_t i) -> uint32_t {
+            return (uint32_t(get16(i + 2)) << 16) | (uint32_t(get16(i + 0)) << 0);
         };
 
         log_i("Settings frame (%d bytes) received", data.size());
@@ -609,75 +610,75 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         // 4     1   0x01                   Frame type
         // 5     1   0x4F                   Frame counter
         // 6     4   0x58 0x02 0x00 0x00    Unknown6
-        log_d("  Unknown6: %f", (float)jk_get_32bit(6) * 0.001f);
+        log_d("  Unknown6: %f", (float)get32(6) * 0.001f);
         // 10    4   0x54 0x0B 0x00 0x00    Cell UVP
-        log_i("  Cell UVP: %f V", (float)jk_get_32bit(10) * 0.001f);
-        publish_state_(cell_voltage_undervoltage_protection_number_, (float)jk_get_32bit(10) * 0.001f);
+        log_i("  Cell UVP: %f V", (float)get32(10) * 0.001f);
+        publish_state_(cellVoltage_undervoltage_protection_number_, (float)get32(10) * 0.001f);
 
         // 14    4   0x80 0x0C 0x00 0x00    Cell OVP Recovery
-        log_i("  Cell UVPR: %f V", (float)jk_get_32bit(14) * 0.001f);
-        publish_state_(cell_voltage_undervoltage_recovery_number_, (float)jk_get_32bit(14) * 0.001f);
+        log_i("  Cell UVPR: %f V", (float)get32(14) * 0.001f);
+        publish_state_(cellVoltage_undervoltage_recovery_number_, (float)get32(14) * 0.001f);
 
         // 18    4   0xCC 0x10 0x00 0x00    Cell OVP
-        log_i("  Cell OVP: %f V", (float)jk_get_32bit(18) * 0.001f);
-        publish_state_(cell_voltage_overvoltage_protection_number_, (float)jk_get_32bit(18) * 0.001f);
+        log_i("  Cell OVP: %f V", (float)get32(18) * 0.001f);
+        publish_state_(cellVoltage_overvoltage_protection_number_, (float)get32(18) * 0.001f);
 
         // 22    4   0x68 0x10 0x00 0x00    Cell OVP Recovery
-        log_i("  Cell OVPR: %f V", (float)jk_get_32bit(22) * 0.001f);
-        publish_state_(cell_voltage_overvoltage_recovery_number_, (float)jk_get_32bit(22) * 0.001f);
+        log_i("  Cell OVPR: %f V", (float)get32(22) * 0.001f);
+        publish_state_(cellVoltage_overvoltage_recovery_number_, (float)get32(22) * 0.001f);
 
         // 26    4   0x0A 0x00 0x00 0x00    Balance trigger voltage
-        log_i("  Balance trigger voltage: %f V", (float)jk_get_32bit(26) * 0.001f);
-        publish_state_(balance_trigger_voltage_number_, (float)jk_get_32bit(26) * 0.001f);
+        log_i("  Balance trigger voltage: %f V", (float)get32(26) * 0.001f);
+        publish_state_(balance_trigger_voltage_number_, (float)get32(26) * 0.001f);
 
         // 30    4   0x00 0x00 0x00 0x00    Unknown30
         // 34    4   0x00 0x00 0x00 0x00    Unknown34
         // 38    4   0x00 0x00 0x00 0x00    Unknown38
         // 42    4   0x00 0x00 0x00 0x00    Unknown42
         // 46    4   0xF0 0x0A 0x00 0x00    Power off voltage
-        log_i("  Power off voltage: %f V", (float)jk_get_32bit(46) * 0.001f);
-        publish_state_(power_off_voltage_number_, (float)jk_get_32bit(46) * 0.001f);
+        log_i("  Power off voltage: %f V", (float)get32(46) * 0.001f);
+        publish_state_(power_off_voltage_number_, (float)get32(46) * 0.001f);
 
         // 50    4   0xA8 0x61 0x00 0x00    Max. charge current
-        log_i("  Max. charge current: %f A", (float)jk_get_32bit(50) * 0.001f);
-        publish_state_(max_charge_current_number_, (float)jk_get_32bit(50) * 0.001f);
+        log_i("  Max. charge current: %f A", (float)get32(50) * 0.001f);
+        publish_state_(max_charge_current_number_, (float)get32(50) * 0.001f);
 
         // 54    4   0x1E 0x00 0x00 0x00    Charge OCP delay
-        log_i("  Charge OCP delay: %f s", (float)jk_get_32bit(54));
+        log_i("  Charge OCP delay: %f s", (float)get32(54));
         // 58    4   0x3C 0x00 0x00 0x00    Charge OCP recovery delay
-        log_i("  Charge OCP recovery delay: %f s", (float)jk_get_32bit(58));
+        log_i("  Charge OCP recovery delay: %f s", (float)get32(58));
         // 62    4   0xF0 0x49 0x02 0x00    Max. discharge current
-        log_i("  Max. discharge current: %f A", (float)jk_get_32bit(62) * 0.001f);
-        publish_state_(max_discharge_current_number_, (float)jk_get_32bit(62) * 0.001f);
+        log_i("  Max. discharge current: %f A", (float)get32(62) * 0.001f);
+        publish_state_(max_discharge_current_number_, (float)get32(62) * 0.001f);
 
         // 66    4   0x2C 0x01 0x00 0x00    Discharge OCP delay
-        log_i("  Discharge OCP recovery delay: %f s", (float)jk_get_32bit(66));
+        log_i("  Discharge OCP recovery delay: %f s", (float)get32(66));
         // 70    4   0x3C 0x00 0x00 0x00    Discharge OCP recovery delay
-        log_i("  Discharge OCP recovery delay: %f s", (float)jk_get_32bit(70));
+        log_i("  Discharge OCP recovery delay: %f s", (float)get32(70));
         // 74    4   0x3C 0x00 0x00 0x00    SCPR time
-        log_i("  SCP recovery time: %f s", (float)jk_get_32bit(74));
+        log_i("  SCP recovery time: %f s", (float)get32(74));
         // 78    4   0xD0 0x07 0x00 0x00    Max balance current
-        log_i("  Max. balance current: %f A", (float)jk_get_32bit(78) * 0.001f);
-        publish_state_(max_balance_current_number_, (float)jk_get_32bit(78) * 0.001f);
+        log_i("  Max. balance current: %f A", (float)get32(78) * 0.001f);
+        publish_state_(max_balance_current_number_, (float)get32(78) * 0.001f);
 
         // 82    4   0xBC 0x02 0x00 0x00    Charge OTP
-        log_i("  Charge OTP: %f °C", (float)jk_get_32bit(82) * 0.1f);
+        log_i("  Charge OTP: %f °C", (float)get32(82) * 0.1f);
         // 86    4   0x58 0x02 0x00 0x00    Charge OTP Recovery
-        log_i("  Charge OTP recovery: %f °C", (float)jk_get_32bit(86) * 0.1f);
+        log_i("  Charge OTP recovery: %f °C", (float)get32(86) * 0.1f);
         // 90    4   0xBC 0x02 0x00 0x00    Discharge OTP
-        log_i("  Discharge OTP: %f °C", (float)jk_get_32bit(90) * 0.1f);
+        log_i("  Discharge OTP: %f °C", (float)get32(90) * 0.1f);
         // 94    4   0x58 0x02 0x00 0x00    Discharge OTP Recovery
-        log_i("  Discharge OTP recovery: %f °C", (float)jk_get_32bit(94) * 0.1f);
+        log_i("  Discharge OTP recovery: %f °C", (float)get32(94) * 0.1f);
         // 98    4   0x38 0xFF 0xFF 0xFF    Charge UTP
-        log_i("  Charge UTP: %f °C", (float)((int32_t)jk_get_32bit(98)) * 0.1f);
+        log_i("  Charge UTP: %f °C", (float)((int32_t)get32(98)) * 0.1f);
         // 102   4   0x9C 0xFF 0xFF 0xFF    Charge UTP Recovery
-        log_i("  Charge UTP recovery: %f °C", (float)((int32_t)jk_get_32bit(102)) * 0.1f);
+        log_i("  Charge UTP recovery: %f °C", (float)((int32_t)get32(102)) * 0.1f);
         // 106   4   0x84 0x03 0x00 0x00    MOS OTP
-        log_i("  MOS OTP: %f °C", (float)((int32_t)jk_get_32bit(106)) * 0.1f);
+        log_i("  MOS OTP: %f °C", (float)((int32_t)get32(106)) * 0.1f);
         // 110   4   0xBC 0x02 0x00 0x00    MOS OTP Recovery
-        log_i("  MOS OTP recovery: %f °C", (float)((int32_t)jk_get_32bit(110)) * 0.1f);
+        log_i("  MOS OTP recovery: %f °C", (float)((int32_t)get32(110)) * 0.1f);
         // 114   4   0x0D 0x00 0x00 0x00    Cell count
-        log_i("  Cell count: %f", (float)jk_get_32bit(114));
+        log_i("  Cell count: %f", (float)get32(114));
         publish_state_(cell_count_number_, (float)data[114]);
 
         // 118   4   0x01 0x00 0x00 0x00    Charge switch
@@ -693,14 +694,14 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         publish_state_(balancer_switch_, (bool)(data[126]));
 
         // 130   4   0x88 0x13 0x00 0x00    Nominal battery capacity
-        log_i("  Nominal battery capacity: %f Ah", (float)jk_get_32bit(130) * 0.001f);
-        publish_state_(total_battery_capacity_number_, (float)jk_get_32bit(130) * 0.001f);
+        log_i("  Nominal battery capacity: %f Ah", (float)get32(130) * 0.001f);
+        publish_state_(total_battery_capacity_number_, (float)get32(130) * 0.001f);
 
         // 134   4   0xDC 0x05 0x00 0x00    Unknown134
-        log_d("  Unknown134: %f", (float)jk_get_32bit(134) * 0.001f);
+        log_d("  Unknown134: %f", (float)get32(134) * 0.001f);
         // 138   4   0xE4 0x0C 0x00 0x00    Start balance voltage
-        log_i("  Start balance voltage: %f V", (float)jk_get_32bit(138) * 0.001f);
-        publish_state_(balance_starting_voltage_number_, (float)jk_get_32bit(138) * 0.001f);
+        log_i("  Start balance voltage: %f V", (float)get32(138) * 0.001f);
+        publish_state_(balance_starting_voltage_number_, (float)get32(138) * 0.001f);
 
         // 142   4   0x00 0x00 0x00 0x00
         // 146   4   0x00 0x00 0x00 0x00
@@ -731,7 +732,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         // 246   4   0x00 0x00 0x00 0x00    Con. wire resistance 23
         // 250   4   0x00 0x00 0x00 0x00    Con. wire resistance 24
         for (uint8_t i = 0; i < 24; i++) {
-            log_i("  Con. wire resistance %d: %f Ohm", i + 1, (float)jk_get_32bit(i * 4 + 158) * 0.001f);
+            log_i("  Con. wire resistance %d: %f Ohm", i + 1, (float)get32(i * 4 + 158) * 0.001f);
         }
 
         // 254   4   0x00 0x00 0x00 0x00
@@ -753,9 +754,9 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         // 299   1   0x40                   CRC
     }
     void decodeJk04Settings(const std::vector<uint8_t>& data) {
-        auto jk_get_16bit = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
-        auto jk_get_32bit = [&](size_t i) -> uint32_t {
-            return (uint32_t(jk_get_16bit(i + 2)) << 16) | (uint32_t(jk_get_16bit(i + 0)) << 0);
+        auto get16 = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
+        auto get32 = [&](size_t i) -> uint32_t {
+            return (uint32_t(get16(i + 2)) << 16) | (uint32_t(get16(i + 0)) << 0);
         };
 
         log_i("Settings frame (%d bytes) received", data.size());
@@ -785,7 +786,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         // 5     1   0x50                   Frame counter
         // 6     4   0x00 0x00 0x80 0x3F
         log_d("  Unknown6: 0x%02X 0x%02X 0x%02X 0x%02X (%f)", data[6], data[7], data[8], data[9],
-              (float)ieee_float_(jk_get_32bit(6)));
+              (float)ieee_float_(get32(6)));
 
         // 10    4   0x00 0x00 0x00 0x00
         // 14    4   0x00 0x00 0x00 0x00
@@ -797,7 +798,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         log_i("  Cell count: %d", data[34]);
 
         // 38    4   0x00 0x00 0x40 0x40    Power off voltage
-        log_i("  Power off voltage: %f V", (float)ieee_float_(jk_get_32bit(38)));
+        log_i("  Power off voltage: %f V", (float)ieee_float_(get32(38)));
 
         // 42    4   0x00 0x00 0x00 0x00
         // 46    4   0x00 0x00 0x00 0x00
@@ -808,7 +809,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         // 66    4   0x00 0x00 0x00 0x00
         // 70    4   0x00 0x00 0x00 0x00
         // 74    4   0xA3 0xFD 0x40 0x40
-        log_d("  Unknown74: %f", (float)ieee_float_(jk_get_32bit(74)));
+        log_d("  Unknown74: %f", (float)ieee_float_(get32(74)));
 
         // 78    4   0x00 0x00 0x00 0x00
         // 82    4   0x00 0x00 0x00 0x00
@@ -816,16 +817,16 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         // 90    4   0x00 0x00 0x00 0x00
         // 94    4   0x00 0x00 0x00 0x00
         // 98    4   0x00 0x00 0x88 0x40    Start balance voltage
-        log_i("  Start balance voltage: %f V", (float)ieee_float_(jk_get_32bit(98)));
+        log_i("  Start balance voltage: %f V", (float)ieee_float_(get32(98)));
 
         // 102   4   0x9A 0x99 0x59 0x40
-        log_d("  Unknown102: %f", (float)ieee_float_(jk_get_32bit(102)));
+        log_d("  Unknown102: %f", (float)ieee_float_(get32(102)));
 
         // 106   4   0x0A 0xD7 0xA3 0x3B    Trigger delta voltage
-        log_i("  Trigger Delta Voltage: %f V", (float)ieee_float_(jk_get_32bit(106)));
+        log_i("  Trigger Delta Voltage: %f V", (float)ieee_float_(get32(106)));
 
         // 110   4   0x00 0x00 0x00 0x40    Max. balance current
-        log_i("  Max. balance current: %f A", (float)ieee_float_(jk_get_32bit(110)));
+        log_i("  Max. balance current: %f A", (float)ieee_float_(get32(110)));
         // 114   4   0x01 0x00 0x00 0x00    Balancer switch
         publish_state_(balancer_switch_, (bool)(data[114]));
 
@@ -843,9 +844,9 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         // 298   2   0x00 0xCE
     }
     void decodeDeviceInfo(const std::vector<uint8_t>& data) {
-        auto jk_get_16bit = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
-        auto jk_get_32bit = [&](size_t i) -> uint32_t {
-            return (uint32_t(jk_get_16bit(i + 2)) << 16) | (uint32_t(jk_get_16bit(i + 0)) << 0);
+        auto get16 = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
+        auto get32 = [&](size_t i) -> uint32_t {
+            return (uint32_t(get16(i + 2)) << 16) | (uint32_t(get16(i + 0)) << 0);
         };
 
         log_i("Device info frame (%d bytes) received", data.size());
@@ -903,8 +904,8 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
         log_i("  Vendor ID: %s", std::string(data.begin() + 6, data.begin() + 6 + 16).c_str());
         log_i("  Hardware version: %s", std::string(data.begin() + 22, data.begin() + 22 + 8).c_str());
         log_i("  Software version: %s", std::string(data.begin() + 30, data.begin() + 30 + 8).c_str());
-        log_i("  Uptime: %d s", jk_get_32bit(38));
-        log_i("  Power on count: %d", jk_get_32bit(42));
+        log_i("  Uptime: %d s", get32(38));
+        log_i("  Power on count: %d", get32(42));
         log_i("  Device name: %s", std::string(data.begin() + 46, data.begin() + 46 + 16).c_str());
         log_i("  Device passcode: %s", std::string(data.begin() + 62, data.begin() + 62 + 16).c_str());
         log_i("  Manufacturing date: %s", std::string(data.begin() + 78, data.begin() + 78 + 8).c_str());
