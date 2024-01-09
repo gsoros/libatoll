@@ -14,34 +14,33 @@ class Preferences {
     const char *preferencesNS;
 
     void preferencesSetup(::Preferences *p, const char *ns) {
-        if (strlen(ns) < 1) log_e("%s %s Error: empty namespace\n", __FILE__, __LINE__);
+        if (strlen(ns) < 1) log_e("empty namespace");
         preferences = p;
         preferencesNS = ns;
     }
 
     bool preferencesStartLoad() {
-        if (!preferences->begin(preferencesNS, true))  // try ro mode
-        {
-            if (!preferences->begin(preferencesNS, false))  // open in rw mode to create ns
-            {
-                log_e("Preferences begin failed for '%s'", preferencesNS);
-                return false;
-            }
-        }
+        if (!preferences->begin(preferencesNS, true))         // try ro mode
+            return _preferencesBeginRW();                     // open in rw mode to create ns
         return true;
     };
 
     bool preferencesStartSave() {
-        if (!preferences->begin(preferencesNS, false)) {
-            log_e("Preferences begin failed for '%s'.", preferencesNS);
-            return false;
-        }
-        return true;
+        return _preferencesBeginRW();
     };
 
     void preferencesEnd() {
         preferences->end();
     }
+
+    protected:
+     bool _preferencesBeginRW() {
+         if (!preferences->begin(preferencesNS, false)) {
+             log_e("failed for '%s'.", preferencesNS);
+             return false;
+         }
+         return true;
+     };
 };
 
 }  // namespace Atoll
