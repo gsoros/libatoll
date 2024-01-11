@@ -82,6 +82,9 @@ class BleClient : public Task,
 
     virtual void onNotify(BLECharacteristic* pCharacteristic);
 
+    typedef std::function<void(Peer*)> Callback;
+    Callback onPeerConnected = [](Peer*) {};
+
    protected:
     bool shouldStop = false;
 

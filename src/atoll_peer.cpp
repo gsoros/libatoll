@@ -477,6 +477,10 @@ bool Peer::isJkBms() {
 }
 
 void Peer::onConnect(BLEClient* client) {
+    if (!isConnected()) {
+        log_i("%s not connected", saved.name);
+        return;
+    }
     log_d("%s connected", saved.name);
 
     log_d("%s discovering attributes...", saved.name);
@@ -487,6 +491,9 @@ void Peer::onConnect(BLEClient* client) {
 
     // log_d("%s requesting conn param update...", saved.name);
     // setConnectionParams(client, APCPP_ESTABLISHED);
+
+    log_d("calling connectedCallback");
+    connectedCallback(this);
 }
 
 /**

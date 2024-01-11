@@ -303,6 +303,7 @@ bool BleClient::addPeer(Peer* peer) {
         log_e("cannot add peer %s", peer->saved.name);
         return false;
     }
+    peer->connectedCallback = [this](Peer* peer) { onPeerConnected(peer); };
     // log_i("adding peer %s %s(%d)", peer->name, peer->address, peer->addressType);
     peers[index] = peer;
     return true;

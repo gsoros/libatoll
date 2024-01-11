@@ -137,6 +137,11 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
     void printSettings();
     void printCellInfo();
 
+    typedef std::function<void(PeerCharacteristicJkBms*)> Callback;
+    Callback onDeviceInfoUpdate = [](PeerCharacteristicJkBms*) {};
+    Callback onSettingsUpdate = [](PeerCharacteristicJkBms*) {};
+    Callback onCellInfoUpdate = [](PeerCharacteristicJkBms*) {};
+
     // https://github.com/syssi/esphome-jk-bms/blob/main/components/jk_bms_ble/jk_bms_ble.cpp
 
     static const uint16_t SERVICE_UUID = 0xffe0;

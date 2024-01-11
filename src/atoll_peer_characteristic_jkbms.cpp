@@ -99,6 +99,7 @@ void PeerCharacteristicJkBms::decode(const std::vector<uint8_t>& data) {
             } else {
                 decodeJk02Settings(data);
             }
+            onSettingsUpdate(this);
             printSettings();
             break;
         case 0x02:
@@ -107,9 +108,11 @@ void PeerCharacteristicJkBms::decode(const std::vector<uint8_t>& data) {
             } else {
                 decodeJk02CellInfo(data);
             }
+            onCellInfoUpdate(this);
             break;
         case 0x03:
             decodeDeviceInfo(data);
+            onDeviceInfoUpdate(this);
             printDeviceInfo();
             break;
         default:

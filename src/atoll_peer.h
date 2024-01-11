@@ -106,6 +106,9 @@ class Peer : public BLEClientCallbacks {
     virtual bool isVesc();
     virtual bool isJkBms();
 
+    typedef std::function<void(Peer*)> Callback;
+    Callback connectedCallback = [](Peer*) {};
+
    protected:
     BLEClient* client = nullptr;                                           // our NimBLE client
     PeerCharacteristic* chars[ATOLL_BLE_PEER_DEVICE_MAX_CHARACTERISTICS];  // characteristics
@@ -196,12 +199,12 @@ class JkBms : public Peer {
         addChar(nullptr != customJkBmsChar
                     ? customJkBmsChar
                     : new PeerCharacteristicJkBms());
-        PeerCharacteristicJkBms* c = (PeerCharacteristicJkBms*)getChar("JkBms");
-        if (nullptr == c) {
+        characteristic = (PeerCharacteristicJkBms*)getChar("JkBms");
+        if (nullptr == characteristic) {
             log_e("char is null");
             return;
         }
-        cellInfo = &c->cellInfo;
+        cellInfo = &characteristic->cellInfo;
     }
 
     void loop() override {
@@ -213,15 +216,15 @@ class JkBms : public Peer {
         // don't set established conn params
     }
 
+    PeerCharacteristicJkBms* characteristic = nullptr;
     PeerCharacteristicJkBms::CellInfo* cellInfo = nullptr;
 
     void printStatus() {
-        PeerCharacteristicJkBms* c = (PeerCharacteristicJkBms*)getChar("JkBms");
-        if (nullptr == c) {
+        if (nullptr == characteristic) {
             log_e("char is null");
             return;
         }
-        c->printCellInfo();
+        characteristic->printCellInfo();
     }
 
    protected:
