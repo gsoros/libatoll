@@ -20,6 +20,7 @@ void Wifi::setup(
     this->instance = instance;
     this->ota = ota;
 
+    taskSetFreq(WIFI_TASK_FREQ);
     loadDefaultSettings();
     loadSettings();
     registerCallbacks();
@@ -37,11 +38,17 @@ void Wifi::setup(
 };
 
 void Wifi::loop() {
-    taskStop();
+    if (settings.enabled &&
+        settings.staEnabled &&
+        !WiFi.isConnected() &&
+        !staConnecting &&
+        lastDisconnect + reconnectDelaySecs * 1000 < millis())
+        startSta();
 };
 
 void Wifi::start() {
     applySettings();
+    taskStart();
 };
 
 void Wifi::stop() {
@@ -144,18 +151,21 @@ void Wifi::applySettings() {
     Serial.flush();
 #endif
     // delay(1000);
-    wifi_mode_t oldMode = WiFi.getMode();
-    wifi_mode_t wifiMode;
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    WiFi.mode(mode);
     if (settings.enabled && (settings.apEnabled || settings.staEnabled)) {
         if (settings.apEnabled && settings.staEnabled)
-            wifiMode = WIFI_MODE_APSTA;
+            mode = WIFI_MODE_APSTA;
         else if (settings.apEnabled)
-            wifiMode = WIFI_MODE_AP;
+            mode = WIFI_MODE_AP;
         else
-            wifiMode = WIFI_MODE_STA;
-    } else
-        wifiMode = WIFI_MODE_NULL;
-    WiFi.mode(wifiMode);
+            mode = WIFI_MODE_STA;
+    }
+    WiFi.persistent(true);
+    WiFi.setAutoReconnect(true);
+    reconnectDelaySecs = 0;
+    WiFi.mode(mode);
+
     if (settings.enabled && settings.apEnabled) {
         if (0 == strlen(settings.apSSID)) {
             log_w("cannot enable AP with empty SSID");
@@ -180,6 +190,7 @@ void Wifi::startAp() {
 };
 
 void Wifi::startSta() {
+    if (staConnecting) return;
     if (ipUnset != settings.staticIp &&
         ipUnset != settings.staticGateway &&
         ipUnset != settings.staticSubnet) {
@@ -196,6 +207,7 @@ void Wifi::startSta() {
     }
 
     log_i("connecting to AP '%s'", settings.staSSID);
+    staConnecting = true;
     WiFi.begin(settings.staSSID, settings.staPassword);
 };
 
@@ -224,6 +236,88 @@ void Wifi::registerCallbacks() {
 void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
     switch (event) {
         case ARDUINO_EVENT_WIFI_READY:
+            log_i("ARDUINO_EVENT_WIFI_READY");
+            break;
+        case ARDUINO_EVENT_WIFI_SCAN_DONE:
+            log_i("ARDUINO_EVENT_WIFI_SCAN_DONE");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
+            log_i("ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
+            log_i("ARDUINO_EVENT_WIFI_STA_GOT_IP6");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
+            log_i("ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_GOT_IP6:
+            log_i("ARDUINO_EVENT_WIFI_AP_GOT_IP6");
+            break;
+        case ARDUINO_EVENT_WIFI_FTM_REPORT:
+            log_i("ARDUINO_EVENT_WIFI_FTM_REPORT");
+            break;
+        case ARDUINO_EVENT_ETH_START:
+            log_i("ARDUINO_EVENT_ETH_START");
+            break;
+        case ARDUINO_EVENT_ETH_STOP:
+            log_i("ARDUINO_EVENT_ETH_STOP");
+            break;
+        case ARDUINO_EVENT_ETH_CONNECTED:
+            log_i("ARDUINO_EVENT_ETH_CONNECTED");
+            break;
+        case ARDUINO_EVENT_ETH_DISCONNECTED:
+            log_i("ARDUINO_EVENT_ETH_DISCONNECTED");
+            break;
+        case ARDUINO_EVENT_ETH_GOT_IP:
+            log_i("ARDUINO_EVENT_ETH_GOT_IP");
+            break;
+        case ARDUINO_EVENT_WPS_ER_SUCCESS:
+            log_i("ARDUINO_EVENT_WPS_ER_SUCCESS");
+            break;
+        case ARDUINO_EVENT_WPS_ER_FAILED:
+            log_i("ARDUINO_EVENT_WPS_ER_FAILED");
+            break;
+        case ARDUINO_EVENT_WPS_ER_TIMEOUT:
+            log_i("ARDUINO_EVENT_WPS_ER_TIMEOUT");
+            break;
+        case ARDUINO_EVENT_WPS_ER_PIN:
+            log_i("ARDUINO_EVENT_WPS_ER_PIN");
+            break;
+        case ARDUINO_EVENT_WPS_ER_PBC_OVERLAP:
+            log_i("ARDUINO_EVENT_WPS_ER_PBC_OVERLAP");
+            break;
+        case ARDUINO_EVENT_SC_SCAN_DONE:
+            log_i("ARDUINO_EVENT_SC_SCAN_DONE");
+            break;
+        case ARDUINO_EVENT_SC_FOUND_CHANNEL:
+            log_i("ARDUINO_EVENT_SC_FOUND_CHANNEL");
+            break;
+        case ARDUINO_EVENT_SC_GOT_SSID_PSWD:
+            log_i("ARDUINO_EVENT_SC_GOT_SSID_PSWD");
+            break;
+        case ARDUINO_EVENT_SC_SEND_ACK_DONE:
+            log_i("ARDUINO_EVENT_SC_SEND_ACK_DONE");
+            break;
+        case ARDUINO_EVENT_PROV_INIT:
+            log_i("ARDUINO_EVENT_PROV_INIT");
+            break;
+        case ARDUINO_EVENT_PROV_DEINIT:
+            log_i("ARDUINO_EVENT_PROV_DEINIT");
+            break;
+        case ARDUINO_EVENT_PROV_START:
+            log_i("ARDUINO_EVENT_PROV_START");
+            break;
+        case ARDUINO_EVENT_PROV_END:
+            log_i("ARDUINO_EVENT_PROV_END");
+            break;
+        case ARDUINO_EVENT_PROV_CRED_RECV:
+            log_i("ARDUINO_EVENT_PROV_CRED_RECV");
+            break;
+        case ARDUINO_EVENT_PROV_CRED_FAIL:
+            log_i("ARDUINO_EVENT_PROV_CRED_FAIL");
+            break;
+        case ARDUINO_EVENT_PROV_CRED_SUCCESS:
+            log_i("ARDUINO_EVENT_PROV_CRED_SUCCESS");
             break;
         case ARDUINO_EVENT_WIFI_AP_START:
             log_i("[AP] started, ip: %s", WiFi.softAPIP().toString().c_str());
@@ -258,6 +352,7 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
             break;
         case ARDUINO_EVENT_WIFI_STA_CONNECTED:
             log_i("[STA] connected");
+            reconnectDelaySecs = 0;
             break;
         case ARDUINO_EVENT_WIFI_STA_GOT_IP:
             log_i("[STA] got ip: %s, gw: %s, sn: %s, d0: %s, d1: %s",
@@ -290,14 +385,23 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
                     log_e("config failed");
                     return;
                 }
-                // WiFi.reconnect();
             }
-            // WiFi.setAutoReconnect(true);
-            // WiFi.persistent(true);
+            break;
+        case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+            log_i("[STA] lost ip");
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
             log_i("[STA] disconnected");
+            WiFi.disconnect();
+            staConnecting = false;
+            lastDisconnect = millis();
             if (settings.enabled && settings.staEnabled) {
+                reconnectDelaySecs += reconnectStep;
+                if (reconnectDelaySecs < reconnectMin)
+                    reconnectDelaySecs = reconnectMin;
+                else if (reconnectMax < reconnectDelaySecs)
+                    reconnectDelaySecs = reconnectMax;
+                log_i("reconnecting in %d secs", reconnectDelaySecs);
                 // log_i("[STA] reconnecting");
                 //  WiFi.disconnect();
                 // WiFi.reconnect();

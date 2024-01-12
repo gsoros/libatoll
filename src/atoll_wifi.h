@@ -14,6 +14,10 @@
 #define SETTINGS_STR_LENGTH 32
 #endif
 
+#ifndef WIFI_TASK_FREQ
+#define WIFI_TASK_FREQ (1.0f / 3.0f)  // run every 3 secs
+#endif
+
 namespace Atoll {
 
 class Wifi : public Preferences, public Task {
@@ -79,6 +83,12 @@ class Wifi : public Preferences, public Task {
 
    protected:
     const IPAddress ipUnset = IPAddress(0, 0, 0, 0);
+    bool staConnecting = false;
+    uint16_t reconnectDelaySecs = 0;
+    const uint16_t reconnectMin = 5;
+    const uint16_t reconnectMax = 300;
+    const uint16_t reconnectStep = 5;
+    ulong lastDisconnect = 0;
 };
 
 }  // namespace Atoll
