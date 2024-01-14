@@ -188,7 +188,7 @@ void BleServer::notify(
     uint8_t *data,
     size_t size) {
     if (!enabled) {
-        log_i("not enabled, not notifying %s %s",
+        log_d("not enabled, not notifying %s %s",
               serviceUuid.toString().c_str(), charUuid.toString().c_str());
         return;
     }
@@ -200,7 +200,7 @@ void BleServer::notify(
     }
     c->setValue(data, size);
     if (!_clients.size()) {
-        log_i("no clients connected, not notifying");
+        // log_d("no clients connected, not notifying");
         return;
     }
     c->notify();
