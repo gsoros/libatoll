@@ -70,24 +70,22 @@ void PeerCharacteristicJkBms::assemble(const uint8_t* data, uint16_t length) {
 
     frameBuffer.insert(frameBuffer.end(), data, data + length);
 
-    if (frameBuffer.size() >= MIN_RESPONSE_SIZE) {
-        const uint8_t* raw = &frameBuffer[0];
-        // Even if the frame is 320 bytes long the CRC is at position 300 in front of 0xAA 0x55 0x90 0xEB
-        const uint16_t frameSize = 300;  // frameBuffer.size();
+    if (frameBuffer.size() < MIN_RESPONSE_SIZE) return;
 
-        uint8_t computed_crc = crc(raw, frameSize - 1);
-        uint8_t remote_crc = raw[frameSize - 1];
-        if (computed_crc != remote_crc) {
-            log_w("CRC check failed! 0x%02X != 0x%02X", computed_crc, remote_crc);
-            frameBuffer.clear();
-            return;
-        }
+    const uint8_t* raw = &frameBuffer[0];
+    // Even if the frame is 320 bytes long the CRC is at position 300 in front of 0xAA 0x55 0x90 0xEB
+    const uint16_t frameSize = 300;  // frameBuffer.size();
 
-        std::vector<uint8_t> data(frameBuffer.begin(), frameBuffer.end());
-
-        decode(data);
+    uint8_t computed_crc = crc(raw, frameSize - 1);
+    uint8_t remote_crc = raw[frameSize - 1];
+    if (computed_crc != remote_crc) {
+        log_w("CRC check failed! 0x%02X != 0x%02X", computed_crc, remote_crc);
         frameBuffer.clear();
+        return;
     }
+
+    decode(std::vector<uint8_t>(frameBuffer.begin(), frameBuffer.end()));
+    frameBuffer.clear();
 }
 
 void PeerCharacteristicJkBms::decode(const std::vector<uint8_t>& data) {
@@ -1121,8 +1119,8 @@ bool PeerCharacteristicJkBms::writeRegister(uint8_t address, uint32_t value, uin
     frame[18] = 0x00;
     frame[19] = crc(frame, sizeof(frame) - 1);
 
-    log_d("sending frame...");
-    printHex(frame, sizeof(frame), "frame: ");
+    // log_d("sending frame...");
+    // printHex(frame, sizeof(frame), "frame: ");
 
     return write(String((char*)&frame, sizeof(frame)), sizeof(frame));
 }
