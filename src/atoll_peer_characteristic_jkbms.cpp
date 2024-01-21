@@ -469,8 +469,13 @@ void PeerCharacteristicJkBms::decodeJk04Settings(const std::vector<uint8_t>& dat
 void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& data) {
     auto get16 = [&](size_t i) -> uint16_t { return (uint16_t(data[i + 1]) << 8) | (uint16_t(data[i + 0]) << 0); };
 
+    // get unsigned int32
     auto get32 = [&](size_t i) -> uint32_t {
         return (uint32_t(get16(i + 2)) << 16) | (uint32_t(get16(i + 0)) << 0);
+    };
+    // get signed int32
+    auto gets32 = [&](size_t i) -> int32_t {
+        return (int32_t(get16(i + 2)) << 16) | (int32_t(get16(i + 0)) << 0);
     };
 
     const uint32_t now = millis();
@@ -607,7 +612,7 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
     // log_d("power: %.2f W", power);
 
     // 126   4   0x00 0x00 0x00 0x00    Charge current        0.001        A
-    cellInfo.chargeCurrent = (float)((int32_t)get32(126 + offset)) * 0.001f;
+    cellInfo.chargeCurrent = (float)gets32(126 + offset) * 0.001f;
     // log_d("chargeCurrent: %.2f A", chargeCurrent);
     if (cellInfo.chargeCurrent < 0.0f && 0.0f < cellInfo.power) cellInfo.power *= -1;
     // 130   2   0xBE 0x00              Temperature Sensor 1  0.1          °C

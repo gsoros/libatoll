@@ -40,6 +40,7 @@ class BleClient : public Task,
     BLEScan* scan;                                           // pointer to scan object
     Peer* peers[ATOLL_BLE_CLIENT_PEERS];                     // peer devices we want connected
     static const uint8_t peersMax = ATOLL_BLE_CLIENT_PEERS;  // convenience for iterations
+    uint32_t reconnectDelay = 0;                             // delay between connection attempts
 #ifdef FEATURE_API
     Api* api = nullptr;
 #endif
@@ -77,7 +78,7 @@ class BleClient : public Task,
     virtual bool addPeer(Peer* peer);
     virtual uint8_t removePeer(Peer* peer, bool markOnly = true);
     virtual uint8_t removePeer(const char* address, bool markOnly = true);
-    virtual uint8_t disablePeer(const char* name);
+    virtual uint8_t setPeerEnabled(const char* name, bool value);
     virtual Peer* getFirstPeerByName(const char* name);
 
     virtual void onNotify(BLECharacteristic* pCharacteristic);

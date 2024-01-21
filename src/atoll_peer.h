@@ -205,6 +205,7 @@ class JkBms : public Peer {
             return;
         }
         cellInfo = &characteristic->cellInfo;
+        settings = &characteristic->settings;
     }
 
     void loop() override {
@@ -218,6 +219,7 @@ class JkBms : public Peer {
 
     PeerCharacteristicJkBms* characteristic = nullptr;
     PeerCharacteristicJkBms::CellInfo* cellInfo = nullptr;
+    PeerCharacteristicJkBms::Settings* settings = nullptr;
 
     void printStatus() {
         if (nullptr == characteristic) {

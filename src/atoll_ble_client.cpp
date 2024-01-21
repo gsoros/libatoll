@@ -86,7 +86,8 @@ void BleClient::loop() {
         } else if (peers[i]->shouldConnect &&
                    !peers[i]->isConnected() &&
                    !peers[i]->connecting &&
-                   (30000 < t && peers[i]->lastConnectionAttempt < t - 30000)) {
+                   (0 == peers[i]->lastConnectionAttempt ||
+                    peers[i]->lastConnectionAttempt + reconnectDelay < t)) {
             // log_d("connecting peer %s %s(%d)",
             //       peers[i]->saved.name, peers[i]->saved.address, peers[i]->saved.addressType);
             peers[i]->connect();
@@ -330,16 +331,22 @@ uint8_t BleClient::removePeer(const char* address, bool markOnly) {
     return removed;
 }
 
-uint8_t BleClient::disablePeer(const char* name) {
+uint8_t BleClient::setPeerEnabled(const char* name, bool value) {
     if (strlen(name) < 1) return 0;
     uint8_t changed = 0;
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
-        log_d("comparing '%s' to '%s'", peers[i]->saved.name, name);
-        if (0 == strcmp(peers[i]->saved.name, name) && peers[i]->enabled) {
-            log_d("disabling and disconnecting %s, reboot to re-enable", peers[i]->saved.name);
-            peers[i]->enabled = 0;
-            if (peers[i]->isConnected()) peers[i]->disconnect();
+        // log_d("comparing '%s' to '%s'", peers[i]->saved.name, name);
+        if (0 == strcmp(peers[i]->saved.name, name) && peers[i]->enabled != value) {
+            if (peers[i]->enabled) {
+                log_d("disabling and disconnecting %s", peers[i]->saved.name);
+                peers[i]->enabled = false;
+                if (peers[i]->isConnected()) peers[i]->disconnect();
+            } else {
+                log_d("enabling and connecting %s", peers[i]->saved.name);
+                peers[i]->enabled = true;
+                if (!peers[i]->isConnected()) peers[i]->connect();
+            }
             changed++;
         }
     }
@@ -516,8 +523,26 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
             if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
             return Api::result("argInvalid");
         }
-        log_i("disablePeer(%s)", param);
-        uint8_t changed = disablePeer(param);
+        log_i("setPeerEnabled(%s, false)", param);
+        uint8_t changed = setPeerEnabled(param, false);
+        if (0 < changed) {
+            snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
+            return Api::success();
+        }
+        return Api::error();
+    }
+    if (msg->argStartsWith("enable")) {
+        if (!msg->argStartsWith("enable:")) {
+            msg->replyAppend("usage: enable:name");
+            return Api::argInvalid();
+        }
+        char* param = msg->arg + 7;
+        if (strlen(param) < 1) {
+            if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
+            return Api::result("argInvalid");
+        }
+        log_i("setPeerEnabled(%s, true)", param);
+        uint8_t changed = setPeerEnabled(param, true);
         if (0 < changed) {
             snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
             return Api::success();
