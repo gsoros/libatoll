@@ -17,6 +17,7 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
     virtual bool subscribeOnConnect() override;
     virtual bool readOnSubscribe() override;
     virtual void onSubscribe(BLEClient* client) override;
+    virtual void onDisconnect();
 
     virtual bool requestDeviceInfo();
     virtual bool requestCellInfo();
@@ -138,9 +139,9 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
     void printCellInfo();
 
     typedef std::function<void(PeerCharacteristicJkBms*)> Callback;
-    Callback onDeviceInfoUpdate = [](PeerCharacteristicJkBms*) {};
-    Callback onSettingsUpdate = [](PeerCharacteristicJkBms*) {};
-    Callback onCellInfoUpdate = [](PeerCharacteristicJkBms*) {};
+    Callback onDeviceInfoUpdate = nullptr;
+    Callback onSettingsUpdate = nullptr;
+    Callback onCellInfoUpdate = nullptr;
 
     // https://github.com/syssi/esphome-jk-bms/blob/main/components/jk_bms_ble/jk_bms_ble.cpp
 

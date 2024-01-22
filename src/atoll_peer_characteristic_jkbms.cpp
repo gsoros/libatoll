@@ -45,6 +45,12 @@ void PeerCharacteristicJkBms::onSubscribe(BLEClient* client) {
     requestCellInfo();
 }
 
+void PeerCharacteristicJkBms::onDisconnect() {
+    deviceInfo = DeviceInfo();
+    settings = Settings();
+    cellInfo = CellInfo();
+}
+
 bool PeerCharacteristicJkBms::requestDeviceInfo() {
     log_d("requesting...");
     writeRegister(COMMAND_DEVICE_INFO, 0x00000000, 0x00);
@@ -97,7 +103,7 @@ void PeerCharacteristicJkBms::decode(const std::vector<uint8_t>& data) {
             } else {
                 decodeJk02Settings(data);
             }
-            onSettingsUpdate(this);
+            if (nullptr != onSettingsUpdate) onSettingsUpdate(this);
             printSettings();
             break;
         case 0x02:
@@ -106,11 +112,11 @@ void PeerCharacteristicJkBms::decode(const std::vector<uint8_t>& data) {
             } else {
                 decodeJk02CellInfo(data);
             }
-            onCellInfoUpdate(this);
+            if (nullptr != onCellInfoUpdate) onCellInfoUpdate(this);
             break;
         case 0x03:
             decodeDeviceInfo(data);
-            onDeviceInfoUpdate(this);
+            if (nullptr != onDeviceInfoUpdate) onDeviceInfoUpdate(this);
             printDeviceInfo();
             break;
         default:

@@ -204,22 +204,23 @@ class JkBms : public Peer {
             log_e("char is null");
             return;
         }
-        cellInfo = &characteristic->cellInfo;
+        characteristic->onDeviceInfoUpdate = [this](PeerCharacteristicJkBms* c) {
+            if (nullptr != c) strncpy(name, c->deviceInfo.deviceName, sizeof(name));
+        };
+        deviceInfo = &characteristic->deviceInfo;
         settings = &characteristic->settings;
+        cellInfo = &characteristic->cellInfo;
     }
 
     void loop() override {
-        if (!enabled) {
-            log_d("%s is disabled, disconnecting", saved.name);
-            if (isConnected()) disconnect();
-            return;
-        }
         // don't set established conn params
     }
 
     PeerCharacteristicJkBms* characteristic = nullptr;
-    PeerCharacteristicJkBms::CellInfo* cellInfo = nullptr;
+    PeerCharacteristicJkBms::DeviceInfo* deviceInfo = nullptr;
     PeerCharacteristicJkBms::Settings* settings = nullptr;
+    PeerCharacteristicJkBms::CellInfo* cellInfo = nullptr;
+    char name[16] = "";
 
     void printStatus() {
         if (nullptr == characteristic) {
@@ -228,6 +229,14 @@ class JkBms : public Peer {
         }
         characteristic->printCellInfo();
     }
+
+    virtual void onDisconnect(BLEClient* pClient, int reason) override {
+        Peer::onDisconnect(pClient, reason);
+        characteristic->onDisconnect();
+        if (nullptr != disconnectCustomCallback) disconnectCustomCallback(this);
+    }
+
+    std::function<void(JkBms*)> disconnectCustomCallback = nullptr;
 
    protected:
 };

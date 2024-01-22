@@ -26,11 +26,6 @@ Peer::Peer(Saved saved,
 }
 
 void Peer::loop() {
-    if (!enabled) {
-        log_d("%s is disabled, disconnecting", saved.name);
-        if (isConnected()) disconnect();
-        return;
-    }
     if (connParamsProfile != APCPP_ESTABLISHED && isConnected()) {
         connParamsProfile = APCPP_ESTABLISHED;
         log_d("%s setting conn params", saved.name);
