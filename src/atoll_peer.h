@@ -54,10 +54,10 @@ class Peer : public BLEClientCallbacks {
         uint32_t passkey = 0;
     } saved;
 
-    bool enabled = true;
+    bool enabled = true;  // TODO is there a good reason for having both enabled and shouldConnect?
+    bool shouldConnect = true;
     bool connecting = false;
     ulong lastConnectionAttempt = 0;
-    bool shouldConnect = true;
     bool markedForRemoval = false;
     uint8_t connParamsProfile = APCPP_INITIAL;
     static const uint8_t packedMaxLength = ATOLL_BLE_PEER_DEVICE_PACKED_LENGTH;  // for convenience

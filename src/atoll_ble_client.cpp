@@ -60,9 +60,10 @@ void BleClient::loop() {
     ulong t = millis();
     for (int8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
-        // log_d("checking peer %d %s isConn:%d shouldConn:%d conning:%d remov:%d",
+        // log_d("checking peer %d %s en: %d, isConn:%d shouldConn:%d conning:%d remov:%d",
         //       i,
         //       peers[i]->saved.name,
+        //       peers[i]->enabled,
         //       peers[i]->isConnected(),
         //       peers[i]->shouldConnect,
         //       peers[i]->connecting,
@@ -89,8 +90,8 @@ void BleClient::loop() {
                    !peers[i]->connecting &&
                    (0 == peers[i]->lastConnectionAttempt ||
                     peers[i]->lastConnectionAttempt + reconnectDelay < t)) {
-            // log_d("connecting peer %s %s(%d)",
-            //       peers[i]->saved.name, peers[i]->saved.address, peers[i]->saved.addressType);
+            log_d("connecting peer %s %s(%d)",
+                  peers[i]->saved.name, peers[i]->saved.address, peers[i]->saved.addressType);
             peers[i]->connect();
         } else if ((!peers[i]->enabled ||
                     !peers[i]->shouldConnect) &&
@@ -343,10 +344,12 @@ uint8_t BleClient::setPeerEnabled(const char* name, bool value) {
             if (peers[i]->enabled) {
                 log_d("disabling %s", peers[i]->saved.name);
                 peers[i]->enabled = false;
+                peers[i]->shouldConnect = false;
                 // if (peers[i]->isConnected()) peers[i]->disconnect();
             } else {
                 log_d("enabling %s", peers[i]->saved.name);
                 peers[i]->enabled = true;
+                peers[i]->shouldConnect = true;
                 // if (!peers[i]->isConnected()) peers[i]->connect();
             }
             changed++;
