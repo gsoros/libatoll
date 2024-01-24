@@ -36,6 +36,7 @@ void WifiSerial::loop() {
         _client = _server.available();
         if (!_client) return;
         _connected = true;
+        if (nullptr != onClientConnected) onClientConnected();
         // board.led.blink(5);
         _client.printf("%s %s %s\n", _hostName, __DATE__, __TIME__);
         // board.status.printHeader();
