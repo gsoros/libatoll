@@ -85,18 +85,22 @@ void BleServer::loop() {
         log_e("not started");
         return;
     }
-    if (ATOLL_BLE_SERVER_MAX_CLIENTS <= _clients.size()) {
-        if (nullptr != advertising && advertising->isAdvertising())
+    if (nullptr == advertising) return;
+    if (advertising->isAdvertising()) {
+        if (0 < advertisingTimeoutMs && advertisingTimeoutMs < millis()) {
+            log_d("advertising timeout reached");
             stopAdvertising();
+            return;
+        }
+        if (_clients.capacity <= _clients.size()) {
+            log_d("max %d clients reached", _clients.capacity);
+            stopAdvertising();
+        }
         return;
     }
-    if (nullptr != advertising) {
-        if (advertising->isAdvertising() && 0 < advertisingTimeoutMs && millis() < advertisingTimeoutMs) {
-            stopAdvertising();
-        } else if (!advertising->isAdvertising()) {
-            startAdvertising();
-        }
-    }
+    // not advertising
+    if (_clients.size() < _clients.capacity)
+        startAdvertising();
 }
 
 void BleServer::setSecurity(bool state, const uint32_t passkey) {
@@ -160,11 +164,11 @@ void BleServer::startAdvertising() {
         return;
     }
     if (!advertising->isAdvertising()) {
-        if (server->startAdvertising()) {
-            // log_d("started");
+        if (!server->startAdvertising()) {
+            log_e("failed to start");
             return;
         }
-        log_e("failed to start");
+        log_d("started");
     }
 }
 
@@ -174,11 +178,11 @@ void BleServer::stopAdvertising() {
         return;
     }
     if (advertising->isAdvertising()) {
-        if (server->stopAdvertising()) {
-            log_i("stopped");
+        if (!server->stopAdvertising()) {
+            log_e("failed to stop");
             return;
         }
-        log_e("failed to stop");
+        log_d("stopped");
     }
 }
 

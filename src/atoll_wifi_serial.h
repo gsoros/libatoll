@@ -48,6 +48,7 @@ class WifiSerial : public Task, public Stream {
     void transmit();
 
     std::function<void()> onClientConnected = nullptr;
+    std::function<void()> onClientDisconnected = nullptr;
 
    private:
     WiFiServer _server;

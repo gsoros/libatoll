@@ -84,6 +84,7 @@ void WifiSerial::disconnect() {
     _client.stop();
     _connected = false;
     log_i("Client disconnected");
+    if (nullptr != onClientDisconnected) onClientDisconnected();
     // board.led.blink(5);
 }
 

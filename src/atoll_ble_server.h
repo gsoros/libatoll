@@ -85,10 +85,10 @@ class BleServer : public Task,
 
    protected:
     // keeps track of connected client handles, in order to gracefully disconnect them before deep sleep or reboot; TODO add has() to CircularBuffer
-    CircularBuffer<uint16_t, 8> _clients;   //
-    BLEServer *server = nullptr;            // pointer to the ble server
-    BLEAdvertising *advertising = nullptr;  // pointer to advertising object
-    ulong advertisingTimeoutMs = 0;         // stop advertising after this time after boot, 0 = never,  TODO get from preferences
+    CircularBuffer<uint16_t, ATOLL_BLE_SERVER_MAX_CLIENTS> _clients;  //
+    BLEServer *server = nullptr;                                      // pointer to the ble server
+    BLEAdvertising *advertising = nullptr;                            // pointer to advertising object
+    ulong advertisingTimeoutMs = 0;                                   // stop advertising after this time after boot, 0 = never,  TODO get from preferences
 };
 
 }  // namespace Atoll
