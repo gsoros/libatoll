@@ -251,8 +251,7 @@ Peer* BleClient::createPeer(BLEAdvertisedDevice* device) {
     } else if (device->isAdvertisingService(BLEUUID(VESC_SERVICE_UUID))) {
         strncpy(saved.type, "V", sizeof(saved.type));
         peer = new Vesc(saved);
-    } else if (device->isAdvertisingService(BLEUUID(PeerCharacteristicJkBms::SERVICE_UUID)) &&
-               0 == strcmp(device->getManufacturerData().c_str(), "650b88a0c8478c10a1bd")) {
+    } else if (device->isAdvertisingService(BLEUUID(PeerCharacteristicJkBms::SERVICE_UUID))) {
         strncpy(saved.type, "B", sizeof(saved.type));
         peer = new JkBms(saved);
     }
@@ -372,6 +371,15 @@ Peer* BleClient::getFirstPeerByName(const char* name) {
     return nullptr;
 }
 
+Peer* BleClient::getFirstPeerByType(const char* type) {
+    for (uint8_t i = 0; i < peersMax; i++) {
+        if (nullptr == peers[i]) continue;
+        if (0 == strcmp(type, peers[i]->saved.type))
+            return peers[i];
+    }
+    return nullptr;
+}
+
 void BleClient::onNotify(BLECharacteristic* pCharacteristic) {
     log_i("not implemented");
 }
@@ -458,7 +466,7 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
             snprintf(msg->reply, sizeof(msg->reply), "%s", "could not start");
             return Api::error();
         }
-        snprintf(msg->reply, sizeof(msg->reply), "%d", duration);
+        snprintf(msg->reply, sizeof(msg->reply), "scan:%d", duration);
         return Api::success();
     }
     if (msg->argStartsWith("scanResult")) {
@@ -497,6 +505,7 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
             return Api::error();
         }
         saveSettings();
+        snprintf(msg->reply, sizeof(msg->reply), "%s", msg->arg);
         return Api::success();
     }
     if (msg->argStartsWith("delete")) {
@@ -513,7 +522,8 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
         uint8_t changed = removePeer(param);
         if (0 < changed) {
             saveSettings();
-            snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
+            // snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
+            snprintf(msg->reply, sizeof(msg->reply), "%s", msg->arg);
             return Api::success();
         }
         return Api::error();
@@ -531,7 +541,8 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
         log_i("setPeerEnabled(%s, false)", param);
         uint8_t changed = setPeerEnabled(param, false);
         if (0 < changed) {
-            snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
+            // snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
+            snprintf(msg->reply, sizeof(msg->reply), "%s", msg->arg);
             return Api::success();
         }
         return Api::error();
@@ -549,28 +560,35 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
         log_i("setPeerEnabled(%s, true)", param);
         uint8_t changed = setPeerEnabled(param, true);
         if (0 < changed) {
-            snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
+            // snprintf(msg->reply, sizeof(msg->reply), "%d", changed);
+            snprintf(msg->reply, sizeof(msg->reply), "%s", msg->arg);
             return Api::success();
         }
         return Api::error();
     }
 
-    char value[Api::msgReplyLength] = "";
-    int16_t remaining = 0;
+    // char value[Api::msgReplyLength] = "";
+    char* target = msg->reply;
+    strncpy(target, "", 1);
+    int16_t remaining = sizeof(msg->reply) - 1;
+    char token[Peer::packedMaxLength + 1];
     for (int i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
         if (peers[i]->markedForRemoval) continue;
-        char token[Peer::packedMaxLength + 1];
+        if (strlen(target)) {
+            strncat(target, "|", remaining);
+            target++;
+        }
         peers[i]->pack(token, sizeof(token) - 1, false);
-        strcat(token, "|");
-        remaining = Api::msgReplyLength - strlen(value) - 1;
-        if (remaining < strlen(token)) {
-            if (msg->log) log_e("no space left for adding %s to %s", token, value);
+        size_t tokenLen = strlen(token);
+        if (remaining < tokenLen) {
+            if (msg->log) log_e("no space left for adding '%s' to '%s'", token, target);
             return Api::internalError();
         }
-        strncat(value, token, remaining);
+        strncat(target, token, remaining);
+        remaining -= tokenLen;
+        target += tokenLen;
     }
-    strncpy(msg->reply, value, Api::msgReplyLength);
     return Api::success();
 }
 
