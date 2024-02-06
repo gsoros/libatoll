@@ -234,7 +234,6 @@ void BleServer::onConnect(BLEServer *pServer, BLEConnInfo &info) {
 }
 
 void BleServer::onDisconnect(BLEServer *pServer, BLEConnInfo &info, int reason) {
-    log_i("client disconnected (reason %d), %s", reason, Ble::connInfoToStr(&info).c_str());
     uint16_t handle;
     // remove saved handle
     for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++) {
@@ -243,6 +242,9 @@ void BleServer::onDisconnect(BLEServer *pServer, BLEConnInfo &info, int reason) 
         if (handle != info.getConnHandle())
             _clients.push(handle);
     }
+    log_i("client disconnected (reason %d), connInfo: %s, serverConnCount: %d, clientsSize: %d",
+          reason, Ble::connInfoToStr(&info).c_str(),
+          pServer->getConnectedCount(), _clients.size());
 }
 
 void BleServer::onMTUChange(uint16_t mtu, BLEConnInfo &info) {
