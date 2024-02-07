@@ -33,7 +33,7 @@ void Task::taskStart(float freq,
         return;
     }
     log_i("Started task '%s' at %.2fHz (delay: %dms), stack: %d, heap: %d before, %d after",
-          taskName(), _taskFreq, _taskDelayMs(), _taskStack, heap, xPortGetFreeHeapSize());
+          taskName(), _taskFreq, taskDelayMs(), _taskStack, heap, xPortGetFreeHeapSize());
 }
 
 bool Task::taskRunning() {
@@ -125,7 +125,7 @@ void Task::_taskSetFreqAndDelay(const float freq) {
 
 void Task::_taskSetFreqAndDelay(const TickType_t delayTicks) {
     _taskDelay = 0 < delayTicks ? delayTicks : 1;
-    ulong ms = _taskDelayMs();
+    ulong ms = taskDelayMs();
     if (0 == ms) {
         log_w("%s delay is zero ms, setting max freq", taskName());
         _taskFreq = 1000.0f;
@@ -162,9 +162,9 @@ void Task::_taskAbortDelay() {
 }
 
 void Task::_taskDebug(const char *tag) {
-    // log_d("%s %s freq: %.2f, delay: %d", tag, taskName(), _taskFreq, _taskDelayMs());
+    // log_d("%s %s freq: %.2f, delay: %d", tag, taskName(), _taskFreq, taskDelayMs());
 }
 
-ulong Task::_taskDelayMs() {
+ulong Task::taskDelayMs() {
     return pdTICKS_TO_MS(_taskDelay);
 }

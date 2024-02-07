@@ -40,6 +40,7 @@ class Task {
     virtual void taskSetDelay(const uint16_t delayMs);
     virtual ulong taskGetNextWakeTimeMs();
     virtual int taskGetLowestStackLevel();
+    ulong taskDelayMs();
     virtual void loop();
 
     Task();
@@ -62,7 +63,6 @@ class Task {
     void _taskSetDelay();
     void _taskAbortDelay();
     void _taskDebug(const char *tag = "");
-    ulong _taskDelayMs();
 };
 
 }  // namespace Atoll
