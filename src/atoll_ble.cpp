@@ -6,34 +6,61 @@
 using namespace Atoll;
 
 void Ble::init(const char *deviceName, uint16_t mtu, uint8_t iocap) {
-    if (initDone) {
-        // log_i("init already done");
+    log_d("init");
+    if (initDone()) {
+        log_i("init already done");
         return;
     }
 
     BLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
     BLEDevice::setScanDuplicateCacheSize(200);
 
-    BLEDevice::init(deviceName);
+    snprintf(Ble::deviceName, sizeof(Ble::deviceName), "%s", deviceName);
+    BLEDevice::init(Ble::deviceName);
 
     // log_d("setMTU(%d)", mtu);
     setMTU(mtu);
 
     // log_d("power: %d", BLEDevice::getPower());
 
-    securityIOCap = iocap;
     setSecurityIOCap(iocap);
+    defaultIOCap = iocap;
+}
 
-    initDone = true;
+void Ble::deinit() {
+    log_d("deinit");
+    if (!initDone()) {
+        log_i("init not done");
+        return;
+    }
+    BLEDevice::deinit(true);
+}
+
+void Ble::reinit() {
+    log_d("reinit");
+    if (!initDone()) {
+        log_i("init not done");
+        return;
+    }
+    uint16_t mtu = BLEDevice::getMTU();
+    log_d("calling deinit");
+    deinit();
+    log_d("calling init");
+    init(Ble::deviceName, mtu, currentIOCap);
+}
+
+bool Ble::initDone() {
+    return BLEDevice::getInitialized();
 }
 
 void Ble::setSecurityIOCap(uint8_t iocap) {
     // log_d("setSecurityIOCap(%d)", iocap);
     BLEDevice::setSecurityIOCap(iocap);
+    currentIOCap = iocap;
 }
 
-void Ble::restoreSecurityIOCap() {
-    setSecurityIOCap(securityIOCap);
+void Ble::setDefaultIOCap() {
+    setSecurityIOCap(defaultIOCap);
 }
 
 bool Ble::deleteBond(const char *address) {
@@ -103,7 +130,8 @@ std::string Ble::charUUIDToStr(BLEUUID uuid) {
     return uuid.toString();
 }
 
-bool Ble::initDone = false;
-uint8_t Ble::securityIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT;
+uint8_t Ble::defaultIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT;
+uint8_t Ble::currentIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT;
+char Ble::deviceName[16] = "unnamed";
 
 #endif

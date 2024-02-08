@@ -12,7 +12,7 @@ void PeerCharacteristicApi::remoteOpStart(BLEClient* client) {
 
 void PeerCharacteristicApi::remoteOpEnd(BLEClient* client) {
     if (needsSecurity(client))
-        Ble::restoreSecurityIOCap();
+        Ble::setDefaultIOCap();
 }
 
 bool PeerCharacteristicApi::needsSecurity(BLEClient* client) {

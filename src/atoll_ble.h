@@ -23,10 +23,13 @@ class Ble {
     static void init(
         const char *deviceName,
         uint16_t mtu = ATOLL_BLE_MTU_DEFAULT,
-        uint8_t securityIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT);
+        uint8_t defaultIOCap = ATOLL_BLE_SECURITY_IOCAP_DEFAULT);
+    static void deinit();
+    static void reinit();
+    static bool initDone();
 
     static void setSecurityIOCap(uint8_t ioCap);
-    static void restoreSecurityIOCap();
+    static void setDefaultIOCap();
     // address = "*" to delete all bonds
     static bool deleteBond(const char *address);
     static uint16_t getMTU();
@@ -36,8 +39,9 @@ class Ble {
     static std::string charUUIDToStr(BLEUUID uuid);
 
    protected:
-    static bool initDone;
-    static uint8_t securityIOCap;  // default io capabilty
+    static char deviceName[16];
+    static uint8_t defaultIOCap;  // default io capabilty
+    static uint8_t currentIOCap;  // current io capabilty
 };
 
 }  // namespace Atoll

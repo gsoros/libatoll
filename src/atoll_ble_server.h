@@ -51,6 +51,8 @@ class BleServer : public Task,
 
     virtual void setup(const char *deviceName);
     virtual void init();
+    virtual void deinit();
+        virtual void reinit();
     virtual uint16_t getAppearance();
     virtual void setupAdvertising();
     virtual bool createDeviceInformationService();
@@ -85,10 +87,11 @@ class BleServer : public Task,
 
    protected:
     // keeps track of connected client handles, in order to gracefully disconnect them before deep sleep or reboot; TODO add has() to CircularBuffer
-    CircularBuffer<uint16_t, ATOLL_BLE_SERVER_MAX_CLIENTS> _clients;  //
-    BLEServer *server = nullptr;                                      // pointer to the ble server
-    BLEAdvertising *advertising = nullptr;                            // pointer to advertising object
-    ulong advertisingTimeoutMs = 0;                                   // stop advertising after this time after boot, 0 = never,  TODO get from preferences
+    CircularBuffer<BLEAddress, ATOLL_BLE_SERVER_MAX_CLIENTS> _clients;  //
+    BLEServer *server = nullptr;                                        // pointer to the ble server
+    BLEAdvertising *advertising = nullptr;                              // pointer to advertising object
+    ulong advertisingTimeoutMs = 0;                                     // stop advertising after this time after boot, 0 = never,  TODO get from preferences
+    bool setupDone = false;
 };
 
 }  // namespace Atoll

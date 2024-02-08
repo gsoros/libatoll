@@ -12,8 +12,7 @@ BleServer::BleServer() {
 BleServer::~BleServer() {}
 
 void BleServer::setup(const char *deviceName) {
-    static bool done = false;
-    if (done) {
+    if (setupDone) {
         log_e("setup already done");
         return;
     }
@@ -34,11 +33,23 @@ void BleServer::setup(const char *deviceName) {
 
     createDeviceInformationService();
 
-    done = true;
+    setupDone = true;
 }
 
 void BleServer::init() {
     Ble::init(deviceName);
+}
+
+void BleServer::deinit() {
+    // delete advertising;
+    // delete server;
+    Ble::deinit();
+}
+
+void BleServer::reinit() {
+    deinit();
+    setupDone = false;
+    setup(deviceName);
 }
 
 uint16_t BleServer::getAppearance() {
@@ -163,6 +174,14 @@ void BleServer::startAdvertising() {
         log_d("not enabled");
         return;
     }
+    if (!Ble::initDone()) {
+        log_e("init not done");
+        return;
+    }
+    if (nullptr == advertising) {
+        log_e("adv is null");
+        return;
+    }
     if (!advertising->isAdvertising()) {
         if (!server->startAdvertising()) {
             log_e("failed to start");
@@ -175,6 +194,10 @@ void BleServer::startAdvertising() {
 void BleServer::stopAdvertising() {
     if (!enabled) {
         log_d("not enabled");
+        return;
+    }
+    if (nullptr == advertising) {
+        log_e("adv is null");
         return;
     }
     if (advertising->isAdvertising()) {
@@ -225,22 +248,22 @@ void BleServer::stop() {
 void BleServer::onConnect(BLEServer *pServer, BLEConnInfo &info) {
     log_i("client connected, %s", Ble::connInfoToStr(&info).c_str());
     //  save client handle so we can gracefully disconnect them
-    bool handleExists = false;
+    bool exists = false;
     for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++)
-        if (_clients[i] == info.getConnHandle())
-            handleExists = true;
-    if (!handleExists)
-        _clients.push(info.getConnHandle());
+        if (_clients[i] == info.getAddress())
+            exists = true;
+    if (!exists)
+        _clients.push(info.getAddress());
 }
 
 void BleServer::onDisconnect(BLEServer *pServer, BLEConnInfo &info, int reason) {
-    uint16_t handle;
-    // remove saved handle
+    BLEAddress a;
+    // remove saved address
     for (decltype(_clients)::index_t i = 0; i < _clients.size(); i++) {
         if (_clients.isEmpty()) break;
-        handle = _clients.shift();
-        if (handle != info.getConnHandle())
-            _clients.push(handle);
+        a = _clients.shift();
+        if (a != info.getAddress())
+            _clients.push(a);
     }
     log_i("client disconnected (reason %d), connInfo: %s, serverConnCount: %d, clientsSize: %d",
           reason, Ble::connInfoToStr(&info).c_str(),
