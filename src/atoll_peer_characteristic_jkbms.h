@@ -102,8 +102,8 @@ class PeerCharacteristicJkBms : public PeerCharacteristicTemplate<String> {
             float resistance = 0.0f;
         } cells[32];
 
-        float cellVoltageMin = 0.0f;
-        float cellVoltageMax = 0.0f;
+        float lowestCellVoltage = 0.0f;
+        float highestCellVoltage = 0.0f;
         float cellVoltageAvg = 0.0f;
         float cellVoltageDelta = 0.0f;
         uint8_t cellVoltageMinId = 0;

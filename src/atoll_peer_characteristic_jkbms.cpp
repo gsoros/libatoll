@@ -548,22 +548,22 @@ void PeerCharacteristicJkBms::decodeJk02CellInfo(const std::vector<uint8_t>& dat
     // 10    2   0x01 0x0D              Voltage cell 03       0.001        V
     // ...
     uint8_t cells = 24 + (offset / 2);
-    float cellVoltageMin = 100.0f;
-    float cellVoltageMax = -100.0f;
+    float lowestCellVoltage = 100.0f;
+    float highestCellVoltage = -100.0f;
     for (uint8_t i = 0; i < cells; i++) {
         float cellVoltage = (float)get16(i * 2 + 6) * 0.001f;
         float cell_resistance = (float)get16(i * 2 + 64 + offset) * 0.001f;
-        if (cellVoltage > 0 && cellVoltage < cellVoltageMin) {
-            cellVoltageMin = cellVoltage;
+        if (cellVoltage > 0 && cellVoltage < lowestCellVoltage) {
+            lowestCellVoltage = cellVoltage;
         }
-        if (cellVoltage > cellVoltageMax) {
-            cellVoltageMax = cellVoltage;
+        if (cellVoltage > highestCellVoltage) {
+            highestCellVoltage = cellVoltage;
         }
         cellInfo.cells[i].voltage = cellVoltage;
         cellInfo.cells[i].resistance = cell_resistance;
     }
-    cellInfo.cellVoltageMin = cellVoltageMin;
-    cellInfo.cellVoltageMax = cellVoltageMax;
+    cellInfo.lowestCellVoltage = lowestCellVoltage;
+    cellInfo.highestCellVoltage = highestCellVoltage;
 
     // 54    4   0xFF 0xFF 0x00 0x00    Enabled cells bitmask
     //           0x0F 0x00 0x00 0x00    4 cells enabled
@@ -840,8 +840,8 @@ void PeerCharacteristicJkBms::decodeJk04CellInfo(const std::vector<uint8_t>& dat
     // 198   4   0x00 0x00 0x00 0x00    Cell resistance 25                 Ohm
     //                                  https://github.com/jblance/mpp-solar/issues/98#issuecomment-823701486
     uint8_t cells = 24;
-    float cellVoltageMin = 100.0f;
-    float cellVoltageMax = -100.0f;
+    float lowestCellVoltage = 100.0f;
+    float highestCellVoltage = -100.0f;
     float total_voltage = 0.0f;
     uint8_t min_voltage_cell = 0;
     uint8_t max_voltage_cell = 0;
@@ -849,20 +849,20 @@ void PeerCharacteristicJkBms::decodeJk04CellInfo(const std::vector<uint8_t>& dat
         float cellVoltage = (float)ieee_float_(get32(i * 4 + 6));
         float cell_resistance = (float)ieee_float_(get32(i * 4 + 102));
         total_voltage = total_voltage + cellVoltage;
-        if (cellVoltage > 0 && cellVoltage < cellVoltageMin) {
-            cellVoltageMin = cellVoltage;
+        if (cellVoltage > 0 && cellVoltage < lowestCellVoltage) {
+            lowestCellVoltage = cellVoltage;
             min_voltage_cell = i + 1;
         }
-        if (cellVoltage > cellVoltageMax) {
-            cellVoltageMax = cellVoltage;
+        if (cellVoltage > highestCellVoltage) {
+            highestCellVoltage = cellVoltage;
             max_voltage_cell = i + 1;
         }
         publish_state_(cells_[i].cellVoltage_sensor_, cellVoltage);
         publish_state_(cells_[i].cell_resistance_sensor_, cell_resistance);
     }
 
-    publish_state_(cellVoltageMin_sensor_, cellVoltageMin);
-    publish_state_(cellVoltageMax_sensor_, cellVoltageMax);
+    publish_state_(cellVoltageMin_sensor_, lowestCellVoltage);
+    publish_state_(cellVoltageMax_sensor_, highestCellVoltage);
     publish_state_(max_voltage_cell_sensor_, (float)max_voltage_cell);
     publish_state_(min_voltage_cell_sensor_, (float)min_voltage_cell);
     publish_state_(total_voltage_sensor_, total_voltage);
@@ -1024,9 +1024,9 @@ void PeerCharacteristicJkBms::printCellInfo() {
         cellInfo.chargeCurrent,
         cellInfo.power,
         cellInfo.cellVoltageMaxId,
-        cellInfo.cellVoltageMax,
+        cellInfo.highestCellVoltage,
         cellInfo.cellVoltageMinId,
-        cellInfo.cellVoltageMin,
+        cellInfo.lowestCellVoltage,
         bal,
         cellInfo.temp0,
         cellInfo.temp1,

@@ -28,6 +28,8 @@ void BleServer::setup(const char *deviceName) {
     }
     server->setCallbacks(this);
 
+    server->advertiseOnDisconnect(false);
+
     advertising = server->getAdvertising();
     setupAdvertising();
 
