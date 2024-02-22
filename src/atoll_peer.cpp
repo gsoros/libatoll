@@ -236,7 +236,7 @@ void Peer::connect() {
     }
     connecting = true;
 
-    log_d("connecting %s", saved.name);
+    // log_d("connecting %s", saved.name);
 
     BLEClient* c = nullptr;
 
