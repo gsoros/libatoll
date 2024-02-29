@@ -7,7 +7,7 @@ void Task::taskStart(float freq,
                      int8_t priority,
                      int8_t core) {
     if (0 < freq) _taskFreq = freq;
-    if (stack != 0) _taskStack = stack;
+    if (0 < stack) taskSetStack(stack);
     if (0 <= priority) _taskPriority = (uint8_t)priority;
     if (0 <= core) _taskCore = (uint8_t)core;
     if (taskRunning()) {
@@ -70,6 +70,15 @@ void Task::taskSetDelay(const uint16_t delayMs) {
     }
     _taskSetFreqAndDelay(delayMs);
     _taskDebug("taskSetDelay");
+}
+
+void Task::taskSetStack(const uint32_t stack) {
+    if (0 == stack) {
+        log_e("%s not setting zero stack", taskName());
+        return;
+    }
+    log_d("%s setting stack %d", taskName(), stack);
+    _taskStack = stack;
 }
 
 ulong Task::taskGetNextWakeTimeMs() {

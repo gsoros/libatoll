@@ -38,6 +38,7 @@ class Task {
     virtual void taskStop();
     virtual void taskSetFreq(const float freq);
     virtual void taskSetDelay(const uint16_t delayMs);
+    virtual void taskSetStack(const uint32_t stack);
     virtual ulong taskGetNextWakeTimeMs();
     virtual int taskGetLowestStackLevel();
     ulong taskDelayMs();
