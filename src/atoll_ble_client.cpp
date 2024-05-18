@@ -216,46 +216,52 @@ bool BleClient::startScan(uint32_t duration) {
 
 Peer* BleClient::createPeer(Peer::Saved saved) {
     // log_d("creating %s,%d,%s,%s,%d", saved.address, saved.addressType, saved.type, saved.name, saved.passkey);
-    Peer* peer;
     if (strstr(saved.type, "E"))
-        peer = new ESPM(saved);
-    else if (strstr(saved.type, "P"))
-        peer = new PowerMeter(saved);
-    else if (strstr(saved.type, "H"))
-        peer = new HeartrateMonitor(saved);
-    else if (strstr(saved.type, "V"))
-        peer = new Vesc(saved);
-    else if (strstr(saved.type, "B"))
-        peer = new JkBms(saved);
-    else
-        return nullptr;
-    return peer;
+        return new ESPM(saved);
+    if (strstr(saved.type, "P"))
+        return new PowerMeter(saved);
+    if (strstr(saved.type, "H"))
+        return new HeartrateMonitor(saved);
+    if (strstr(saved.type, "V"))
+        return new Vesc(saved);
+    if (strstr(saved.type, "B"))
+        return new JkBms(saved);
+
+    return nullptr;
 }
 
 Peer* BleClient::createPeer(BLEAdvertisedDevice* device) {
+    Peer::Saved saved = advertisedToSaved(device);
+
+    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID))) {
+        strncpy(saved.type, "E", sizeof(saved.type));
+        return new ESPM(saved);
+    }
+    if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID))) {
+        strncpy(saved.type, "P", sizeof(saved.type));
+        return new PowerMeter(saved);
+    }
+    if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID))) {
+        strncpy(saved.type, "H", sizeof(saved.type));
+        return new HeartrateMonitor(saved);
+    }
+    if (device->isAdvertisingService(BLEUUID(VESC_SERVICE_UUID))) {
+        strncpy(saved.type, "V", sizeof(saved.type));
+        return new Vesc(saved);
+    }
+    if (device->isAdvertisingService(BLEUUID(PeerCharacteristicJkBms::SERVICE_UUID))) {
+        strncpy(saved.type, "B", sizeof(saved.type));
+        return new JkBms(saved);
+    }
+    return nullptr;
+}
+
+Peer::Saved BleClient::advertisedToSaved(BLEAdvertisedDevice* device) {
     Peer::Saved saved;
     strncpy(saved.address, device->getAddress().toString().c_str(), sizeof(saved.address));
     saved.addressType = device->getAddress().getType();
     strncpy(saved.name, device->getName().c_str(), sizeof(saved.name));
-
-    Peer* peer = nullptr;
-    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID))) {
-        strncpy(saved.type, "E", sizeof(saved.type));
-        peer = new ESPM(saved);
-    } else if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID))) {
-        strncpy(saved.type, "P", sizeof(saved.type));
-        peer = new PowerMeter(saved);
-    } else if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID))) {
-        strncpy(saved.type, "H", sizeof(saved.type));
-        peer = new HeartrateMonitor(saved);
-    } else if (device->isAdvertisingService(BLEUUID(VESC_SERVICE_UUID))) {
-        strncpy(saved.type, "V", sizeof(saved.type));
-        peer = new Vesc(saved);
-    } else if (device->isAdvertisingService(BLEUUID(PeerCharacteristicJkBms::SERVICE_UUID))) {
-        strncpy(saved.type, "B", sizeof(saved.type));
-        peer = new JkBms(saved);
-    }
-    return peer;
+    return saved;
 }
 
 // get index of existing peer address
@@ -575,9 +581,12 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
     for (int i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) continue;
         if (peers[i]->markedForRemoval) continue;
-        if (strlen(target)) {
+        // log_d("reply before (%d): %s", strlen(msg->reply), msg->reply);
+        if (strlen(msg->reply)) {
             strncat(target, "|", remaining);
             target++;
+            remaining--;
+            // log_d("reply with | (%d): %s", strlen(msg->reply), msg->reply);
         }
         peers[i]->pack(token, sizeof(token) - 1, false);
         size_t tokenLen = strlen(token);
@@ -586,6 +595,7 @@ Api::Result* BleClient::peersProcessor(Api::Message* msg) {
             return Api::internalError();
         }
         strncat(target, token, remaining);
+        // log_d("reply after (%d): %s", strlen(msg->reply), msg->reply);
         remaining -= tokenLen;
         target += tokenLen;
     }

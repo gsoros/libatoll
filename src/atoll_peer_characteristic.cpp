@@ -100,6 +100,10 @@ bool PeerCharacteristic::unsubscribe(BLEClient* client) {
     return true;
 }
 
+void PeerCharacteristic::notify() {
+    //log_d("notify %s", label);
+}
+
 bool PeerCharacteristic::readOnSubscribe() { return true; }
 
 bool PeerCharacteristic::subscribeOnConnect() { return true; }

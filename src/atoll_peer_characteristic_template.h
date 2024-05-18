@@ -71,11 +71,8 @@ class PeerCharacteristicTemplate : public PeerCharacteristic {
         bool isNotify) override {
         lastValue = decode(data, length);
         // log_d("%s 0x%x", label, lastValue);
+        //log_d("onNotify %s", label);
         notify();
-    }
-
-    virtual void notify() {
-        // log_d("%s 0x%x", label, lastValue);
     }
 
     virtual bool subscribe(BLEClient* client) override {

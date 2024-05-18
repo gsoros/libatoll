@@ -94,8 +94,10 @@ class BleClient : public Task,
     virtual void onResult(BLEAdvertisedDevice* advertisedDevice) override;
     virtual void onScanEnd(BLEScanResults results) override;
 
+    Peer::Saved advertisedToSaved(BLEAdvertisedDevice* device);
+
 #ifdef FEATURE_API
-    Api::Result* peersProcessor(Api::Message*);
+        Api::Result* peersProcessor(Api::Message*);
 #endif
 };
 

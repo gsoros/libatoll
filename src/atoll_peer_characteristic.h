@@ -30,6 +30,7 @@ class PeerCharacteristic {
     virtual bool subscribe(BLEClient* client);
     virtual bool unsubscribe(BLEClient* client);
     virtual void onNotify(BLERemoteCharacteristic* c, uint8_t* data, size_t length, bool isNotify) = 0;
+    virtual void notify();
     virtual bool readOnSubscribe();
     virtual bool subscribeOnConnect();
 

@@ -583,6 +583,7 @@ ESPM::ESPM(
           saved,
           customPowerChar,
           customBattChar) {
+    log_d("Atoll::ESPM constructed");
     addChar(nullptr != customApiTxChar
                 ? customApiTxChar
                 : new PeerCharacteristicApiTX());
