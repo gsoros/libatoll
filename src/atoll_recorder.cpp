@@ -1094,7 +1094,7 @@ Api::Result *Recorder::recProcessor(Api::Message *msg) {
             if (!msg->argGetParam("offset:", offsetStr, sizeof(offsetStr))) {
                 f.close();
                 instance->device->releaseMutex();
-                log_e("missing offset");
+                log_e("missing offset in '%s'", msg->arg);
                 return Api::argInvalid();
             }
             int offset = atoi(offsetStr);
