@@ -185,7 +185,7 @@ void Wifi::applySettings() {
 };
 
 void Wifi::startAp() {
-    log_i("setting up AP '%s'", settings.apSSID);
+    log_i("setting up AP '%s' '%s'", settings.apSSID, settings.apPassword);
     WiFi.softAP(settings.apSSID, settings.apPassword);
 };
 
@@ -231,6 +231,25 @@ void Wifi::registerCallbacks() {
             onEvent(event, info);
         },
         ARDUINO_EVENT_MAX);
+}
+
+void Wifi::apLogStations() {
+    wifi_sta_list_t wifi_sta_list;
+    memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
+    tcpip_adapter_sta_list_t adapter_sta_list;
+    memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
+    esp_wifi_ap_get_sta_list(&wifi_sta_list);
+    tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+    char ip[16] = "";
+    for (int i = 0; i < adapter_sta_list.num; i++) {
+        tcpip_adapter_sta_info_t station = adapter_sta_list.sta[i];
+        log_i("AP sta #%d: %d.%d.%d.%d",
+              i,
+              ip4_addr1(&(station.ip)),
+              ip4_addr2(&(station.ip)),
+              ip4_addr3(&(station.ip)),
+              ip4_addr4(&(station.ip)));
+    }
 }
 
 void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
@@ -343,9 +362,11 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
             break;
         case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
             log_i("[AP] station got IP");
+            apLogStations();
             break;
         case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
             log_i("[AP] station disconnected, now active: %d", WiFi.softAPgetStationNum());
+            apLogStations();
             break;
         case ARDUINO_EVENT_WIFI_STA_START:
             log_i("[STA] starting");

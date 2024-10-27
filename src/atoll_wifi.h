@@ -5,6 +5,8 @@
 #include <Preferences.h>
 #include <WiFi.h>
 
+#include "esp_wifi.h"  // for apLogStations
+
 #include "atoll_preferences.h"
 #include "atoll_task.h"
 #include "atoll_api.h"
@@ -69,6 +71,7 @@ class Wifi : public Preferences, public Task {
     virtual bool isEnabled();
     virtual bool isConnected();
     virtual void registerCallbacks();
+    virtual void apLogStations();
 
     virtual void onEvent(arduino_event_id_t event, arduino_event_info_t info);
 
